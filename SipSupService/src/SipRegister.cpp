@@ -74,44 +74,44 @@ SipRegister::~SipRegister()
     }
 }
 
-// void SipRegister::registerServiceStart()
-// {
-//     if(m_regTimer)
-//     {
-//         m_regTimer->setTimerFun(RegisterCheckProc,this);
-//         m_regTimer->start();
-//     }
-// }
+void SipRegister::registerServiceStart()
+{
+    if(m_regTimer)
+    {
+        m_regTimer->setTimerFun(RegisterCheckProc,this);
+        m_regTimer->start();
+    }
+}
 
-// void SipRegister::RegisterCheckProc(void* param)
-// {
-//     time_t regTime=0;
-//     struct sysinfo info;
-//     memset(&info,0,sizeof(info));
-//     int ret=sysinfo(&info);
-//     if(ret==0)
-//     {
-//         regTime=info.uptime;
-//     }
-//     else
-//     {
-//         regTime=time(NULL);
-//     }
-//     AutoMutexLock lock(&GlobalCtl::globalLock);
-//     GlobalCtl::SUBDOMAININFOLIST::iterator iter=GlobalCtl::instance()->getSubDomainInfoList().begin();
-//     for(;iter!=GlobalCtl::instance()->getSubDomainInfoList().end();iter++)
-//     {
-//         if(iter->registered)
-//         {
-//             LOG(INFO)<<"regTime:"<<regTime<<",lastRegTime"<<iter->lastRegTime;
-//             if(regTime-(iter->lastRegTime)>=iter->expires)
-//             {
-//                 iter->registered=false;
-//                 LOG(INFO)<<"registet time was gone";
-//             }
-//         }
-//     }
-// }
+void SipRegister::RegisterCheckProc(void* param)
+{
+    time_t regTime=0;
+    struct sysinfo info;
+    memset(&info,0,sizeof(info));
+    int ret=sysinfo(&info);
+    if(ret==0)
+    {
+        regTime=info.uptime;
+    }
+    else
+    {
+        regTime=time(NULL);
+    }
+    AutoMutexLock lock(&GlobalCtl::globalLock);
+    GlobalCtl::SUBDOMAININFOLIST::iterator iter=GlobalCtl::instance()->getSubDomainInfoList().begin();
+    for(;iter!=GlobalCtl::instance()->getSubDomainInfoList().end();iter++)
+    {
+        if(iter->registered)
+        {
+            LOG(INFO)<<"regTime:"<<regTime<<",lastRegTime:"<<iter->lastRegTime;
+            if(regTime-(iter->lastRegTime)>=iter->expires)
+            {
+                iter->registered=false;
+                LOG(INFO)<<"registet time was gone";
+            }
+        }
+    }
+}
 
 pj_status_t SipRegister::run(pjsip_rx_data *rdata)
 {
