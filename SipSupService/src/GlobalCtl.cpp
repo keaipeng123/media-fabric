@@ -29,6 +29,7 @@ bool GlobalCtl::init(void *param)
         info.addrIp=iter->ip;
         info.sipPort=iter->port;
         info.protocal=iter->poto;
+        info.auth=iter->auth;
         subDomainInfoList.push_back(info);
     }
 
@@ -93,4 +94,43 @@ void GlobalCtl::setLastRegTime(string id,time_t t)
     {
         it->lastRegTime = t;
     }
+}
+
+bool GlobalCtl::getAuth(string id)
+{
+    AutoMutexLock lck(&globalLock);
+    SUBDOMAININFOLIST::iterator it;
+    it=std::find(subDomainInfoList.begin(),subDomainInfoList.end(),id);
+    if(it!=subDomainInfoList.end())
+    {
+        return it->auth;
+    }
+}
+
+string GlobalCtl::randomNum(int length)
+{
+    #if 1
+    //随机数种子
+    random_device rd;
+    //随机数生成器
+    mt19937 gen(rd());
+    //分布器类模板 设定一个0-15的均匀整数分布的区间范围
+    uniform_int_distribution<> dis(0,15);
+    stringstream ss;
+    for(int i=0;i<length;++i)
+    {
+        //每次使用随机数生成器在指定的分布范围内获取随机数
+        int value=dis(gen);
+        ss<<std::hex<<value;
+    }
+    #endif
+    // stringstream ss;
+    // for(int i=0;i<length;++i)
+    // {
+    //     int value=random()%15;
+    //     ss<<std::hex<<value;
+    // }
+    return ss.str();
+    
+
 }

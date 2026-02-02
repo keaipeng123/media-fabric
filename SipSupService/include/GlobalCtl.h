@@ -4,6 +4,9 @@
 #include "SipLocalConfig.h"
 #include "ThreadPool.h"
 #include "SipCore.h"
+#include<time.h>
+#include<random>
+#include<sstream>
 
 class GlobalCtl;
 #define GBOJ(obj) GlobalCtl::instance()->obj //宏定义简化单例成员访问
@@ -39,6 +42,7 @@ class GlobalCtl
             registered=false;
             expires=0;
             lastRegTime = 0;
+            auth=false;
         }
         
         bool operator==(string id)
@@ -53,6 +57,7 @@ class GlobalCtl
         bool registered;
         int expires;
         time_t lastRegTime;
+        bool auth;
     }SubDomainInfo;
     typedef list<SubDomainInfo> SUBDOMAININFOLIST;
 
@@ -80,6 +85,9 @@ class GlobalCtl
     static void setExpires(string id,int expires);
     static void setRegister(string id,bool registered);
     static void setLastRegTime(string id,time_t t);
+    static bool getAuth(string id); 
+
+    static string randomNum(int length);
 
     private:
     //私有构造函数：防止外部通过 new GlobalCtl() 创建实例
