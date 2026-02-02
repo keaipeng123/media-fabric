@@ -29,14 +29,6 @@ bool GlobalCtl::init(void *param)
         info.addrIp=iter->ip;
         info.sipPort=iter->port;
         info.protocal=iter->poto;
-        info.isAuth=iter->auth;
-        // if(iter->auth)
-        // {
-        //     info.isAuth=(iter->auth=1)?true:false;
-        //     info.usr=iter->usr;
-        //     info.pwd=iter->pwd;
-        //     info.realm=iter->realm;
-        // }
         subDomainInfoList.push_back(info);
     }
 
@@ -78,5 +70,27 @@ void GlobalCtl::setExpires(string id,int expires)
     if(it!=subDomainInfoList.end())
     {
         it->expires=expires;
+    }
+}
+
+void GlobalCtl::setRegister(string id,bool registered)
+{
+    AutoMutexLock lck(&globalLock);
+    SUBDOMAININFOLIST::iterator it;
+    it = std::find(subDomainInfoList.begin(),subDomainInfoList.end(),id);
+    if(it != subDomainInfoList.end())
+    {
+        it->registered = registered;
+    }
+}
+
+void GlobalCtl::setLastRegTime(string id,time_t t)
+{
+    AutoMutexLock lck(&globalLock);
+    SUBDOMAININFOLIST::iterator it;
+    it = std::find(subDomainInfoList.begin(),subDomainInfoList.end(),id);
+    if(it != subDomainInfoList.end())
+    {
+        it->lastRegTime = t;
     }
 }

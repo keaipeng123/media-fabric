@@ -38,10 +38,7 @@ class GlobalCtl
             protocal=0;
             registered=false;
             expires=0;
-            isAuth=false;
-            usr="";
-            pwd="";
-            realm="";
+            lastRegTime = 0;
         }
         
         bool operator==(string id)
@@ -55,10 +52,7 @@ class GlobalCtl
         int protocal;
         bool registered;
         int expires;
-        bool isAuth;
-        string usr;
-        string pwd;
-        string realm;
+        time_t lastRegTime;
     }SubDomainInfo;
     typedef list<SubDomainInfo> SUBDOMAININFOLIST;
 
@@ -84,6 +78,8 @@ class GlobalCtl
     public:
     static bool checkIsExist(string id);
     static void setExpires(string id,int expires);
+    static void setRegister(string id,bool registered);
+    static void setLastRegTime(string id,time_t t);
 
     private:
     //私有构造函数：防止外部通过 new GlobalCtl() 创建实例

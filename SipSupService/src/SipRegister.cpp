@@ -298,32 +298,32 @@ pj_status_t SipRegister::dealWithRegister(pjsip_rx_data *rdata)
         LOG(ERROR)<<"send response msg failed";
         return status;
     }
-    // if(status_code==200)
-    // {
-    //     if(expiresValue>0)
-    //     {
-    //         time_t regTime=0;
-    //         struct sysinfo info;
-    //         memset(&info,0,sizeof(info));
-    //         int ret=sysinfo(&info);
-    //         if(ret==0)
-    //         {
-    //             regTime=info.uptime;
-    //         }
-    //         else
-    //         {
-    //             regTime=time(NULL);
-    //         }
-    //         GlobalCtl::setRegister(fromId,true);
-    //         GlobalCtl::setLastRegTime(fromId,regTime);
-    //     }
-    //     else if(expiresValue==0)
-    //     {
-    //         GlobalCtl::setRegister(fromId,false);
-    //         GlobalCtl::setLastRegTime(fromId,0);
-    //     }
-    // }
+    if(status_code==200)
+    {
+        if(expiresValue>0)
+        {
+            time_t regTime=0;
+            struct sysinfo info;
+            memset(&info,0,sizeof(info));
+            int ret=sysinfo(&info);
+            if(ret==0)
+            {
+                regTime=info.uptime;
+            }
+            else
+            {
+                regTime=time(NULL);
+            }
+            GlobalCtl::setRegister(fromId,true);
+            GlobalCtl::setLastRegTime(fromId,regTime);
+        }
+        else if(expiresValue==0)
+        {
+            GlobalCtl::setRegister(fromId,false);
+            GlobalCtl::setLastRegTime(fromId,0);
+        }
+    }
 
-    return PJ_SUCCESS;
+    return status;
     
 }
