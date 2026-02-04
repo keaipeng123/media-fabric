@@ -71,6 +71,7 @@ void* func(void *argc)
 
 int main()
 {
+	srand(time(0));
 	//signal(SIGINT,SIG_IGN);//忽略终止信号
     SetGlogLevel glog(0);
 	SipLocalConfig* config=new SipLocalConfig(); 

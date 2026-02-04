@@ -109,7 +109,7 @@ bool GlobalCtl::getAuth(string id)
 
 string GlobalCtl::randomNum(int length)
 {
-    #if 1
+    #if 0
     //随机数种子
     random_device rd;
     //随机数生成器
@@ -124,12 +124,12 @@ string GlobalCtl::randomNum(int length)
         ss<<std::hex<<value;
     }
     #endif
-    // stringstream ss;
-    // for(int i=0;i<length;++i)
-    // {
-    //     int value=random()%15;
-    //     ss<<std::hex<<value;
-    // }
+    stringstream ss;
+    for(int i=0;i<length;++i)
+    {
+        int value=random()%15;
+        ss<<std::hex<<value;
+    }
     return ss.str();
     
 

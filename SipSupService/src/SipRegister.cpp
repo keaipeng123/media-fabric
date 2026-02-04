@@ -148,7 +148,8 @@ pj_status_t SipRegister::dealWithAuthorRegister(pjsip_rx_data* rdata)
         hdr->scheme=pj_str("digest");
         //nonce
         string nonce=GlobalCtl::randomNum(32);
-        LOG(INFO)<<"nonce:"<<nonce;
+        string nonce1=GlobalCtl::randomNum(32);
+        LOG(INFO)<<"nonce:"<<nonce<<",nonce1:"<<nonce1;
         pj_str_t src_nonce = pj_str((char*)nonce.c_str());
         pj_str_t res_nonce;
         pj_strdup(rdata->tp_info.pool, &res_nonce, &src_nonce);
