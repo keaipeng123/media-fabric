@@ -11,6 +11,7 @@ static const string keyLocalPort="local_port";
 static const string keySipId="sip_id";
 static const string keySipIp="sip_ip";
 static const string keySipPort="sip_port";
+static const string keySipRealm="sip_realm";
 
 static const string keySubNodeNum="subnode_num";
 static const string keySubNodeId="sip_subnode_id";
@@ -27,6 +28,7 @@ SipLocalConfig::SipLocalConfig()
     m_sipId="";
     m_sipIp="";
     m_sipPort=0;
+    m_sipRealm="";
     m_subNodeIp="";
     m_subNodePort=0;
     m_subNodePoto=0;
@@ -79,9 +81,16 @@ int SipLocalConfig::ReadConf()
         LOG(ERROR)<<"sipPort is woring";
         return ret;
     }
+    m_sipRealm=m_conf.readStr(keySipRealm);
+    if (m_sipRealm.empty())
+    {
+        ret=-1;
+        LOG(ERROR)<<"sipRealm is woring";
+        return ret;
+    }
    
     LOG(INFO)<<"localip:"<<m_localIp<<",localPort:"<<m_localPort<<",sipId:"<<m_sipId<<",sipIp:"<<m_sipIp\
-    <<",sipPort:"<<m_sipPort;
+    <<",sipPort:"<<m_sipPort<<",sipRealm:"<<m_sipRealm;
 
     int num=m_conf.readInt(keySubNodeNum);
     SubNodeInfo info;

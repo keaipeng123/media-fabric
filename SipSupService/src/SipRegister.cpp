@@ -123,7 +123,7 @@ pj_status_t SipRegister::RegisterRequestMessage(pjsip_rx_data *rdata)
     pjsip_msg* msg=rdata->msg_info.msg;
     if(GlobalCtl::getAuth(parseFromId(msg)))
     {
-       //return dealWithAuthorRegister(rdata);
+       return dealWithAuthorRegister(rdata);
     }
     else
     {
@@ -131,17 +131,17 @@ pj_status_t SipRegister::RegisterRequestMessage(pjsip_rx_data *rdata)
     }
 }
 
-#if 0
+#if 1
 pj_status_t SipRegister::dealWithAuthorRegister(pjsip_rx_data* rdata)
 {
     pjsip_msg* msg=rdata->msg_info.msg;
-    string fromId=parseFromId(msg);
-    pj_int32_t expiresValue=0;
+    //string fromId=parseFromId(msg);         
+    //pj_int32_t expiresValue=0;
     pjsip_hdr hdr_list;
     pj_list_init(&hdr_list);
     int status_code=401;
     pj_status_t status;
-    bool registered=false;
+    //bool registered=false;
     if(pjsip_msg_find_hdr(msg,PJSIP_H_AUTHORIZATION,NULL)==NULL)
     {
         pjsip_www_authenticate_hdr* hdr=pjsip_www_authenticate_hdr_create(rdata->tp_info.pool);
@@ -174,40 +174,40 @@ pj_status_t SipRegister::dealWithAuthorRegister(pjsip_rx_data* rdata)
     }
     else
     {
-        pjsip_auth_srv auth_srv;
-        string realm_str=GBOJ(gConfig)->realm();
-        pj_str_t realm=pj_str((char*)realm_str.c_str());
-        status=pjsip_auth_srv_init(rdata->tp_info.pool,&auth_srv,&realm,&auth_cred_callback,0);
-        if(PJ_SUCCESS!=status)
-        {
-            LOG(ERROR)<<"pjsip_auth_srv_init failed";
-            status_code=401;
-        }
-        pjsip_auth_srv_verify(&auth_srv,rdata,&status_code);
-        // status=pjsip_auth_srv_verify(&auth_srv,rdata,&status_code);
+        // pjsip_auth_srv auth_srv;
+        // string realm_str=GBOJ(gConfig)->realm();
+        // pj_str_t realm=pj_str((char*)realm_str.c_str());
+        // status=pjsip_auth_srv_init(rdata->tp_info.pool,&auth_srv,&realm,&auth_cred_callback,0);
         // if(PJ_SUCCESS!=status)
         // {
-        //     LOG(ERROR)<<"pjsip_auth_srv_verify failed,pj_status:"<<status;
+        //     LOG(ERROR)<<"pjsip_auth_srv_init failed";
         //     status_code=401;
         // }
-        LOG(INFO)<<"status_code_t:"<<status_code;
-        if(SIP_SUCCESS==status_code)
-        {
-            pjsip_expires_hdr* expires=(pjsip_expires_hdr*)pjsip_msg_find_hdr(msg,PJSIP_H_EXPIRES,NULL);
-            expiresValue=expires->ivalue;
-            GlobalCtl::setExpires(fromId,expiresValue);
+        // pjsip_auth_srv_verify(&auth_srv,rdata,&status_code);
+        // // status=pjsip_auth_srv_verify(&auth_srv,rdata,&status_code);
+        // // if(PJ_SUCCESS!=status)
+        // // {
+        // //     LOG(ERROR)<<"pjsip_auth_srv_verify failed,pj_status:"<<status;
+        // //     status_code=401;
+        // // }
+        // LOG(INFO)<<"status_code_t:"<<status_code;
+        // if(SIP_SUCCESS==status_code)
+        // {
+        //     pjsip_expires_hdr* expires=(pjsip_expires_hdr*)pjsip_msg_find_hdr(msg,PJSIP_H_EXPIRES,NULL);
+        //     expiresValue=expires->ivalue;
+        //     GlobalCtl::setExpires(fromId,expiresValue);
 
-            //data字段hdr部分组织
-            time_t t;
-            t=time(0);
-            char bufT[32]={0};
-            strftime(bufT,sizeof(bufT),"%y-%m-%d%H:%M:%S",localtime(&t));
-            pj_str_t value_time =pj_str(bufT);
-            pj_str_t key=pj_str("Date");
-            pjsip_date_hdr* date_hrd= (pjsip_date_hdr*)pjsip_date_hdr_create(rdata->tp_info.pool,&key,&value_time);
-            pj_list_push_back(&hdr_list,date_hrd);
-            registered=true;
-        }
+        //     //data字段hdr部分组织
+        //     time_t t;
+        //     t=time(0);
+        //     char bufT[32]={0};
+        //     strftime(bufT,sizeof(bufT),"%y-%m-%d%H:%M:%S",localtime(&t));
+        //     pj_str_t value_time =pj_str(bufT);
+        //     pj_str_t key=pj_str("Date");
+        //     pjsip_date_hdr* date_hrd= (pjsip_date_hdr*)pjsip_date_hdr_create(rdata->tp_info.pool,&key,&value_time);
+        //     pj_list_push_back(&hdr_list,date_hrd);
+        //     registered=true;
+        // }
 
     }
     status=pjsip_endpt_respond(GBOJ(gSipServer)->GetEndPoint(),NULL,rdata,status_code,NULL,&hdr_list,NULL,NULL);
@@ -217,31 +217,31 @@ pj_status_t SipRegister::dealWithAuthorRegister(pjsip_rx_data* rdata)
         return status;
     }
 
-    if(registered)
-    {
-        if(expiresValue>0)
-        {
-            time_t regTime=0;
-            struct sysinfo info;
-            memset(&info,0,sizeof(info));
-            int ret=sysinfo(&info);
-            if(ret==0)
-            {
-                regTime=info.uptime;
-            }
-            else
-            {
-                regTime=time(NULL);
-            }
-            GlobalCtl::setRegister(fromId,true);
-            GlobalCtl::setLastRegTime(fromId,regTime);
-        }
-        else if(expiresValue==0)
-        {
-            GlobalCtl::setRegister(fromId,false);
-            GlobalCtl::setLastRegTime(fromId,0);
-        }
-    }
+    // if(registered)
+    // {
+    //     if(expiresValue>0)
+    //     {
+    //         time_t regTime=0;
+    //         struct sysinfo info;
+    //         memset(&info,0,sizeof(info));
+    //         int ret=sysinfo(&info);
+    //         if(ret==0)
+    //         {
+    //             regTime=info.uptime;
+    //         }
+    //         else
+    //         {
+    //             regTime=time(NULL);
+    //         }
+    //         GlobalCtl::setRegister(fromId,true);
+    //         GlobalCtl::setLastRegTime(fromId,regTime);
+    //     }
+    //     else if(expiresValue==0)
+    //     {
+    //         GlobalCtl::setRegister(fromId,false);
+    //         GlobalCtl::setLastRegTime(fromId,0);
+    //     }
+    // }
 }
 #endif
 
