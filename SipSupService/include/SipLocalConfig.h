@@ -17,6 +17,8 @@ class SipLocalConfig
     inline string sipIp(){return m_sipIp;}
     inline int sipPort(){return m_sipPort;}
     inline string realm(){return m_sipRealm;}
+    inline string usr(){return m_usr;}
+    inline string pwd(){return m_pwd;}
 
     struct SubNodeInfo
     {
@@ -35,6 +37,8 @@ class SipLocalConfig
     string m_sipId;
     string m_sipIp;
     int m_sipPort;
+    string m_usr;
+    string m_pwd;
     string m_sipRealm;
     string m_subNodeIp;
     int m_subNodePort;

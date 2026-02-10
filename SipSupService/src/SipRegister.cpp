@@ -5,61 +5,61 @@
 #include<sys/sysinfo.h>
 
 
-// static pj_status_t auth_cred_callback(pj_pool_t *pool,
-//     const pj_str_t *realm,
-//     const pj_str_t *acc_name,
-//     pjsip_cred_info *cred_info)
-// {
-//     // //string usr_str=GBOJ(gConfig)->usr();
-//     // pj_str_t usr=pj_str((char*)GBOJ(gConfig)->usr().c_str());
-//     // if(pj_stricmp(acc_name,&usr)!=0)
-//     // {
-//     //     LOG(ERROR)<<"usr name wrong";
-//     //     return PJ_FALSE;
-//     // }
-//     // //string pwd_str=GBOJ(gConfig)->pwd();
-//     // pj_str_t pwd=pj_str((char*)GBOJ(gConfig)->pwd().c_str());
-//     // cred_info->realm=*realm;
-//     // cred_info->username=usr;
-//     // //cred_info->username=pj_str("123123");
-//     // cred_info->data_type=PJSIP_CRED_DATA_PLAIN_PASSWD;
-//     // cred_info->data=pwd;
-//     // 	// 打印 cred_info 关键字段（假设是 pjsip_passwd 类型）
-// 	// printf("first_cred_info->username: %.*s\n",
-//     //     (int)cred_info->username.slen,
-//     //     cred_info->username.ptr);
-//     // printf("first_cred_info->data_type: %d\n", cred_info->data_type); // 例如 PJSIP_CRED_DATA_PLAIN_PASSWD
-//     // //cred_info->data=pj_str("123123");
-//     // return PJ_SUCCESS;
-//     // 从配置获取用户名
-//     const std::string& usr_str = GBOJ(gConfig)->usr();
+static pj_status_t auth_cred_callback(pj_pool_t *pool,
+    const pj_str_t *realm,
+    const pj_str_t *acc_name,
+    pjsip_cred_info *cred_info)
+{
+    // //string usr_str=GBOJ(gConfig)->usr();
+    // pj_str_t usr=pj_str((char*)GBOJ(gConfig)->usr().c_str());
+    // if(pj_stricmp(acc_name,&usr)!=0)
+    // {
+    //     LOG(ERROR)<<"usr name wrong";
+    //     return PJ_FALSE;
+    // }
+    // //string pwd_str=GBOJ(gConfig)->pwd();
+    // pj_str_t pwd=pj_str((char*)GBOJ(gConfig)->pwd().c_str());
+    // cred_info->realm=*realm;
+    // cred_info->username=usr;
+    // //cred_info->username=pj_str("123123");
+    // cred_info->data_type=PJSIP_CRED_DATA_PLAIN_PASSWD;
+    // cred_info->data=pwd;
+    // 	// 打印 cred_info 关键字段（假设是 pjsip_passwd 类型）
+	// printf("first_cred_info->username: %.*s\n",
+    //     (int)cred_info->username.slen,
+    //     cred_info->username.ptr);
+    // printf("first_cred_info->data_type: %d\n", cred_info->data_type); // 例如 PJSIP_CRED_DATA_PLAIN_PASSWD
+    // //cred_info->data=pj_str("123123");
+    // return PJ_SUCCESS;
+    // 从配置获取用户名
+    const std::string& usr_str = GBOJ(gConfig)->usr();
     
-//     // 创建临时pj_str_t并复制到内存池
-//     pj_str_t src_usr = pj_str((char*)usr_str.c_str());
-//     pj_str_t usr;
-//     pj_strdup(pool, &usr, &src_usr); // 正确使用3个参数的pj_strdup
+    // 创建临时pj_str_t并复制到内存池
+    pj_str_t src_usr = pj_str((char*)usr_str.c_str());
+    pj_str_t usr;
+    pj_strdup(pool, &usr, &src_usr); // 正确使用3个参数的pj_strdup
 
-//     if (pj_stricmp(acc_name, &usr) != 0) {
-//         LOG(ERROR) << "usr name wrong";
-//         return PJ_FALSE;
-//     }
+    if (pj_stricmp(acc_name, &usr) != 0) {
+        LOG(ERROR) << "usr name wrong";
+        return PJ_FALSE;
+    }
 
-//     // 从配置获取密码
-//     const std::string& pwd_str = GBOJ(gConfig)->pwd();
+    // 从配置获取密码
+    const std::string& pwd_str = GBOJ(gConfig)->pwd();
     
-//     // 创建临时pj_str_t并复制到内存池
-//     pj_str_t src_pwd = pj_str((char*)pwd_str.c_str());
-//     pj_str_t pwd;
-//     pj_strdup(pool, &pwd, &src_pwd);
+    // 创建临时pj_str_t并复制到内存池
+    pj_str_t src_pwd = pj_str((char*)pwd_str.c_str());
+    pj_str_t pwd;
+    pj_strdup(pool, &pwd, &src_pwd);
 
-//     // 设置凭证信息
-//     cred_info->realm = *realm;       // PJSIP会自动管理这个内存
-//     cred_info->username = usr;       // 使用池分配后的用户名
-//     cred_info->data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
-//     cred_info->data = pwd;           // 使用池分配后的密码
+    // 设置凭证信息
+    cred_info->realm = *realm;       // PJSIP会自动管理这个内存
+    cred_info->username = usr;       // 使用池分配后的用户名
+    cred_info->data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
+    cred_info->data = pwd;           // 使用池分配后的密码
 
-//     return PJ_SUCCESS;
-// }
+    return PJ_SUCCESS;
+}
 SipRegister::SipRegister()
 {
     m_regTimer=new TaskTimer(10);
@@ -135,13 +135,13 @@ pj_status_t SipRegister::RegisterRequestMessage(pjsip_rx_data *rdata)
 pj_status_t SipRegister::dealWithAuthorRegister(pjsip_rx_data* rdata)
 {
     pjsip_msg* msg=rdata->msg_info.msg;
-    //string fromId=parseFromId(msg);         
-    //pj_int32_t expiresValue=0;
+    string fromId=parseFromId(msg);         
+    pj_int32_t expiresValue=0;
     pjsip_hdr hdr_list;
     pj_list_init(&hdr_list);
     int status_code=401;
     pj_status_t status;
-    //bool registered=false;
+    bool registered=false;
     if(pjsip_msg_find_hdr(msg,PJSIP_H_AUTHORIZATION,NULL)==NULL)
     {
         pjsip_www_authenticate_hdr* hdr=pjsip_www_authenticate_hdr_create(rdata->tp_info.pool);
@@ -175,40 +175,40 @@ pj_status_t SipRegister::dealWithAuthorRegister(pjsip_rx_data* rdata)
     }
     else
     {
-        // pjsip_auth_srv auth_srv;
-        // string realm_str=GBOJ(gConfig)->realm();
-        // pj_str_t realm=pj_str((char*)realm_str.c_str());
-        // status=pjsip_auth_srv_init(rdata->tp_info.pool,&auth_srv,&realm,&auth_cred_callback,0);
+        pjsip_auth_srv auth_srv;
+        string realm_str=GBOJ(gConfig)->realm();
+        pj_str_t realm=pj_str((char*)realm_str.c_str());
+        status=pjsip_auth_srv_init(rdata->tp_info.pool,&auth_srv,&realm,&auth_cred_callback,0);
+        if(PJ_SUCCESS!=status)
+        {
+            LOG(ERROR)<<"pjsip_auth_srv_init failed";
+            status_code=401;
+        }
+        pjsip_auth_srv_verify(&auth_srv,rdata,&status_code);
+        // status=pjsip_auth_srv_verify(&auth_srv,rdata,&status_code);
         // if(PJ_SUCCESS!=status)
         // {
-        //     LOG(ERROR)<<"pjsip_auth_srv_init failed";
+        //     LOG(ERROR)<<"pjsip_auth_srv_verify failed,pj_status:"<<status;
         //     status_code=401;
         // }
-        // pjsip_auth_srv_verify(&auth_srv,rdata,&status_code);
-        // // status=pjsip_auth_srv_verify(&auth_srv,rdata,&status_code);
-        // // if(PJ_SUCCESS!=status)
-        // // {
-        // //     LOG(ERROR)<<"pjsip_auth_srv_verify failed,pj_status:"<<status;
-        // //     status_code=401;
-        // // }
-        // LOG(INFO)<<"status_code_t:"<<status_code;
-        // if(SIP_SUCCESS==status_code)
-        // {
-        //     pjsip_expires_hdr* expires=(pjsip_expires_hdr*)pjsip_msg_find_hdr(msg,PJSIP_H_EXPIRES,NULL);
-        //     expiresValue=expires->ivalue;
-        //     GlobalCtl::setExpires(fromId,expiresValue);
+        LOG(INFO)<<"status_code_t:"<<status_code;
+        if(SIP_SUCCESS==status_code)
+        {
+            pjsip_expires_hdr* expires=(pjsip_expires_hdr*)pjsip_msg_find_hdr(msg,PJSIP_H_EXPIRES,NULL);
+            expiresValue=expires->ivalue;
+            GlobalCtl::setExpires(fromId,expiresValue);
 
-        //     //data字段hdr部分组织
-        //     time_t t;
-        //     t=time(0);
-        //     char bufT[32]={0};
-        //     strftime(bufT,sizeof(bufT),"%y-%m-%d%H:%M:%S",localtime(&t));
-        //     pj_str_t value_time =pj_str(bufT);
-        //     pj_str_t key=pj_str("Date");
-        //     pjsip_date_hdr* date_hrd= (pjsip_date_hdr*)pjsip_date_hdr_create(rdata->tp_info.pool,&key,&value_time);
-        //     pj_list_push_back(&hdr_list,date_hrd);
-        //     registered=true;
-        // }
+            //data字段hdr部分组织
+            time_t t;
+            t=time(0);
+            char bufT[32]={0};
+            strftime(bufT,sizeof(bufT),"%y-%m-%d%H:%M:%S",localtime(&t));
+            pj_str_t value_time =pj_str(bufT);
+            pj_str_t key=pj_str("Date");
+            pjsip_date_hdr* date_hrd= (pjsip_date_hdr*)pjsip_date_hdr_create(rdata->tp_info.pool,&key,&value_time);
+            pj_list_push_back(&hdr_list,date_hrd);
+            registered=true;
+        }
 
     }
     status=pjsip_endpt_respond(GBOJ(gSipServer)->GetEndPoint(),NULL,rdata,status_code,NULL,&hdr_list,NULL,NULL);
@@ -218,31 +218,31 @@ pj_status_t SipRegister::dealWithAuthorRegister(pjsip_rx_data* rdata)
         return status;
     }
 
-    // if(registered)
-    // {
-    //     if(expiresValue>0)
-    //     {
-    //         time_t regTime=0;
-    //         struct sysinfo info;
-    //         memset(&info,0,sizeof(info));
-    //         int ret=sysinfo(&info);
-    //         if(ret==0)
-    //         {
-    //             regTime=info.uptime;
-    //         }
-    //         else
-    //         {
-    //             regTime=time(NULL);
-    //         }
-    //         GlobalCtl::setRegister(fromId,true);
-    //         GlobalCtl::setLastRegTime(fromId,regTime);
-    //     }
-    //     else if(expiresValue==0)
-    //     {
-    //         GlobalCtl::setRegister(fromId,false);
-    //         GlobalCtl::setLastRegTime(fromId,0);
-    //     }
-    // }
+    if(registered)
+    {
+        if(expiresValue>0)
+        {
+            time_t regTime=0;
+            struct sysinfo info;
+            memset(&info,0,sizeof(info));
+            int ret=sysinfo(&info);
+            if(ret==0)
+            {
+                regTime=info.uptime;
+            }
+            else
+            {
+                regTime=time(NULL);
+            }
+            GlobalCtl::setRegister(fromId,true);
+            GlobalCtl::setLastRegTime(fromId,regTime);
+        }
+        else if(expiresValue==0)
+        {
+            GlobalCtl::setRegister(fromId,false);
+            GlobalCtl::setLastRegTime(fromId,0);
+        }
+    }
 }
 #endif
 

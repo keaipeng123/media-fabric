@@ -18,7 +18,11 @@ static const string keySupNodeIp="sip_supnode_ip";
 static const string keySupNodePort="sip_supnode_port";
 static const string keySupNodePoto="sip_supnode_poto";
 static const string keySupNodeExpires="sip_supnode_expires";
+static const string keySupNodeUsr="sip_supnode_usr";
+static const string keySupNodePwd="sip_supnode_pwd";
 static const string keySupNodeAuth="sip_supnode_auth";
+static const string keySupNodeRealm="sip_supnode_realm";
+
 
 SipLocalConfig::SipLocalConfig()
 :m_conf(CONFIGFILE_PATH)
@@ -91,8 +95,11 @@ int SipLocalConfig::ReadConf()
         string ip=keySupNodeIp+to_string(i);
         string port=keySupNodePort+to_string(i);
         string proto=keySupNodePoto+to_string(i);
-        string auth=keySupNodeAuth+to_string(i);
         string expires=keySupNodeExpires+to_string(i);
+        string usr=keySupNodeUsr+to_string(i);
+        string pwd=keySupNodePwd+to_string(i);
+        string auth=keySupNodeAuth+to_string(i);
+        string realm=keySupNodeRealm+to_string(i);
         
 
         SupNodeInfo info;
@@ -101,9 +108,14 @@ int SipLocalConfig::ReadConf()
         info.port=m_conf.readInt(port);
         info.poto=m_conf.readInt(proto);
         info.expires=m_conf.readInt(expires);
+        info.usr=m_conf.readStr(usr);
+        info.pwd=m_conf.readStr(pwd);
+        info.auth=m_conf.readInt(auth);
+        info.realm=m_conf.readStr(realm);
         upNodeInfoList.push_back(info);
         LOG(INFO)<<"supNodeId:"<<info.id<<"supNodeIp:"<<info.ip<<",supNodePort:"<<info.port<<",supNodePoto:"<<info.poto\
-        <<",subNodeExpires:"<<info.expires;
+        <<",subNodeExpires:"<<info.expires<<",supNodeUsr:"<<info.usr<<",supNodePwd:"<<info.pwd\
+        <<",supNodeAuth:"<<info.auth<<",supNodeRealm:"<<info.realm;
     }
 
     LOG(INFO)<<"upNodeInfoList.SIZE:"<<upNodeInfoList.size();

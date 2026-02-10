@@ -127,7 +127,7 @@ string GlobalCtl::randomNum(int length)
     stringstream ss;
     for(int i=0;i<length;++i)
     {
-        int value=random()%15;
+        int value=random()%16;
         ss<<std::hex<<value;
     }
     return ss.str();

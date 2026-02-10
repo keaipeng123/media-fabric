@@ -114,6 +114,30 @@ int SipRegister::gbRegister(GlobalCtl::SupDomainInfo& node)
             break;
         }
 
+        if(node.isAuth)
+        {
+            //pjsip 的 pjsip_regc_set_credentials() 只是把凭据保存到 regc 对象里，第一次发送时 pjsip 并不会把它们放进报文；收到 401 后内部自动计算 response 再重发
+            pjsip_cred_info cred;//鉴权信息结构体
+            pj_bzero(&cred,sizeof(pjsip_cred_info));
+            cred.scheme=pj_str("digest");
+            //string realm_str=node.realm;
+            cred.realm=pj_str((char*)node.realm.c_str());
+            string usr_str=node.usr;
+            cred.username=pj_str((char*)usr_str.c_str());
+            cred.data_type=PJSIP_CRED_DATA_PLAIN_PASSWD;
+            string pwd_str=node.pwd;
+            //LOG(ERROR)<<"usr:"<<usr_str<<",realm:"<<realm_str<<",pwd:"<<pwd_str;
+            cred.data=pj_str((char*)pwd_str.c_str());
+
+            status=pjsip_regc_set_credentials(regc,1,&cred);
+            if(PJ_SUCCESS!=status)
+            {
+                pjsip_regc_destroy(regc);
+                LOG(ERROR)<<"pjsip_regc_set_credentials error";
+                break;
+            }
+        }
+
         pjsip_tx_data* tdata=NULL;
         status=pjsip_regc_register(regc,PJ_TRUE,&tdata);
         if(PJ_SUCCESS!=status)
