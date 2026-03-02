@@ -1,3 +1,273 @@
+# GB28181 注册（REGISTER）学习笔记（围绕上下级 `SipRegister`）
+
+> 对应工程代码（两侧同名类但职责不同）：
+>
+> - [SipSubService/include/SipRegister.h](../../SipSubService/include/SipRegister.h)
+> - [SipSubService/src/SipRegister.cpp](../../SipSubService/src/SipRegister.cpp)
+> - [SipSubService/include/SipMessage.h](../../SipSubService/include/SipMessage.h)
+> - [SipSubService/src/SipMessage.cpp](../../SipSubService/src/SipMessage.cpp)
+> - [SipSubService/include/GlobalCtl.h](../../SipSubService/include/GlobalCtl.h)
+> - [SipSubService/src/GlobalCtl.cpp](../../SipSubService/src/GlobalCtl.cpp)
+> - [SipSupService/include/SipRegister.h](../../SipSupService/include/SipRegister.h)
+> - [SipSupService/src/SipRegister.cpp](../../SipSupService/src/SipRegister.cpp)
+> - [SipSupService/include/SipTaskBase.h](../../SipSupService/include/SipTaskBase.h)
+> - [SipSupService/src/SipTaskBase.cpp](../../SipSupService/src/SipTaskBase.cpp)
+> - [SipSupService/include/GlobalCtl.h](../../SipSupService/include/GlobalCtl.h)
+> - [SipSupService/src/GlobalCtl.cpp](../../SipSupService/src/GlobalCtl.cpp)
+>
+> 前置建议：如果你还没看 PJSIP 事件循环/收发线程，可先读 [pjsip初始化_SipCore.md](pjsip初始化_SipCore.md)。
+
+本文目标（只围绕现有代码，不展开太多“未来怎么优化”）：
+
+1. 看懂 SUB 侧如何发起 REGISTER（PJSIP 注册客户端 `pjsip_regc`）。
+2. 看懂 SUP 侧如何处理 REGISTER 并回包（含可选 Digest 鉴权分支）。
+3. 把 `From/To/Request-URI/Contact/Expires` 与代码一一对上。
+4. 明确状态存哪里（`GlobalCtl`）、什么时候更新（回调/回包/定时器）。
+
+---
+
+## 1. 一句话总览：上下级 REGISTER 的闭环
+
+- **SUB（SipSubService）**：定时扫描“上级平台列表”，对 `registered=false` 的上级发 REGISTER；收到响应后在回调里把该上级置为 `registered=true`。
+- **SUP（SipSupService）**：收到 REGISTER 后解析 `From` 得到下级 ID，做“是否存在/是否要求鉴权”的判断，回 `200/403/401` 等，并把 `expires/registered/lastRegTime` 写回自己的 `GlobalCtl` 下级列表。
+
+---
+
+## 2. SUB 侧（客户端）：如何发 REGISTER
+
+### 2.1 定时触发入口：`registerServiceStart()` → `RegisterProc()`
+
+代码在 [SipSubService/src/SipRegister.cpp](../../SipSubService/src/SipRegister.cpp)：
+
+- 构造函数：`m_regTimer = new TaskTimer(3);`（每 3 秒触发）
+- `registerServiceStart()`：设置回调 `SipRegister::RegisterProc(this)` 并启动定时器
+- `RegisterProc()`：
+  - 先 `AutoMutexLock lock(&GlobalCtl::globalLock)`
+  - 遍历 `GlobalCtl::instance()->getSupDomainInfoList()`
+  - 对 `registered == false` 的节点调用 `gbRegister(*iter)`
+
+这里的“上级平台列表”来自 SUB 的 `GlobalCtl`：
+
+- [SipSubService/include/GlobalCtl.h](../../SipSubService/include/GlobalCtl.h) 定义 `SupDomainInfo` 与 `SUPDOMAININFOLIST`
+- [SipSubService/src/GlobalCtl.cpp](../../SipSubService/src/GlobalCtl.cpp) 的 `init()` 把配置 `upNodeInfoList` 拷贝进 `supDomainInfoList`
+
+### 2.2 REGISTER 报文的四个关键字符串：`SipMessage` 只负责拼字符串
+
+在 `gbRegister()` 里使用 [SipSubService/src/SipMessage.cpp](../../SipSubService/src/SipMessage.cpp) 拼接：
+
+1. `From`：`<sip:${本端sipId}@${本端sipIp}>`
+2. `To`：`<sip:${本端sipId}@${本端sipIp}>`（REGISTER 场景里这里与 From 一致）
+3. `Request-URI`：`sip:${对端sipId}@${对端addrIp}:${对端sipPort};transport=${udp|tcp}`
+4. `Contact`：`sip:${本端sipId}@${本端sipIp}:${本端sipPort}`
+
+注意：`SipMessage::setContact()` 生成的字符串没有尖括号 `<...>`，而 From/To 有（这是当前实现的真实输出）。
+
+### 2.3 PJSIP 调用链：`pjsip_regc_*`
+
+`gbRegister()` 的核心 API 顺序：
+
+1. `pjsip_regc_create(endpt, token, cb, &regc)`
+   - `endpt`：`GBOJ(gSipServer)->GetEndPoint()`
+   - `token`：传入 `&node`，用于回调识别是哪个上级节点
+   - `cb`：静态回调 `client_cb()`
+2. `pjsip_regc_init(regc, &request_uri, &from, &to, 1, &contact, node.expires)`
+   - `node.expires` 来自配置，作为 Expires 值
+3. （可选）`pjsip_regc_set_credentials(regc, 1, &cred)`
+   - 当 `node.isAuth == true` 时设置 Digest 凭据：`realm/usr/pwd`
+4. `pjsip_regc_register(regc, PJ_TRUE, &tdata)`
+5. `pjsip_regc_send(regc, tdata)` 发送
+
+### 2.4 回调：`client_cb()` 如何更新状态
+
+`client_cb(struct pjsip_regc_cbparam *param)` 逻辑非常直接：
+
+- 打印 `param->code`
+- 若 `param->code == 200`：
+  - `GlobalCtl::SupDomainInfo* subinfo = (GlobalCtl::SupDomainInfo*)param->token;`
+  - `subinfo->registered = true;`
+
+这意味着 SUB 的“注册成功”判定完全由回调收到的 `200` 决定。
+
+---
+
+## 3. SUP 侧（服务端）：如何处理收到的 REGISTER
+
+SUP 侧 `SipRegister` 是一个业务处理类：
+
+- 声明见 [SipSupService/include/SipRegister.h](../../SipSupService/include/SipRegister.h)
+- 实现在 [SipSupService/src/SipRegister.cpp](../../SipSupService/src/SipRegister.cpp)
+- 继承自 `SipTaskBase`，入口是 `run(pjsip_rx_data* rdata)`
+
+### 3.1 入口分发：是否走鉴权分支
+
+处理链：
+
+- `run()` → `RegisterRequestMessage(rdata)`
+- `RegisterRequestMessage()`：
+  - 先拿到 `pjsip_msg* msg = rdata->msg_info.msg`
+  - `parseFromId(msg)` 得到 `fromId`
+  - `GlobalCtl::getAuth(fromId)` 返回 true → `dealWithAuthorRegister(rdata)`
+  - 否则 → `dealWithRegister(rdata)`
+
+`fromId` 的解析来自 [SipSupService/src/SipTaskBase.cpp](../../SipSupService/src/SipTaskBase.cpp)：
+
+- 找 `PJSIP_H_FROM` 头并 `print_on()` 打印成字符串
+- `fromId = fromString.substr(11, 20)`（固定位置截取 20 位）
+
+因此 SUP 侧“识别设备/下级节点”强依赖 From 头文本格式。
+
+### 3.2 不鉴权分支：`dealWithRegister()`（白名单 + 回 200/403）
+
+`dealWithRegister()` 的实际步骤（按代码顺序）：
+
+1. `fromId = parseFromId(msg)`
+2. `GlobalCtl::checkIsExist(fromId)`：
+   - false → `status_code = 403 (SIP_FORBIDDEN)`
+   - true → 读取 `Expires`：`pjsip_msg_find_hdr(msg, PJSIP_H_EXPIRES, NULL)`
+     - `expiresValue = expires->ivalue`
+     - `GlobalCtl::setExpires(fromId, expiresValue)`
+3. `pjsip_endpt_create_response(endpt, rdata, status_code, ..., &txdata)` 创建响应
+4. 增加 `Date` 头：`pjsip_date_hdr_create()` + `pjsip_msg_add_hdr()`
+5. 获取响应地址：`pjsip_get_response_addr(txdata->pool, rdata, &res_addr)`
+6. 发送响应：`pjsip_endpt_send_response(endpt, &res_addr, txdata, ...)`
+7. 若 `status_code == 200`：
+   - `expiresValue > 0`：计算 `regTime`（优先 `sysinfo().uptime`），写：
+     - `GlobalCtl::setRegister(fromId, true)`
+     - `GlobalCtl::setLastRegTime(fromId, regTime)`
+   - `expiresValue == 0`：
+     - `setRegister(fromId, false)`
+     - `setLastRegTime(fromId, 0)`
+
+### 3.3 鉴权分支：`dealWithAuthorRegister()`（Digest 401 / 验证成功回 200）
+
+`dealWithAuthorRegister()` 走两段逻辑：
+
+**A. 首次无 Authorization：回 401 + `WWW-Authenticate: Digest ...`**
+
+- 检测 `pjsip_msg_find_hdr(msg, PJSIP_H_AUTHORIZATION, NULL)`
+- 若不存在：
+  - 创建 `pjsip_www_authenticate_hdr`
+  - `scheme = "digest"`
+  - 生成 `nonce/opaque`（`GlobalCtl::randomNum(32)`）并 `pj_strdup(pool, ...)` 拷贝到池里
+  - `realm` 来自 `GBOJ(gConfig)->realm()`
+  - `algorithm = "MD5"`
+  - 把该头压入 `hdr_list`
+  - 用 `pjsip_endpt_respond(..., 401, ..., &hdr_list, ...)` 发送
+
+**B. 已带 Authorization：服务端验签**
+
+- `pjsip_auth_srv_init(pool, &auth_srv, &realm, &auth_cred_callback, 0)`
+- `pjsip_auth_srv_verify(&auth_srv, rdata, &status_code)`（`status_code` 会被写成 200/401 等）
+- 若 `status_code == 200`：
+  - 读取 `Expires` 并 `GlobalCtl::setExpires(fromId, expiresValue)`
+  - 添加 `Date` 头到 `hdr_list`
+  - `registered = true`
+- `pjsip_endpt_respond(..., status_code, ..., &hdr_list, ...)` 发送
+- 若 `registered == true`：按 `expiresValue` 更新 `registered/lastRegTime`（与不鉴权分支一致）
+
+`auth_cred_callback()` 里用户名/密码来自 `GBOJ(gConfig)->usr()/pwd()`，并用 `pj_strdup(pool, ...)` 把 `pj_str_t` 拷贝到 pool，避免指针指向临时 `std::string` 内存。
+
+### 3.4 SUP 侧定时状态检查：`RegisterCheckProc()`
+
+SUP 侧 `SipRegister` 构造函数里还有：`m_regTimer = new TaskTimer(10)`，并在 `registerServiceStart()` 启动。
+
+`RegisterCheckProc()` 的行为：
+
+- 获取 `regTime`（优先 uptime）
+- 遍历 `GlobalCtl::instance()->getSubDomainInfoList()`
+- 若某节点 `registered == true` 且 `regTime - lastRegTime >= expires`：
+  - 将其 `registered = false`
+
+这对应“超过 Expires 期限后标记超时”。
+
+---
+
+## 4. `GlobalCtl`：状态与配置是怎么对上的
+
+### 4.1 SUB（客户端）侧：上级平台列表 `supDomainInfoList`
+
+结构体定义见 [SipSubService/include/GlobalCtl.h](../../SipSubService/include/GlobalCtl.h)：
+
+- `sipId/addrIp/sipPort/protocal`：对端平台信息
+- `expires`：注册有效期（发给对端）
+- `registered`：本地状态（是否认为注册成功）
+- `isAuth/usr/pwd/realm`：是否带鉴权、鉴权材料
+
+初始化见 [SipSubService/src/GlobalCtl.cpp](../../SipSubService/src/GlobalCtl.cpp)：把 `SipLocalConfig::upNodeInfoList` 拷贝进列表。
+
+一个很容易忽略的“现状细节”：
+
+- `if(iter->auth) { info.isAuth = (iter->auth = 1) ? true : false; ... }`
+  - 这里使用了赋值 `=` 而不是比较 `==`，会把 `iter->auth` 直接置为 1；从阅读角度看，它几乎等价于“只要进了 if，就认为要鉴权”。
+
+### 4.2 SUP（服务端）侧：下级设备列表 `subDomainInfoList`
+
+结构体定义见 [SipSupService/include/GlobalCtl.h](../../SipSupService/include/GlobalCtl.h)：
+
+- `sipId/addrIp/sipPort/protocal`：下级信息（来自配置 `ubNodeInfoList`）
+- `auth`：是否要求该下级走鉴权分支
+- `expires/registered/lastRegTime`：SUP 侧维护的注册状态
+
+SUP 的 `GlobalCtl` 提供：
+
+- `checkIsExist(id)`：用 `std::find(list.begin(), list.end(), id)` + `SubDomainInfo::operator==(string)`（比对 `sipId`）
+- `setExpires/setRegister/setLastRegTime`：写入状态
+- `getAuth(id)`：返回该下级是否要求鉴权
+
+现状细节：`getAuth(id)` 在“未找到 id”时没有显式返回值（C++ 层面是未定义行为），阅读/调试时要留意这个分支。
+
+---
+
+## 5. 字段对照表：从代码到 SIP 报文
+
+把最关键的头字段与代码生成逻辑对齐如下（以 SUB 发出的 REGISTER 为例）：
+
+- `From`：`SipMessage::setFrom()` → `"<sip:%s@%s>"`（本端 id + 本端 ip）
+- `To`：`SipMessage::setTo()` → `"<sip:%s@%s>"`（本端 id + 本端 ip）
+- `Request-URI`：`SipMessage::setUrl()` → `"sip:%s@%s:%d;transport=%s"`（对端 id + 对端 ip:port + transport）
+- `Contact`：`SipMessage::setContact()` → `"sip:%s@%s:%d"`（本端 id + 本端 ip:port）
+- `Expires`：来自 `node.expires`，传给 `pjsip_regc_init()`
+
+SUP 侧处理时：
+
+- `fromId`：`SipTaskBase::parseFromId()` 通过打印 `From:` 头字符串再截取得到
+- `Expires`：从 `PJSIP_H_EXPIRES` 头读取 `ivalue`，并写入 `GlobalCtl`
+
+---
+
+## 6. 线程、锁、回调：状态是“什么时候”更新的
+
+结合现有代码，可把时间线理解为：
+
+1. SUB 定时线程（`TaskTimer(3)`）触发：遍历上级列表并发 REGISTER
+2. PJSIP 收到响应时触发回调 `client_cb()`：把对应上级节点的 `registered=true`
+3. SUP 收到 REGISTER 时进入 `SipRegister::run()`：完成校验/鉴权并回包，同时在成功时更新 `registered/lastRegTime/expires`
+4. SUP 定时线程（`TaskTimer(10)`）触发 `RegisterCheckProc()`：若已超出 `expires`，将 `registered=false`
+
+锁相关现状：
+
+- SUB 的 `RegisterProc()` 在遍历和调用 `gbRegister()` 时持有 `GlobalCtl::globalLock`。
+- SUB 的 `client_cb()` 更新 `registered` 时未显式加锁（直接写 token 指向的结构体字段）。
+- SUP 的 `GlobalCtl::*` 写操作内部会加 `AutoMutexLock`。
+
+---
+
+## 7. 读代码时容易踩到的“现状假设”
+
+这些点不是“怎么优化”，只是为了读懂当前行为：
+
+1. SUP 侧认为 `From` 头打印出来后，`substr(11, 20)` 就是设备 ID（依赖格式稳定）。
+2. SUP 侧读取 `Expires` 时默认该头存在（若对端不带 Expires，这里会拿到空指针并有崩溃风险）。
+3. SUB 侧用 `node.registered` 作为唯一“是否继续发注册”的判断条件；回调只在 `200` 时置 true。
+4. SUB 侧传入回调的 `token` 是 `&node`（指向 list 元素）；只要该元素不被删除/容器不变，回调可找到对应节点。
+
+---
+
+## 8. 学习用自测/抓包（保持最少）
+
+- Wireshark 过滤：`sip && sip.Method == "REGISTER"`
+- 对照 SUB 发出的 `From/To/Contact/Request-URI/Expires` 是否与本笔记一致
+- 对照 SUP 回的响应码（`200/401/403`）以及是否携带 `WWW-Authenticate`（鉴权分支）
 # GB28181 注册（REGISTER）学习笔记（围绕 `SipRegister`）
 
 > 对应工程代码：

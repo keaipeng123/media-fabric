@@ -31,6 +31,7 @@
 
 #include"ECThread.h"
 #include"SipRegister.h"
+#include"SipHeartBeat.h"
 using namespace EC;
 
 class SetGlogLevel
@@ -101,6 +102,9 @@ int main()
 
 	SipRegister* sipRegister=new SipRegister();
 	sipRegister->registerServiceStart();
+
+	SipHeartBeat* heartBeat=new SipHeartBeat();
+	heartBeat->gbHeartBeatServiceStart();
 
 	while(true)
 	{

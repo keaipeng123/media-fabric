@@ -32,7 +32,7 @@ bool GlobalCtl::init(void *param)
         info.expires=iter->expires;
         if(iter->auth)
         {
-            info.isAuth=(iter->auth=1)?true:false;
+            info.isAuth=(iter->auth==1)?true:false;
             info.usr=iter->usr;
             info.pwd=iter->pwd;
             info.realm=iter->realm;
