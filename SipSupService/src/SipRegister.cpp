@@ -2,7 +2,6 @@
 #include"Common.h"
 #include"SipDef.h"
 #include"GlobalCtl.h"
-#include<sys/sysinfo.h>
 
 
 static pj_status_t auth_cred_callback(pj_pool_t *pool,

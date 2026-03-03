@@ -39,21 +39,48 @@
 static void HeartBeatProc(void* param);
 ```
 
-这里的关键点：**定时器框架（`TaskTimer`）只认识“函数指针 + 一个 `void*` 参数”这种 C 风格回调**。
+这里“签名决定必须传入上下文指针”可以理解成一句大白话：
 
-因此：
+> `TaskTimer` 只会在时间到了之后调用 `fun(param)`，它不会（也没法）帮你自动找到“应该操作哪个对象”。
 
-- 回调触发时，框架只能把当初保存的那个 `void*` 原样传回来。
-- 回调函数本身是 `static`，没有隐式 `this`。
+也就是说，`TaskTimer` 的能力非常固定：
+
+- 你给它一个**函数指针**（比如 `HeartBeatProc`）
+- 再给它一个**额外参数**（类型被统一写成 `void*`，能装下“任何指针”）
+- 之后它在内部线程里，按周期去做：`m_timerFun(m_funParam)`
+
+结合工程实现看会更直观（见 `SipSubService/src/TaskTimer.cpp`）：
+
+1. `setTimerFun(fun, param)`：把回调函数保存到 `m_timerFun`，把参数保存到 `m_funParam`
+2. `start()`：创建线程，线程入口是 `TaskTimer::timer(void* context)`，并把 **`TaskTimer` 自己的 `this`** 作为 `context` 传进去
+3. 在线程函数 `timer()` 里，每到时间点就执行：
+
+    ```cpp
+    pthis->m_timerFun(pthis->m_funParam);
+    ```
+
+注意第 3 步：**`TaskTimer` 调回调时，唯一能传回去的“业务信息”就是那个 `void* m_funParam`**。所以你想在回调里操作某个对象，就必须提前把“对象地址”塞进这个 `void*`。
+
+因此在 `SipHeartBeat::gbHeartBeatServiceStart()` 里才会写：
+
+- `m_heartTimer->setTimerFun(HeartBeatProc, this);`
+
+含义就是：
+
+- “将来定时器触发时，请调用 `HeartBeatProc(param)`”
+- “这里的 `param` 就用当前这个 `SipHeartBeat` 对象的地址（`this`）”
 
 ### 2.2 `static` 成员函数没有隐式 `this`
 
-在 C++ 里：
+在 C++ 里要分清两种函数：
 
-- 普通成员函数隐式形态是 `void f(SipHeartBeat* this, ...)`，所以能直接用 `this`。
-- `static` 成员函数本质上就是“放在类命名空间里的普通函数”，没有 `this`，所以**无法“直接获取到当前对象”**。
+- **普通成员函数**：调用时必须“绑定某个对象”，它天然就知道自己属于谁，所以函数体里可以直接用 `this`。
+    - 可以粗略理解成编译器会帮你偷偷多传一个参数：`SipHeartBeat* this`
+- **`static` 成员函数**：它不属于某个具体对象，更像“放在类作用域里的普通函数”，所以它**没有**隐式 `this`。
 
-所以当前代码在回调里做了标准的 C 回调“回传上下文”写法：
+但 `TaskTimer` 需要的是“可直接用函数指针调用的回调”，所以回调通常写成 `static`（或者干脆写成普通全局函数）。既然回调拿不到 `this`，那就只能靠 `void* param` 把对象地址带回来。
+
+所以你看到的就是非常经典的 C 风格回调写法（把上下文指针强转回真实类型）：
 
 ```cpp
 SipHeartBeat* pthis=(SipHeartBeat*)param;
@@ -62,6 +89,16 @@ pthis->gbHeartBeat(*iter);
 ```
 
 这就是为什么必须把 `this` 作为 `void*` 传进去。
+
+### 2.3 一个“闹钟”类比（帮助快速理解）
+
+把 `TaskTimer` 想象成闹钟：
+
+- 你只能告诉闹钟两件事：
+    1) 时间到了要“拨打哪个号码”（回调函数指针）
+    2) 拨通后要“报什么暗号”（`void* param`）
+
+`this` 就是那个暗号：闹钟响的时候，回调函数通过 `param` 才知道“我应该去操作哪个 `SipHeartBeat` 对象”。
 
 ---
 

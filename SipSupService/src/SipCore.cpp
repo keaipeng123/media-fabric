@@ -4,8 +4,8 @@
 #include"GlobalCtl.h"
 #include "SipTaskBase.h"
 #include "SipRegister.h"
+#include "SipHeartBeat.h"
 #include "ECThread.h"  
-#include"tinyxml2.h" 
 
 using namespace EC;
 
@@ -43,34 +43,34 @@ pj_bool_t onRxRequest(pjsip_rx_data *rdata)
     }
     else if(msg->line.req.method.id==PJSIP_OTHER_METHOD)
     {
-        tinyxml2::XMLDocument* pxmlDoc=NULL;
-        pxmlDoc=new tinyxml2::XMLDocument();
-        if(pxmlDoc)
-        {
-            pxmlDoc->Parse((char*)msg->body->data);
-        }
-        tinyxml2::XMLElement* pRootElement=pxmlDoc->RootElement();
-        string rootType = pRootElement->Value();
-        LOG(INFO)<<"rootType:"<<rootType;
-        tinyxml2::XMLElement* cmdElement=pRootElement->FirstChildElement("CmdType");
-        string cmdType;
-        if (cmdElement&&cmdElement->GetText())
-        {
-            cmdType=cmdElement->GetText();
-            // if(rootType==SIP_NOTIFY&&cmdType==SIP_HEARTBEAT)
-            // {
-            //     param->base=new SipHeartBeat();
-            // }
-        }
-        LOG(INFO)<<"cmdType:"<<cmdType;
-        // string rootType = "",cmdType = "CmdType",cmdValue;
-        // tinyxml2::XMLElement* root = SipTaskBase::parseXmlData(msg,rootType,cmdType,cmdValue);
-        // LOG(INFO)<<"rootType:"<<rootType;
-        // LOG(INFO)<<"cmdValue:"<<cmdValue;
-        // if(rootType == SIP_NOTIFY && cmdValue == SIP_HEARTBEAT)
+        // tinyxml2::XMLDocument* pxmlDoc=NULL;
+        // pxmlDoc=new tinyxml2::XMLDocument();
+        // if(pxmlDoc)
         // {
-        //     param->base=new SipHeartBeat();
+        //     pxmlDoc->Parse((char*)msg->body->data);
         // }
+        // tinyxml2::XMLElement* pRootElement=pxmlDoc->RootElement();
+        // string rootType = pRootElement->Value();
+        // LOG(INFO)<<"rootType:"<<rootType;
+        // tinyxml2::XMLElement* cmdElement=pRootElement->FirstChildElement("CmdType");
+        // string cmdType;
+        // if (cmdElement&&cmdElement->GetText())
+        // {
+        //     cmdType=cmdElement->GetText();
+        //     // if(rootType==SIP_NOTIFY&&cmdType==SIP_HEARTBEAT)
+        //     // {
+        //     //     param->base=new SipHeartBeat();
+        //     // }
+        // }
+        //LOG(INFO)<<"cmdType:"<<cmdType;
+        string rootType = "",cmdType = "CmdType",cmdValue;
+        tinyxml2::XMLElement* root = SipTaskBase::parseXmlData(msg,rootType,cmdType,cmdValue);
+        LOG(INFO)<<"rootType:"<<rootType;
+        LOG(INFO)<<"cmdValue:"<<cmdValue;
+        if(rootType == SIP_NOTIFY && cmdValue == SIP_HEARTBEAT)
+        {
+            param->base=new SipHeartBeat();
+        }
         // else if(rootType==SIP_RESPONSE)
         // {
         //     if(cmdValue==SIP_CATALOG)
