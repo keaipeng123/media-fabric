@@ -189,18 +189,3 @@ parse.getXmlData(xmlbuf);
 4) XML 声明可配置（例如声明 encoding：`gb2312/utf-8`）
 
 ---
-
-## 7. 你可以用它扩展哪些 GB28181 消息？
-
-把 `<Notify>` 换成不同根节点/字段，就可以生成：
-
-- 设备目录响应（`<Response><CmdType>Catalog</CmdType>...</Response>`）
-- 设备信息响应（`<Response><CmdType>DeviceInfo</CmdType>...</Response>`）
-- 报警通知（`<Notify><CmdType>Alarm</CmdType>...</Notify>`）
-
-核心套路不变：
-
-1) `AddRootNode`
-2) 多次 `InsertSubNode`
-3) `getXmlData` 获取字符串
-4) 填入 `pjsip_msg_body_create(..., "Application", "MANSCDP+xml", ...)`
