@@ -1,7 +1,7 @@
 #include"SipHeartBeat.h"
 #include"Common.h"
 #include "SipMessage.h"
-//#include"XmlParser.h"
+#include"XmlParser.h"
 //#include<string>
 
 int SipHeartBeat::m_snIndex=0;
@@ -84,7 +84,7 @@ int SipHeartBeat::gbHeartBeat(GlobalCtl::SupDomainInfo& node)
 
     char strIndex[16]={0};
     sprintf(strIndex,"%d",m_snIndex++);
-    #if 1
+    #if 0
     string keepalive="<?xml version=\"1.0\"?>\r\n";
     keepalive+="<Notify>\r\n";
     keepalive+="<CmdType>keepalive</CmdType>\r\n";
@@ -98,23 +98,23 @@ int SipHeartBeat::gbHeartBeat(GlobalCtl::SupDomainInfo& node)
     keepalive+="</Notify>\r\n";
     #endif
 
-    // //XmlParser* m_heartXml =new XmlParser();//堆上创建，需要手动释放
-    // XmlParser parse;//栈上创建
-    // tinyxml2::XMLElement* rootNode=parse.AddRootNode((char*)"Notify");
-    // parse.InsertSubNode(rootNode,(char*)"CmdType",(char*)"keepalive");
-    // parse.InsertSubNode(rootNode,(char*)"SN",strIndex);
-    // parse.InsertSubNode(rootNode,(char*)"DeviceID",(char*)GBOJ(gConfig)->sipId().c_str());
-    // parse.InsertSubNode(rootNode,(char*)"Status",(char*)"OK");
-    // char* xmlbuf=new char[1024];
-    // memset(xmlbuf,0,1024);
-    // parse.getXmlData(xmlbuf);
-    // //LOG(INFO)<<"getXmlData:"<<xmlbuf;
+    //XmlParser* m_heartXml =new XmlParser();//堆上创建，需要手动释放
+    XmlParser parse;//栈上创建
+    tinyxml2::XMLElement* rootNode=parse.AddRootNode((char*)"Notify");
+    parse.InsertSubNode(rootNode,(char*)"CmdType",(char*)"keepalive");
+    parse.InsertSubNode(rootNode,(char*)"SN",strIndex);
+    parse.InsertSubNode(rootNode,(char*)"DeviceID",(char*)GBOJ(gConfig)->sipId().c_str());
+    parse.InsertSubNode(rootNode,(char*)"Status",(char*)"OK");
+    char* xmlbuf=new char[1024];
+    memset(xmlbuf,0,1024);
+    parse.getXmlData(xmlbuf);
+    LOG(INFO)<<"getXmlData:"<<xmlbuf;
     
 
     pj_str_t type =pj_str("Application");
     pj_str_t subtype=pj_str("MANSCDP+xml");
-    //pj_str_t xmldata=pj_str(xmlbuf);
-    pj_str_t xmldata=pj_str((char*)keepalive.c_str());
+    pj_str_t xmldata=pj_str(xmlbuf);
+    //pj_str_t xmldata=pj_str((char*)keepalive.c_str());
     tdata->msg->body=pjsip_msg_body_create(tdata->pool,&type,&subtype,&xmldata);
     status=pjsip_endpt_send_request(GBOJ(gSipServer)->GetEndPoint(),tdata,-1,&node,&response_callback);
     if(PJ_SUCCESS!=status)
