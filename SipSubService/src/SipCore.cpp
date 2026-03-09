@@ -2,6 +2,8 @@
 #include "Common.h"
 #include "SipDef.h"
 #include"GlobalCtl.h"
+#include"SipTaskBase.h"
+#include"SipDirectory.h"
 
 static int pollingEvent(void* arg)
 {
@@ -23,6 +25,50 @@ static int pollingEvent(void* arg)
 //rx 接收
 pj_bool_t onRxRequest(pjsip_rx_data *rdata)
 {
+    LOG(INFO)<<"request msg coming...";
+    if(NULL==rdata||NULL==rdata->msg_info.msg)
+    {
+        return PJ_FALSE;
+    }
+    threadParam* param=new threadParam();
+    pjsip_rx_data_clone(rdata,0,&param->data);
+    pjsip_msg* msg=rdata->msg_info.msg;
+    if(msg->line.req.method.id==PJSIP_OTHER_METHOD)
+    {
+        string rootType="",cmdType="CmdType",cmdValue="";
+        SipTaskBase::parseXmlData(msg,rootType,cmdType,cmdValue);
+        LOG(INFO)<<"rootType:"<<rootType;
+        LOG(INFO)<<"cmdValue:"<<cmdValue;
+        if(rootType == SIP_QUERY )
+        {
+            if(cmdValue==SIP_CATALOG)
+            {
+                param->base=new SipDirectory();
+            }
+            // else if(cmdValue==SIP_RECORDINFO)
+            // {
+            //     param->base=new SipRecordList();
+            // }
+        }
+    }
+    //pjsip对ack和cancel事件做了孤立，dailog模块儿不会将这两个事件发送到应用层，这里接收不到，并且ack和cancel在生产中实际不会使用
+    // else if(msg->line.req.method.id == PJSIP_INVITE_METHOD
+    //         ||msg->line.req.method.id == PJSIP_BYE_METHOD)
+    // {
+    //     param->base=new SipGbPlay();
+    // }
+    pthread_t pid;
+    int ret=EC::ECThread::createThread(SipCore::dealTaskThread,param,pid);
+    if (ret!=0)
+    {
+        LOG(ERROR)<<"create task thread error";
+        if(param)
+        {
+            delete param;
+            param = NULL;
+        }
+        return PJ_FALSE;
+    }
     return PJ_SUCCESS;
 }
 static pjsip_module recv_mod=
@@ -53,6 +99,20 @@ SipCore::~SipCore()
     pj_caching_pool_destroy(&m_cachingPool);
     pj_shutdown();
     GlobalCtl::gStopPool=true;
+}
+
+void* SipCore::dealTaskThread(void* arg)
+{
+    threadParam* param = (threadParam*)arg;
+    if(!param || param->base == NULL)
+    {
+        return NULL;
+    }
+    pj_thread_desc desc;
+    pjcall_thread_register(desc);
+    param->base->run(param->data);
+    delete param;
+    param=NULL;
 }
 
 bool SipCore::InitSip(int sipPort)

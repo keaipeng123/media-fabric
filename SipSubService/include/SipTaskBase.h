@@ -18,7 +18,7 @@ class SipTaskBase
         LOG(INFO)<<"~SipTaskBase";
     }
 
-    virtual pj_status_t run(pjsip_rx_data *rdata)=0;
+    virtual void run(pjsip_rx_data *rdata)=0;
     //从 SIP 消息的 body 中提取一段 XML，获取根节点类型，以及某个指定标签的文本值
     static tinyxml2::XMLElement* parseXmlData(pjsip_msg* msg,string& rootType,const string xmlkey,string& xmlvalue);
     protected://只能由派生类去调用

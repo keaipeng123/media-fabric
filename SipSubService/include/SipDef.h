@@ -5,4 +5,10 @@
 #define SIP_STACK_SIZE 1024*256
 #define SIP_ALLOC_POOL_1M 1024*1024*1
 
+#define SIP_NOTIFY "Notify"
+#define SIP_HEARTBEAT "keepalive"
+#define SIP_QUERY "Query"
+#define SIP_CATALOG "Catalog"
+#define SIP_RECORDINFO "RecordInfo"
+
 #endif
