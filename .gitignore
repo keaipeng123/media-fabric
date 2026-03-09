@@ -26,3 +26,9 @@ log/
 *.o
 *.obj
 *.d
+
+3rd
+
+pjproject-2.7.2-addgb28181
+
+.gitignore
