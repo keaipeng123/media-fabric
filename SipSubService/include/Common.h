@@ -47,7 +47,9 @@ class JsonParse
         bool bret =false;
         Json::CharReaderBuilder builder;
         Json::CharReaderBuilder::strictMode(&builder.settings_);
-        builder["collectComents"]=true;
+        //LOG(INFO) << "CharReaderBuilder defaults:\n" << builder.settings_.toStyledString();
+        builder["collectComments"]=true;
+        //LOG(INFO) << "CharReaderBuilder strictMode:\n" << builder.settings_.toStyledString();
 
         const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());//智能指针
         JSONCPP_STRING errs;
