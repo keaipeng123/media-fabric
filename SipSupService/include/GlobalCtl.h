@@ -82,6 +82,7 @@ class GlobalCtl
 
     public:
     static bool checkIsExist(string id);
+    static bool checkIsVaild(string id);
     static void setExpires(string id,int expires);
     static void setRegister(string id,bool registered);
     static void setLastRegTime(string id,time_t t);

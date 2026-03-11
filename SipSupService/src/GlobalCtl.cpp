@@ -62,6 +62,18 @@ bool GlobalCtl::checkIsExist(string id)
     return false;
 }
 
+bool GlobalCtl::checkIsVaild(string id)
+{
+    AutoMutexLock lck(&globalLock);
+    SUBDOMAININFOLIST::iterator it;
+    it=std::find(subDomainInfoList.begin(),subDomainInfoList.end(),id);
+    if(it!=subDomainInfoList.end()&&it->registered)
+    {
+        return true;
+    }
+    return false;
+}
+
 
 void GlobalCtl::setExpires(string id,int expires)
 {

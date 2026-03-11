@@ -5,7 +5,8 @@
 #include "SipTaskBase.h"
 #include "SipRegister.h"
 #include "SipHeartBeat.h"
-#include "ECThread.h"  
+#include "ECThread.h"
+#include"SipDirectory.h"  
 
 using namespace EC;
 
@@ -71,17 +72,17 @@ pj_bool_t onRxRequest(pjsip_rx_data *rdata)
         {
             param->base=new SipHeartBeat();
         }
-        // else if(rootType==SIP_RESPONSE)
-        // {
-        //     if(cmdValue==SIP_CATALOG)
-        //     {
-        //         param->base=new SipDirectory(root);
-        //     }
-        //     else if(cmdValue==SIP_RECORDINFO)
-        //     {
-        //         param->base=new SipRecordList(root);
-        //     }
-        // }
+        else if(rootType==SIP_RESPONSE)
+        {
+            if(cmdValue==SIP_CATALOG)
+            {
+                param->base=new SipDirectory(root);
+            }
+            else if(cmdValue==SIP_RECORDINFO)
+            {
+                //param->base=new SipRecordList(root);
+            }
+        }
     }
     pthread_t pid;
     int ret=EC::ECThread::createThread(SipCore::dealTaskThread,param,pid);
