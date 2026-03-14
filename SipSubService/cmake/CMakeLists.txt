@@ -6,6 +6,7 @@ MESSAGE(STATUS "operation system is ${CMAKE_SYSTEM}")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=gnu++0x")
 #在编译时使用-g选项添加调试信息，编译后的程序可以使用gdb调试
 ADD_DEFINITIONS(-g)
+FIND_PACKAGE(OpenSSL REQUIRED)
 #指定需要编译的源文件路径，并指定相应的变量名
 AUX_SOURCE_DIRECTORY(../src SRC)
 #添加头文件路径
@@ -33,3 +34,4 @@ TARGET_LINK_LIBRARIES(${EXE_NAME} libjrtp.a libjthread.a)
 TARGET_LINK_LIBRARIES(${EXE_NAME} libtinyxml2.a)
 TARGET_LINK_LIBRARIES(${EXE_NAME} libjsoncpp.a)
 TARGET_LINK_LIBRARIES(${EXE_NAME} libevent.a libevent_pthreads.a)
+TARGET_LINK_LIBRARIES(${EXE_NAME} ${OPENSSL_LIBRARIES})

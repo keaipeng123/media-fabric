@@ -1,12 +1,13 @@
 #include "SipCore.h"
 #include "Common.h"
 #include "SipDef.h"
-#include"GlobalCtl.h"
+#include "GlobalCtl.h"
 #include "SipTaskBase.h"
 #include "SipRegister.h"
 #include "SipHeartBeat.h"
 #include "ECThread.h"
-#include"SipDirectory.h"  
+#include "SipDirectory.h"  
+#include "SipGbPlay.h"
 
 using namespace EC;
 
@@ -147,6 +148,7 @@ SipCore::SipCore()
 }
 SipCore::~SipCore()
 {
+    pjmedia_endpt_destroy(m_mediaEndpt);
     pjsip_endpt_destroy(m_endpt);
     pj_caching_pool_destroy(&m_cachingPool);
     pj_shutdown();
@@ -190,6 +192,18 @@ bool SipCore::InitSip(int sipPort)
             break;
         }
 
+          //【目的】取出端点内部已经建好的 I/O 队列
+        //【详解】pjlib 的 ioqueue 是对 select/epoll/kqueue/iocp 的跨平台封装；把它传给 pjmedia，可以让媒体层与 SIP 共用同一个事件循环。
+        pj_ioqueue_t* ioqueue=pjsip_endpt_get_ioqueue(m_endpt);
+        //【目的】创建 pjmedia 端点
+        //【详解】媒体端点负责加载 codec、创建 RTP/RTCP 会话、桥接声音设备等。第三个参数 0 表示让库自己选时钟源。
+        status=pjmedia_endpt_create(&m_cachingPool.factory,ioqueue,0,&m_mediaEndpt);
+        if(PJ_SUCCESS!=status)
+        {
+            LOG(ERROR)<<"create media endpoint faild,code:"<<status;
+            break;
+        }
+
         //会话事务模块
         //目的】注册 事务层 模块
         //【详解】把 INVITE Client/Server Transaction、Non-INVITE Transaction 全部挂到 SIP 端点，提供状态机、定时器重传、ACK/CANCEL 处理。
@@ -224,6 +238,37 @@ bool SipCore::InitSip(int sipPort)
         if(PJ_SUCCESS!=status)
         {
             LOG(ERROR)<<"register recv module faild,code:"<<status;
+            break;
+        }
+
+        //【目的】加载 100rel（可靠临时响应）扩展模块
+        //【详解】让 UAS 可以发 183/180 PRACK 等可靠临时响应，符合 RFC 3262。
+        status=pjsip_100rel_init_module(m_endpt);
+        if(PJ_SUCCESS!=status)
+        {
+            LOG(ERROR)<<"100rel module init faild,code:"<<status;
+            break;
+        }
+
+        pjsip_inv_callback inv_cb;
+        pj_bzero(&inv_cb,sizeof(inv_cb));
+        inv_cb.on_state_changed=&SipGbPlay::OnStateChanged; //请求会话状态发生变更时回调
+        inv_cb.on_new_session=&SipGbPlay::OnNewSession;//消息会话请求模块创建了一个新的对话框 上述两个会话pjsip需要强制初始化，可以不用但是必须强制初始化
+        inv_cb.on_media_update=&SipGbPlay::OnMediaUpdate;//处理媒体相关事务，解析sdp协议，rtp传输等（下级发送200ok并且携带sdp时会触发）
+        inv_cb.on_send_ack = &SipGbPlay::OnSendAck; //这个回调是对响应的200ok的sdp进行校验
+        /*
+        【目的】注册 INVITE会话（INVITE session）模块并挂回调
+        【详解】
+        必须提供 4 个回调：
+        on_state_changed   – 会话状态迁移（EARLY→CONNECTING→CONFIRMED→DISCONNECTED）
+        on_new_session     – 新 dialog 产生
+        on_media_update    – SDP 有变更（收到/发出 200 OK 带 SDP 时触发）
+        on_send_ack        – 发送 ACK 前给一次校验/修改 SDP 的机会
+        */
+        status=pjsip_inv_usage_init(m_endpt,&inv_cb);
+        if(PJ_SUCCESS!=status)
+        {
+            LOG(ERROR)<<"register invite module faild,code:"<<status;
             break;
         }
 
