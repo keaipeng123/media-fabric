@@ -4,6 +4,7 @@
 #include "SipLocalConfig.h"
 #include "ThreadPool.h"
 #include "SipCore.h"
+#include "SipDef.h"
 #include<time.h>
 #include<random>
 #include<sstream>
@@ -79,6 +80,7 @@ class GlobalCtl
     static pthread_mutex_t globalLock;
 
     static bool gStopPool;
+    static bool gRcvIpc;
 
     public:
     static bool checkIsExist(string id);
@@ -87,6 +89,7 @@ class GlobalCtl
     static void setRegister(string id,bool registered);
     static void setLastRegTime(string id,time_t t);
     static bool getAuth(string id); 
+    static DevTypeCode getSipDevInfo(string id);
 
     static string randomNum(int length);
 

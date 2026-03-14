@@ -92,16 +92,16 @@ void SipDirectory::SaveDir(int& status_code)
             tinyxml2::XMLElement* pChild=pItem->FirstChildElement("DeviceID");
             if(pChild&&pChild->GetText())
             {
-                // strDeviceID=pChild->GetText();
-                // if(strDeviceID.length()==20)
-                // {
-                //     DevTypeCode type=GlobalCtl::getSipDevInfo(strDeviceID);
-                //     if (type==Ipc_Code || type==Camera_Code)
-                //     {
-                //         GlobalCtl::gRcvIpc=true;
-                //         LOG(INFO)<<"get ipc device";
-                //     }
-                // }
+                strDeviceID=pChild->GetText();
+                if(strDeviceID.length()==20)
+                {
+                    DevTypeCode type=GlobalCtl::getSipDevInfo(strDeviceID);
+                    if (type==Ipc_Code || type==Camera_Code)
+                    {
+                        GlobalCtl::gRcvIpc=true;
+                        LOG(INFO)<<"get ipc device";
+                    }
+                }
             }
 
             pChild=pItem->FirstChildElement("Manufacturer");
