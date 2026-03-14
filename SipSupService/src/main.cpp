@@ -32,6 +32,7 @@
 #include"ECThread.h"
 #include"SipRegister.h"
 #include"GetCatalog.h"
+#include"OpenStream.h"
 using namespace EC;
 
 class SetGlogLevel
@@ -106,6 +107,9 @@ int main()
 
 	sleep(5);//等待注册完成后再发送目录查询请求，确保下级设备已经注册成功
 	GetCatalog* getCat=new GetCatalog();
+
+	OpenStream* gbStream=new OpenStream();
+	gbStream->StreamServiceStart();
 
 	while(true)
 	{

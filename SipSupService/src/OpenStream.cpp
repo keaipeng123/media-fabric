@@ -261,26 +261,26 @@ void OpenStream::StreamGetProc(void* param)
         return;
    }
 
-//    pj_str_t subjectName=pj_str("Subject");
-//    char subjectBuf[128]={0};
-//    sprintf(subjectBuf,"%s:0,%s:0",info.devid.c_str(),GBOJ(gConfig)->sipId().c_str());
-//    pj_str_t subjectValue=pj_str(subjectBuf);
-//    pjsip_generic_string_hdr* hdr=pjsip_generic_string_hdr_create(GBOJ(gSipServer)->GetPool(),&subjectName,&subjectValue);
-//    pjsip_msg_add_hdr(tdata->msg,(pjsip_hdr*)hdr);
+   pj_str_t subjectName=pj_str("Subject");
+   char subjectBuf[128]={0};
+   sprintf(subjectBuf,"%s:0,%s:0",info.devid.c_str(),GBOJ(gConfig)->sipId().c_str());
+   pj_str_t subjectValue=pj_str(subjectBuf);
+   pjsip_generic_string_hdr* hdr=pjsip_generic_string_hdr_create(GBOJ(gSipServer)->GetPool(),&subjectName,&subjectValue);
+   pjsip_msg_add_hdr(tdata->msg,(pjsip_hdr*)hdr);
 
-//    status=pjsip_inv_send_msg(inv,tdata);
-//    if(PJ_SUCCESS!=status)
-//    {
-//         pjsip_dlg_terminate(dlg);
-//         LOG(ERROR)<<"pjsip_inv_send_msg ERROR";
-//         return;
-//    }
+   status=pjsip_inv_send_msg(inv,tdata);
+   if(PJ_SUCCESS!=status)
+   {
+        pjsip_dlg_terminate(dlg);
+        LOG(ERROR)<<"pjsip_inv_send_msg ERROR";
+        return;
+   }
 
 
 //    AutoMutexLock lck(&GlobalCtl::gStreamLock);
 //    GlobalCtl::glistSession.push_back(pSession);
 
-//    GlobalCtl::gRcvIpc=false;
+    GlobalCtl::gRcvIpc=false;
 //    //sleep(3);
 //    //OpenStream::StreamStop("11000000002000000001","11000000001310000059");
 
