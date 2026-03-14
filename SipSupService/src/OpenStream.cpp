@@ -168,76 +168,76 @@ void OpenStream::StreamGetProc(void* param)
         return;
     }
 
-//     //sdp part 这里也可以使用string字符串拼接的方式
-//     pjmedia_sdp_session* sdp=NULL;
-//     /*
-//         Session Description Protocol Version (v): 0
-//         Owner/Creator, Session Id (o): 33010602001310019325 0 0 IN IP4 10.64.49.44
-//         Session Name (s): Play
-//         Connection Information (c): IN IP4 10.64.49.44
-//         Time Description, active time (t): 0 0
-//         Media Description, name and address (m): video 5494 RTP/AVP 96
-//         Media Attribute (a): rtpmap:96 PS/90000
-//         Media Attribute (a): recvonly
-//     */
-//    //pjsip中对结构体内存的创建
-//    sdp=(pjmedia_sdp_session*)pj_pool_zalloc(GBOJ(gSipServer)->GetPool(),sizeof(pjmedia_sdp_session));//这里需要内存池poll，内存池poll一般在txdata或rxdata里面，需要将sip初始化处的内存池保存起来
-//    //Session Description Protocol Version (v): 0
-//    sdp->origin.version=0;
-//    // Owner/Creator, Session Id (o): 33010602001310019325 0 0 IN IP4 10.64.49.44
-//    sdp->origin.user=pj_str((char*)info.devid.c_str());
-//    sdp->origin.id=0;
-//    sdp->origin.net_type=pj_str("IN");
-//    sdp->origin.addr_type=pj_str("IP4");
-//    sdp->origin.addr=pj_str((char*)GBOJ(gConfig)->sipIp().c_str());//开流端ip
-//    //Session Name (s): Play
-//    sdp->name=pj_str((char*)info.streamName.c_str());
-//    //Connection Information (c): IN IP4 10.64.49.44
-//    sdp->conn=(pjmedia_sdp_conn*)pj_pool_zalloc(GBOJ(gSipServer)->GetPool(),sizeof(pjmedia_sdp_conn));
-//    sdp->conn->net_type=pj_str("IN");
-//    sdp->conn->addr_type=pj_str("IP4");
-//    sdp->conn->addr=pj_str((char*)GBOJ(gConfig)->sipIp().c_str());//收流端ip
-//    //Time Description, active time (t): 0 0
-//    sdp->time.start=info.startTime;
-//    sdp->time.stop=info.endTime;
+    //sdp part 这里也可以使用string字符串拼接的方式
+    pjmedia_sdp_session* sdp=NULL;
+    /*
+        Session Description Protocol Version (v): 0
+        Owner/Creator, Session Id (o): 33010602001310019325 0 0 IN IP4 10.64.49.44
+        Session Name (s): Play
+        Connection Information (c): IN IP4 10.64.49.44
+        Time Description, active time (t): 0 0
+        Media Description, name and address (m): video 5494 RTP/AVP 96
+        Media Attribute (a): rtpmap:96 PS/90000
+        Media Attribute (a): recvonly
+    */
+   //pjsip中对结构体内存的创建
+   sdp=(pjmedia_sdp_session*)pj_pool_zalloc(GBOJ(gSipServer)->GetPool(),sizeof(pjmedia_sdp_session));//这里需要内存池poll，内存池poll一般在txdata或rxdata里面，需要将sip初始化处的内存池保存起来
+   //Session Description Protocol Version (v): 0
+   sdp->origin.version=0;
+   // Owner/Creator, Session Id (o): 33010602001310019325 0 0 IN IP4 10.64.49.44
+   sdp->origin.user=pj_str((char*)info.devid.c_str());
+   sdp->origin.id=0;
+   sdp->origin.net_type=pj_str("IN");
+   sdp->origin.addr_type=pj_str("IP4");
+   sdp->origin.addr=pj_str((char*)GBOJ(gConfig)->sipIp().c_str());//开流端ip
+   //Session Name (s): Play
+   sdp->name=pj_str((char*)info.streamName.c_str());
+   //Connection Information (c): IN IP4 10.64.49.44
+   sdp->conn=(pjmedia_sdp_conn*)pj_pool_zalloc(GBOJ(gSipServer)->GetPool(),sizeof(pjmedia_sdp_conn));
+   sdp->conn->net_type=pj_str("IN");
+   sdp->conn->addr_type=pj_str("IP4");
+   sdp->conn->addr=pj_str((char*)GBOJ(gConfig)->sipIp().c_str());//收流端ip
+   //Time Description, active time (t): 0 0
+   sdp->time.start=info.startTime;
+   sdp->time.stop=info.endTime;
 
-//    //Media Description, name and address (m): video 5494 RTP/AVP 96
-//    sdp->media_count=1;//多个媒体会话的描述index
-//    pjmedia_sdp_media* m=(pjmedia_sdp_media*)pj_pool_zalloc(GBOJ(gSipServer)->GetPool(),sizeof(pjmedia_sdp_media));
-//    sdp->media[0]=m;
-//    m->desc.media=pj_str("video");
-//    m->desc.port=rtp_port;
-//    m->desc.port_count=1;
-//    if(info.protocal)
-//    {
-//         m->desc.transport=pj_str("TCP/RTP/AVP");
-//    }
-//    else
-//    {
-//         m->desc.transport=pj_str("RTP/AVP");
-//    }
-//    m->desc.fmt_count=1;
-//    m->desc.fmt[0]=pj_str("96");
+   //Media Description, name and address (m): video 5494 RTP/AVP 96
+   sdp->media_count=1;//多个媒体会话的描述index
+   pjmedia_sdp_media* m=(pjmedia_sdp_media*)pj_pool_zalloc(GBOJ(gSipServer)->GetPool(),sizeof(pjmedia_sdp_media));
+   sdp->media[0]=m;
+   m->desc.media=pj_str("video");
+   m->desc.port=20000;
+   m->desc.port_count=1;
+   if(info.protocal)
+   {
+        m->desc.transport=pj_str("TCP/RTP/AVP");
+   }
+   else
+   {
+        m->desc.transport=pj_str("RTP/AVP");
+   }
+   m->desc.fmt_count=1;
+   m->desc.fmt[0]=pj_str("96");
 
-//    // Media Attribute (a): rtpmap:96 PS/90000
-//    // Media Attribute (a): recvonly
-//    // Media Attribute (a): setup:active
-//    m->attr_count=0;
-//    pjmedia_sdp_attr* attr=(pjmedia_sdp_attr*)pj_pool_zalloc(GBOJ(gSipServer)->GetPool(),sizeof(pjmedia_sdp_attr));
-//    attr->name=pj_str("rtpmap");
-//    attr->value=pj_str((char*)rtpmap_ps.c_str());
-//    m->attr[m->attr_count++]=attr;
+   // Media Attribute (a): rtpmap:96 PS/90000
+   // Media Attribute (a): recvonly
+   // Media Attribute (a): setup:active
+   m->attr_count=0;
+   pjmedia_sdp_attr* attr=(pjmedia_sdp_attr*)pj_pool_zalloc(GBOJ(gSipServer)->GetPool(),sizeof(pjmedia_sdp_attr));
+   attr->name=pj_str("rtpmap");
+   attr->value=pj_str((char*)rtpmap_ps.c_str());
+   m->attr[m->attr_count++]=attr;
 
-//    attr=(pjmedia_sdp_attr*)pj_pool_zalloc(GBOJ(gSipServer)->GetPool(),sizeof(pjmedia_sdp_attr));
-//    attr->name=pj_str("recvonly");
-//    m->attr[m->attr_count++]=attr;
-//    if(info.protocal)
-//    {
-//         attr=(pjmedia_sdp_attr*)pj_pool_zalloc(GBOJ(gSipServer)->GetPool(),sizeof(pjmedia_sdp_attr));
-//         attr->name=pj_str("setup");
-//         attr->value=pj_str((char*)info.setupType.c_str());
-//         m->attr[m->attr_count++]=attr;
-//    }
+   attr=(pjmedia_sdp_attr*)pj_pool_zalloc(GBOJ(gSipServer)->GetPool(),sizeof(pjmedia_sdp_attr));
+   attr->name=pj_str("recvonly");
+   m->attr[m->attr_count++]=attr;
+   if(info.protocal)
+   {
+        attr=(pjmedia_sdp_attr*)pj_pool_zalloc(GBOJ(gSipServer)->GetPool(),sizeof(pjmedia_sdp_attr));
+        attr->name=pj_str("setup");
+        attr->value=pj_str((char*)info.setupType.c_str());
+        m->attr[m->attr_count++]=attr;
+   }
 
 //    pjsip_inv_session* inv;
 //    status=pjsip_inv_create_uac(dlg,sdp,0,&inv);

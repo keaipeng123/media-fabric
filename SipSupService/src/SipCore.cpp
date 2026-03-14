@@ -277,8 +277,8 @@ bool SipCore::InitSip(int sipPort)
         【详解】大小参数：初始块 1 MB，扩容块 1 MB；线程轮询、定时器、应用层对象都从这里分配，生命周期与 SIP 端点相同。
         【与m_caching_poll的区别】：在 SIP 栈（m_endpt）上先搭“大仓库”(pj_caching_pool)，再从仓库里拿一块“临时工地”(pj_pool)，最后用这块工地起一条 后台线程 不断调用 pjsip_endpt_handle_events()，让 PJSIP 能 7×24 小时收包、发包、跑定时器
         */
-        pj_pool_t* pool=pjsip_endpt_create_pool(m_endpt,NULL,SIP_ALLOC_POOL_1M,SIP_ALLOC_POOL_1M);//分配内存池
-        if(NULL==pool)
+        m_pool=pjsip_endpt_create_pool(m_endpt,NULL,SIP_ALLOC_POOL_1M,SIP_ALLOC_POOL_1M);//分配内存池
+        if(NULL==m_pool)
         {
             LOG(ERROR)<<"create pool faild";
             break;
@@ -287,7 +287,7 @@ bool SipCore::InitSip(int sipPort)
         pj_thread_t* eventThread = NULL;
         //【目的】创建 事件分发线程
         //【详解】线程入口 pollingEvent 里通常死循环调用 pjsip_endpt_handle_events() 或 pj_ioqueue_poll()，让 SIP 栈持续处理网络 IO、定时器、重传等后台任务。
-        status=pj_thread_create(pool,NULL,&pollingEvent,m_endpt,0,0,&eventThread);//启动线程轮询处理endpt事务
+        status=pj_thread_create(m_pool,NULL,&pollingEvent,m_endpt,0,0,&eventThread);//启动线程轮询处理endpt事务
         if(PJ_SUCCESS!=status)
         {
             LOG(ERROR)<<"create pjsip thread faild,code:"<<status;
