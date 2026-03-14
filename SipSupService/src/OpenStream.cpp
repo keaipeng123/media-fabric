@@ -239,27 +239,27 @@ void OpenStream::StreamGetProc(void* param)
         m->attr[m->attr_count++]=attr;
    }
 
-//    pjsip_inv_session* inv;
-//    status=pjsip_inv_create_uac(dlg,sdp,0,&inv);
-//    if(PJ_SUCCESS!=status)
-//    {
-//         pjsip_dlg_terminate(dlg);
-//         LOG(ERROR)<<"pjsip_inv_create_uac ERROR";
-//         return;
-//    }
+   pjsip_inv_session* inv;
+   status=pjsip_inv_create_uac(dlg,sdp,0,&inv);
+   if(PJ_SUCCESS!=status)
+   {
+        pjsip_dlg_terminate(dlg);
+        LOG(ERROR)<<"pjsip_inv_create_uac ERROR";
+        return;
+   }
 
 //    Session* pSession=new Gb28181Session(info);
 //    pSession->m_rtpPort=rtp_port;
 //    inv->mod_data[0]=(void*)pSession;
 
-//    pjsip_tx_data* tdata;
-//    status=pjsip_inv_invite(inv,&tdata);
-//    if(PJ_SUCCESS!=status)
-//    {
-//         pjsip_dlg_terminate(dlg);
-//         LOG(ERROR)<<"pjsip_inv_invite ERROR";
-//         return;
-//    }
+   pjsip_tx_data* tdata;
+   status=pjsip_inv_invite(inv,&tdata);
+   if(PJ_SUCCESS!=status)
+   {
+        pjsip_dlg_terminate(dlg);
+        LOG(ERROR)<<"pjsip_inv_invite ERROR";
+        return;
+   }
 
 //    pj_str_t subjectName=pj_str("Subject");
 //    char subjectBuf[128]={0};
