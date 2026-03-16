@@ -52,11 +52,11 @@ pj_bool_t onRxRequest(pjsip_rx_data *rdata)
         }
     }
     //pjsip对ack和cancel事件做了孤立，dailog模块儿不会将这两个事件发送到应用层，这里接收不到，并且ack和cancel在生产中实际不会使用
-    // else if(msg->line.req.method.id == PJSIP_INVITE_METHOD
-    //         ||msg->line.req.method.id == PJSIP_BYE_METHOD)
-    // {
-    //     param->base=new SipGbPlay();
-    // }
+    else if(msg->line.req.method.id == PJSIP_INVITE_METHOD
+            ||msg->line.req.method.id == PJSIP_BYE_METHOD)
+    {
+        param->base=new SipGbPlay();
+    }
     pthread_t pid;
     int ret=EC::ECThread::createThread(SipCore::dealTaskThread,param,pid);
     if (ret!=0)
@@ -119,7 +119,7 @@ bool SipCore::InitSip(int sipPort)
 {
     pj_status_t status;
     //0-关闭 6-详细
-    pj_log_set_level(6);
+    pj_log_set_level(0);
     do
     {
         //【目的】初始化 pjlib 核心
@@ -149,6 +149,18 @@ bool SipCore::InitSip(int sipPort)
         if(PJ_SUCCESS!=status)
         {
             LOG(ERROR)<<"create endpt faild,code:"<<status;
+            break;
+        }
+
+          //【目的】取出端点内部已经建好的 I/O 队列
+        //【详解】pjlib 的 ioqueue 是对 select/epoll/kqueue/iocp 的跨平台封装；把它传给 pjmedia，可以让媒体层与 SIP 共用同一个事件循环。
+        pj_ioqueue_t* ioqueue=pjsip_endpt_get_ioqueue(m_endpt);
+        //【目的】创建 pjmedia 端点
+        //【详解】媒体端点负责加载 codec、创建 RTP/RTCP 会话、桥接声音设备等。第三个参数 0 表示让库自己选时钟源。
+        status=pjmedia_endpt_create(&m_cachingPool.factory,ioqueue,0,&m_mediaEndpt);
+        if(PJ_SUCCESS!=status)
+        {
+            LOG(ERROR)<<"create media endpoint faild,code:"<<status;
             break;
         }
 
@@ -189,13 +201,44 @@ bool SipCore::InitSip(int sipPort)
             break;
         }
 
+        //【目的】加载 100rel（可靠临时响应）扩展模块
+        //【详解】让 UAS 可以发 183/180 PRACK 等可靠临时响应，符合 RFC 3262。
+        status=pjsip_100rel_init_module(m_endpt);
+        if(PJ_SUCCESS!=status)
+        {
+            LOG(ERROR)<<"100rel module init faild,code:"<<status;
+            break;
+        }
+
+        pjsip_inv_callback inv_cb;
+        pj_bzero(&inv_cb,sizeof(inv_cb));
+        inv_cb.on_state_changed=&SipGbPlay::OnStateChanged; //请求会话状态发生变更时回调
+        inv_cb.on_new_session=&SipGbPlay::OnNewSession;//消息会话请求模块创建了一个新的对话框 上述两个会话pjsip需要强制初始化，可以不用但是必须强制初始化
+        inv_cb.on_media_update=&SipGbPlay::OnMediaUpdate;//处理媒体相关事务，解析sdp协议，rtp传输等（下级发送200ok并且携带sdp时会触发）
+        inv_cb.on_send_ack = &SipGbPlay::OnSendAck; //这个回调是对响应的200ok的sdp进行校验
+        /*
+        【目的】注册 INVITE会话（INVITE session）模块并挂回调
+        【详解】
+        必须提供 4 个回调：
+        on_state_changed   – 会话状态迁移（EARLY→CONNECTING→CONFIRMED→DISCONNECTED）
+        on_new_session     – 新 dialog 产生
+        on_media_update    – SDP 有变更（收到/发出 200 OK 带 SDP 时触发）
+        on_send_ack        – 发送 ACK 前给一次校验/修改 SDP 的机会
+        */
+        status=pjsip_inv_usage_init(m_endpt,&inv_cb);
+        if(PJ_SUCCESS!=status)
+        {
+            LOG(ERROR)<<"register invite module faild,code:"<<status;
+            break;
+        }
+
         /*
         【目的】为 SIP 任务再建一个 持久内存池
         【详解】大小参数：初始块 1 MB，扩容块 1 MB；线程轮询、定时器、应用层对象都从这里分配，生命周期与 SIP 端点相同。
         【与m_caching_poll的区别】：在 SIP 栈（m_endpt）上先搭“大仓库”(pj_caching_pool)，再从仓库里拿一块“临时工地”(pj_pool)，最后用这块工地起一条 后台线程 不断调用 pjsip_endpt_handle_events()，让 PJSIP 能 7×24 小时收包、发包、跑定时器
         */
-        pj_pool_t* pool=pjsip_endpt_create_pool(m_endpt,NULL,SIP_ALLOC_POOL_1M,SIP_ALLOC_POOL_1M);//分配内存池
-        if(NULL==pool)
+        m_pool=pjsip_endpt_create_pool(m_endpt,NULL,SIP_ALLOC_POOL_1M,SIP_ALLOC_POOL_1M);//分配内存池
+        if(NULL==m_pool)
         {
             LOG(ERROR)<<"create pool faild";
             break;
@@ -204,7 +247,7 @@ bool SipCore::InitSip(int sipPort)
         pj_thread_t* eventThread = NULL;
         //【目的】创建 事件分发线程
         //【详解】线程入口 pollingEvent 里通常死循环调用 pjsip_endpt_handle_events() 或 pj_ioqueue_poll()，让 SIP 栈持续处理网络 IO、定时器、重传等后台任务。
-        status=pj_thread_create(pool,NULL,&pollingEvent,m_endpt,0,0,&eventThread);//启动线程轮询处理endpt事务
+        status=pj_thread_create(m_pool,NULL,&pollingEvent,m_endpt,0,0,&eventThread);//启动线程轮询处理endpt事务
         if(PJ_SUCCESS!=status)
         {
             LOG(ERROR)<<"create pjsip thread faild,code:"<<status;
@@ -214,7 +257,7 @@ bool SipCore::InitSip(int sipPort)
 
     }while(0);
 
-    bool bret=true;
+    bool bret=true; 
     if(PJ_SUCCESS!=status)
     {
         bret=false;      

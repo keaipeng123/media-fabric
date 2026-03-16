@@ -58,3 +58,25 @@ bool GlobalCtl::init(void *param)
     return true;
 
 }
+
+DevTypeCode GlobalCtl::getSipDevInfo(string id)
+{
+    DevTypeCode code_type=Error_Code;
+    string tmp=id.substr(10,3);
+    int type=atoi(tmp.c_str());
+
+    switch(type)
+    {
+        case Camera_Code:
+            code_type=Camera_Code;
+            break;
+        case Ipc_Code:
+            code_type=Ipc_Code;
+            break;
+        default:
+            code_type=Error_Code;
+            break;
+    }
+
+    return code_type;
+}

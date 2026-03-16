@@ -72,6 +72,7 @@ class GlobalCtl
     }
 
     static pthread_mutex_t globalLock;
+    static DevTypeCode getSipDevInfo(string id);
 
     static bool gStopPool;
 
