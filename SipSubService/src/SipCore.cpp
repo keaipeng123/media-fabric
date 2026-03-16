@@ -4,6 +4,7 @@
 #include"GlobalCtl.h"
 #include"SipTaskBase.h"
 #include"SipDirectory.h"
+#include "SipGbPlay.h"
 
 static int pollingEvent(void* arg)
 {
@@ -215,7 +216,7 @@ bool SipCore::InitSip(int sipPort)
         inv_cb.on_state_changed=&SipGbPlay::OnStateChanged; //请求会话状态发生变更时回调
         inv_cb.on_new_session=&SipGbPlay::OnNewSession;//消息会话请求模块创建了一个新的对话框 上述两个会话pjsip需要强制初始化，可以不用但是必须强制初始化
         inv_cb.on_media_update=&SipGbPlay::OnMediaUpdate;//处理媒体相关事务，解析sdp协议，rtp传输等（下级发送200ok并且携带sdp时会触发）
-        inv_cb.on_send_ack = &SipGbPlay::OnSendAck; //这个回调是对响应的200ok的sdp进行校验
+        //inv_cb.on_send_ack = &SipGbPlay::OnSendAck; //这个回调是对响应的200ok的sdp进行校验
         /*
         【目的】注册 INVITE会话（INVITE session）模块并挂回调
         【详解】

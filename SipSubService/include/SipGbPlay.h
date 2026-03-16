@@ -1,7 +1,7 @@
 #ifndef _SIPGBPLAY_H
 #define _SIPGBPLAY_H
 #include "SipTaskBase.h"
-#include "Gb28181Session.h"
+//#include "Gb28181Session.h"
 #include <unordered_map>
 class SipGbPlay : public SipTaskBase
 {
@@ -31,9 +31,9 @@ class SipGbPlay : public SipTaskBase
         而map的key呢是支持所有的数据类型，
         最后总结下，不需要按键值排序并且key的数据类型单一的那么就用unordered_map，否则就用map
         */
-        typedef unordered_map<string, SipPsCode*> MediaStreamInfo;
-        static MediaStreamInfo  mediaInfoMap;
-        static pthread_mutex_t streamLock;
+        //typedef unordered_map<string, SipPsCode*> MediaStreamInfo;
+        // static MediaStreamInfo  mediaInfoMap;
+        //static pthread_mutex_t streamLock;
         
         SipGbPlay();
         ~SipGbPlay();
@@ -46,8 +46,8 @@ class SipGbPlay : public SipTaskBase
         static void OnNewSession(pjsip_inv_session *inv, pjsip_event *e);
         static void OnMediaUpdate(pjsip_inv_session *inv_ses, pj_status_t status);
 
-        void sendPsRtpStream(SipPsCode** ps);
-        int recvFrame(SipPsCode** ps);
+        // void sendPsRtpStream(SipPsCode** ps);
+        // int recvFrame(SipPsCode** ps);
 
 };
 #endif

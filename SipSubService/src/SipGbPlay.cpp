@@ -81,7 +81,7 @@ void SipGbPlay::dealWithInvite(pjsip_rx_data *rdata)
     int status_code = 200;
     string id;
     MediaInfo sdpInfo;
-    SipPsCode* ps = NULL;
+    //SipPsCode* ps = NULL;
     do
     {
        {
@@ -119,7 +119,7 @@ void SipGbPlay::dealWithInvite(pjsip_rx_data *rdata)
 
         string devId(sdp->origin.user.ptr,sdp->origin.user.slen);
         DevTypeCode type = GlobalCtl::getSipDevInfo(devId);
-        if(type == Error_code)
+        if(type == Error_Code)
         {
             status_code = SIP_FORBIDDEN;
             break;

@@ -4,6 +4,7 @@
 #include "SipLocalConfig.h"
 #include "ThreadPool.h"
 #include "SipCore.h"
+#include "SipDef.h"
 
 class GlobalCtl;
 #define GBOJ(obj) GlobalCtl::instance()->obj //宏定义简化单例成员访问

@@ -42,6 +42,8 @@ class SipCore
 
     private:
     pjsip_endpoint* m_endpt;
+    pjmedia_endpt* m_mediaEndpt;
     pj_caching_pool m_cachingPool;
+    pj_pool_t* m_pool;
 };
 #endif
