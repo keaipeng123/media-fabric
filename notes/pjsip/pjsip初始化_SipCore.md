@@ -24,15 +24,18 @@
 
 ## 0. `SipCore` 一眼看懂（先抓住工程结构）
 
-`SipCore` 目前就是一个“最小 SIP 栈启动器”，核心成员只有两个：
+`SipCore` 目前就是一个“最小 SIP 栈启动器”，核心成员实际有四个：
 
 - `pjsip_endpoint* m_endpt`：SIP 栈的核心句柄（模块挂载、transport、事件循环都围绕它）
+- `pjmedia_endpt* m_mediaEndpt`：媒体端点，用于承载 pjmedia 能力
 - `pj_caching_pool m_cachingPool`：PJSIP 全栈长期使用的缓存池（必须与 `SipCore` 同寿命）
+- `pj_pool_t* m_pool`：从 endpoint 派生出来的应用侧 pool，目前主要用于创建事件线程等长生命周期对象
 
-对外接口也很简单：
+对外接口也比较简单：
 
 - `bool InitSip(int sipPort)`：完成 PJLIB/PJSIP 初始化 + 开 transport + 注册模块 + 启事件线程
 - `pjsip_endpoint* GetEndPoint()`：给上层拿 endpoint（例如后续发消息/建事务可能会用）
+- 上级（SUP）侧额外提供 `pj_pool_t* GetPool()`，下级（SUB）侧当前没有这个接口
 
 ## 1. PJSIP 家族模块速览（你需要先有一张“地图”）
 
@@ -118,7 +121,9 @@
 
 补充一条更“贴近工程现状”的观察：
 
-- 你在 `recv_mod` 里只实现了 `on_rx_request`，并且当前返回值等价于“不拦截”。因此收到请求后，通常会继续向后交给其它模块/默认处理路径。
+- 你在 `recv_mod` 里只实现了 `on_rx_request`。
+- 上下级两侧当前都在 `onRxRequest()` 末尾返回 `PJ_SUCCESS`，而 `PJ_SUCCESS` 通常等价于 `0`，在 `pj_bool_t` 语义上更接近 `PJ_FALSE`。
+- 也就是说，虽然代码里已经开始做异步分发，但从模块返回值语义看，当前实现仍然倾向于“继续向后传递给其它模块”。
 
 ---
 
@@ -136,24 +141,30 @@
 
 初始化顺序（与你代码一致）：
 
-1) `pj_log_set_level(6)`：设置 PJLIB 日志等级（0 关，越大越详细）
+1) `pj_log_set_level(0)`：设置 PJLIB 日志等级（当前代码把日志降到最少）
 2) `pj_init()`：初始化 PJLIB
 3) `pjlib_util_init()`：初始化 pjlib-util
 4) `pj_caching_pool_init(...)`：初始化 caching pool
    - `SipDef.h` 里：`SIP_STACK_SIZE = 1024*256`
 5) `pjsip_endpt_create(...)`：创建 endpoint（得到 `m_endpt`）
-6) `pjsip_tsx_layer_init_module(m_endpt)`：初始化事务层模块
-7) `pjsip_ua_init_module(m_endpt, NULL)`：初始化 UA 层
-8) `init_transport_layer(sipPort)`：启动 UDP/TCP transport 监听端口
-9) `pjsip_endpt_register_module(m_endpt, &recv_mod)`：注册你自定义的接收模块
-10) `pjsip_endpt_create_pool(...)`：给后续线程/对象创建长期 pool
+6) `pjsip_endpt_get_ioqueue(m_endpt)`：取出 endpoint 当前使用的 ioqueue
+7) `pjmedia_endpt_create(...)`：创建媒体端点 `m_mediaEndpt`
+8) `pjsip_tsx_layer_init_module(m_endpt)`：初始化事务层模块
+9) `pjsip_ua_init_module(m_endpt, NULL)`：初始化 UA 层
+10) `init_transport_layer(sipPort)`：启动 UDP/TCP transport 监听端口
+11) `pjsip_endpt_register_module(m_endpt, &recv_mod)`：注册你自定义的接收模块
+12) `pjsip_100rel_init_module(m_endpt)`：注册 100rel 模块
+13) `pjsip_inv_usage_init(m_endpt, &inv_cb)`：注册 INVITE usage 并挂回调
+14) `pjsip_endpt_create_pool(...)`：给后续线程/对象创建长期 pool
     - `SipDef.h` 里：`SIP_ALLOC_POOL_1M = 1MB`
-11) `pj_thread_create(..., pollingEvent, m_endpt, ..., &eventThread)`：启动事件轮询线程
+15) `pj_thread_create(..., pollingEvent, m_endpt, ..., &eventThread)`：启动事件轮询线程
 
-两个“代码细节”建议在脑子里记牢：
+几个“代码细节”建议在脑子里记牢：
 
 - 这段初始化是用 `do { ... } while(0)` 包起来的：一旦某步失败 `break`，最后用 `status` 决定返回值。
-- 事件线程使用的是 `pjsip_endpt_create_pool()` 创建的 pool：只要 endpoint 活着，这个 pool 也应该一直活着。
+- `pjmedia_endpt_create()` 放在事务层/UA 层之前，说明当前工程初始化时已经把媒体端点纳入 SIP 栈启动流程。
+- 上下级都会初始化 `pjsip_inv_usage_init()`，但下级当前注释掉了 `on_send_ack`，上级则显式设置了它。
+- 事件线程使用的是 `pjsip_endpt_create_pool()` 创建的 pool；当前代码把它当成长生命周期 pool 来使用。
 
 
 ---
@@ -184,7 +195,7 @@
 你在 `pollingEvent()` 里做的是：
 
 ```cpp
-while (true) {
+while (!GlobalCtl::gStopPool) {
     pj_time_val timeout = {0, 500};
     pjsip_endpt_handle_events(ept, &timeout);
 }
@@ -238,13 +249,10 @@ while (true) {
 
 - 返回 “真/假” 来告诉 PJSIP：这个请求是否被该模块处理并截断/继续传递
 
-你当前代码里写了：
+当前上下级代码都在 `onRxRequest()` 末尾写了：
 
 ```cpp
-pj_bool_t onRxRequest(pjsip_rx_data *rdata)
-{
-    return PJ_SUCCESS;
-}
+return PJ_SUCCESS;
 ```
 
 从学习角度建议你记住：
@@ -254,10 +262,10 @@ pj_bool_t onRxRequest(pjsip_rx_data *rdata)
 
 （这点在“编译可过但语义不清晰”时特别容易迷糊。）
 
-结合你这里的实际返回值再说一句“工程事实”：
+结合这里的实际返回值再说一句“工程事实”：
 
 - `PJ_SUCCESS` 的数值通常是 0，因此它在 `pj_bool_t` 上等价于 `PJ_FALSE`。
-- 也就是说，你当前实现实际上表示：**我不处理/不截断这个请求，继续让其它模块处理**。
+- 也就是说，虽然当前实现已经 clone 报文、创建任务线程、准备异步执行业务，但从模块返回值角度看，它仍然表示：**我不截断这个请求，继续让其它模块处理**。
 
 更建议你写成更清晰的形式（语义不变）：
 
@@ -304,27 +312,35 @@ if (msg && msg->type == PJSIP_REQUEST_MSG) {
 
 虽然上下级两侧都注册了同名的 `recv_mod`（模块名 `mod-recv`），但 **接收回调实现差异很大**：
 
-#### 6.5.1 下级（SipSubService）侧：当前是“空实现/不处理”
+#### 6.5.1 下级（SipSubService）侧：已经有最小业务分发，不再是空实现
 
 对应 [SipSubService/src/SipCore.cpp](../../SipSubService/src/SipCore.cpp)：
 
-- `onRxRequest()` 直接 `return PJ_SUCCESS;`
-- 由于 `PJ_SUCCESS` 通常是 0，它在 `pj_bool_t` 上等价于 `PJ_FALSE`
-- 实际含义：**该模块不处理请求，让请求继续向后传递给其它模块**
+- 先判空，再 `pjsip_rx_data_clone(rdata, 0, &param->data)`
+- 如果方法是 `PJSIP_OTHER_METHOD`：
+  - 会解析 XML 的 `rootType/cmdValue`
+  - 当 `rootType == SIP_QUERY` 且 `cmdValue == SIP_CATALOG` 时，创建 `SipDirectory()` 任务
+- 如果方法是 `PJSIP_INVITE_METHOD` 或 `PJSIP_BYE_METHOD`：
+  - 创建 `SipGbPlay()` 任务
+- 然后统一走 `ECThread::createThread(SipCore::dealTaskThread, param, pid)` 异步处理
+- 最后仍然 `return PJ_SUCCESS;`
 
-这通常意味着：SUB 侧更多是“主动发起请求（例如 REGISTER client）”，而不是在 `onRxRequest()` 里做业务。
+所以 SUB 侧的现状不是“空实现”，而是已经有一个最小的按方法分发器，只是返回值语义仍然没有体现“本模块已接管请求”。
 
-#### 6.5.2 上级（SipSupService）侧：按方法创建任务类 + 开线程处理
+#### 6.5.2 上级（SipSupService）侧：按 REGISTER / XML 命令类型分发
 
 对应 [SipSupService/src/SipCore.cpp](../../SipSupService/src/SipCore.cpp)：
 
-SUP 侧 `onRxRequest()` 做了一个最小的“路由器/分发器”：
+SUP 侧 `onRxRequest()` 也是一个最小的“路由器/分发器”，但分发规则与 SUB 不同：
 
 1) 判空：`rdata` / `rdata->msg_info.msg`
 2) 克隆消息：`pjsip_rx_data_clone(rdata, 0, &param->data)`
   - 目的：把 `rdata` 的内容复制一份，交给业务线程异步处理
 3) 按方法选择业务：
-  - `if (msg->line.req.method.id == PJSIP_REGISTER_METHOD) param->base = new SipRegister();`
+  - `PJSIP_REGISTER_METHOD`：创建 `SipRegister()`
+  - `PJSIP_OTHER_METHOD`：解析 XML，再按 `rootType/cmdValue` 分流
+    - `SIP_NOTIFY + SIP_HEARTBEAT`：创建 `SipHeartBeat()`
+    - `SIP_RESPONSE + SIP_CATALOG`：创建 `SipDirectory(root)`
 4) 启线程处理：`ECThread::createThread(SipCore::dealTaskThread, param, pid)`
   - 每个请求一个线程（学习阶段简单直接，但高并发下会有开销，后续可替换成线程池/队列）
 
@@ -339,7 +355,7 @@ SUP 侧 `onRxRequest()` 做了一个最小的“路由器/分发器”：
 
 ### 6.6 `pjsip_rx_data_clone()` / `pjsip_rx_data_free_cloned()`：异步处理的“必要动作”
 
-SUP 侧之所以要 clone，是因为：
+当前上下级两侧都会先 clone 再把报文交给业务线程，原因是：
 
 - `onRxRequest()` 运行在 PJSIP 的接收线程/事件线程上下文里
 - `rdata` 的生命周期通常由栈内部管理，回调返回后不保证继续有效
@@ -349,7 +365,7 @@ SUP 侧之所以要 clone，是因为：
 - 回调里 clone 一份 `pjsip_rx_data`
 - 业务线程处理完后释放 clone
 
-在 SUP 侧 [SipSupService/include/SipCore.h](../../SipSupService/include/SipCore.h) 里用 `threadParam` 的析构函数统一做了收尾：
+在 [SipSupService/include/SipCore.h](../../SipSupService/include/SipCore.h) 和 [SipSubService/include/SipCore.h](../../SipSubService/include/SipCore.h) 里，都用 `threadParam` 的析构函数统一做了收尾：
 
 - `delete base;`（释放业务任务对象）
 - `pjsip_rx_data_free_cloned(data);`（释放 clone 的 rdata）
@@ -358,7 +374,7 @@ SUP 侧之所以要 clone，是因为：
 
 ### 6.6.1 `_threadParam`/`threadParam` 的作用：跨线程的“任务上下文 + 统一回收”
 
-SUP 侧 [SipSupService/include/SipCore.h](../../SipSupService/include/SipCore.h) 定义了：
+上下级两侧的 [SipSupService/include/SipCore.h](../../SipSupService/include/SipCore.h) 和 [SipSubService/include/SipCore.h](../../SipSubService/include/SipCore.h) 都定义了：
 
 - `_threadParam`：结构体本体
 - `threadParam`：`typedef` 的别名
@@ -383,6 +399,12 @@ SUP 侧 [SipSupService/include/SipCore.h](../../SipSupService/include/SipCore.h)
 
 一句话总结：`threadParam` 就是这套“收到请求 → 分发到业务线程”的承载体，它把 **业务对象 + 报文副本** 绑在一起，并用 RAII（析构回收）保证任何路径下都不泄漏。
 
+不过这里还要补一个和当前实现强相关的细节：
+
+- 在 SUB/SUP 两侧的 `dealTaskThread()` 中，如果 `param->base == NULL`，函数会直接 `return NULL;`
+- 这条路径不会 `delete param;`，也就不会触发 `threadParam` 析构
+- 因此一旦出现“消息 clone 了，但没有成功匹配出业务处理对象”的情况，当前代码存在泄漏风险
+
 ---
 
 ### 6.7 外部线程使用 PJSIP：必须做 PJLIB 线程注册
@@ -403,7 +425,7 @@ PJLIB 要求：**外部线程在调用任何 PJLIB/PJSIP API 之前必须注册*
 - `pj_thread_desc desc;`
 - `pjcall_thread_register(desc);`
 
-另外你还能在 [SipSupService/src/TaskTimer.cpp](../../SipSupService/src/TaskTimer.cpp) 里看到同样的注册动作，说明：**只要线程不是 PJLIB 创建的，但又要调用 PJLIB/PJSIP，就应该先注册**。
+另外你还能在 [SipSupService/src/TaskTimer.cpp](../../SipSupService/src/TaskTimer.cpp) 和 [SipSubService/src/TaskTimer.cpp](../../SipSubService/src/TaskTimer.cpp) 里看到同样的注册动作，说明：**只要线程不是 PJLIB 创建的，但又要调用 PJLIB/PJSIP，就应该先注册**。
 
 ---
 
@@ -420,22 +442,12 @@ PJLIB 要求：**外部线程在调用任何 PJLIB/PJSIP API 之前必须注册*
 
 ## 8. 学习过程中必须注意的几个“工程级坑”（强烈建议记在脑子里）
 
-### 8.1 `pj_caching_pool` 生命周期问题（你代码里已经写了提示）
-
-`SipCore::InitSip()` 里：
-
-- `pj_caching_pool cachingPool;` 是**栈对象**
-- 函数返回后它会销毁
-
-但 `pjsip_endpt_create(&cachingPool.factory, ..., &m_endpt)` 会把这个 factory 用于后续内存分配。
-
-所以如果 caching pool 生命周期不够长，后面就可能出严重问题。
-
-> 你代码注释里也写了“cachingPool 需要和 sipCore 对象生命周期一致，所以放在类成员中”，这是正确方向。
-
 ### 8.2 事件线程的退出/销毁顺序
 
-当前 `pollingEvent()` 是死循环，且线程句柄 `eventThread` 没有保存到成员里。
+当前 `pollingEvent()` 不是无条件死循环，而是：
+
+- 只要 `GlobalCtl::gStopPool == false` 就持续轮询
+- 线程句柄 `eventThread` 只保存在局部变量里，没有保存到成员里
 
 如果 `SipCore` 析构里 `pjsip_endpt_destroy(m_endpt);` 先发生：
 
@@ -449,24 +461,29 @@ PJLIB 要求：**外部线程在调用任何 PJLIB/PJSIP API 之前必须注册*
 
 并且对照你当前实现，问题点更具体是：
 
-- `pollingEvent()` 是 `while(true)`，没有任何退出条件
+- `pollingEvent()` 的退出依赖 `GlobalCtl::gStopPool`
 - `eventThread` 没有保存成成员，也没有 join/detach 管理
-- 析构函数里直接 `pjsip_endpt_destroy(m_endpt);`：极易导致线程还在跑、endpoint 已释放
+- 但 `SipCore::~SipCore()` 里是先销毁 `pjmedia_endpt` / `pjsip_endpt` / `pj_caching_pool` / `pj_shutdown()`，最后才把 `GlobalCtl::gStopPool=true`
+- 也就是说当前停止顺序仍然是反的：先销毁，再告诉线程退出
 
 ### 8.3 析构与全局初始化/反初始化
 
-你当前 `SipCore::~SipCore()` 只有：
+你当前 `SipCore::~SipCore()` 实际已经做了这些动作：
 
+- `pjmedia_endpt_destroy(m_mediaEndpt);`
 - `pjsip_endpt_destroy(m_endpt);`
+- `pj_caching_pool_destroy(&m_cachingPool);`
+- `pj_shutdown();`
+- `GlobalCtl::gStopPool = true;`
 
 从“资源生命周期完整性”看，还缺少至少两类收尾动作（是否要做取决于你是否需要优雅退出）：
 
 1) 停止事件线程（让 `pollingEvent` 退出，并等待线程结束）
-2) 销毁 caching pool：`pj_caching_pool_destroy(&m_cachingPool)`
+2) 在线程真正退出后，再销毁 endpoint / media endpoint / pool / PJLIB 全局状态
 
-另外，如果你把 PJLIB/PJSIP 当“整个进程只初始化一次”的全局设施，通常在进程退出时还会有 `pj_shutdown()` 之类的收尾（具体取决于你工程的初始化策略）。
+另外，当前析构已经调用了 `pj_shutdown()`，所以真正的问题不是“有没有反初始化”，而是“反初始化时机和顺序是否安全”。
 
-### 8.3 多线程下的 PJLIB 线程注册
+### 8.4 多线程下的 PJLIB 线程注册与当前实现细节
 
 PJLIB 在多线程环境中通常要求线程在使用 PJLIB API 前做线程注册（具体是否需要取决于你调用路径）。
 
@@ -477,6 +494,9 @@ PJLIB 在多线程环境中通常要求线程在使用 PJLIB API 前做线程注
 这里结合你的代码给一个更具体的提醒：
 
 - 事件线程里会调用 PJSIP API（`pjsip_endpt_handle_events`），如果后续你在其它业务线程里也调用 PJSIP API，需要确认 PJLIB 的线程注册/锁策略是否满足要求。
+- 当前 SUB/SUP 两侧的 `TaskTimer` 线程也都在执行定时回调前做了线程注册，说明工程作者已经意识到“外部线程必须注册”这件事。
+- 但当前 `pjcall_thread_register()` 对 `pj_thread_desc` 的保存方式还是局部变量传入式写法，后续如果继续重构线程模型，这里仍然是一个值得重点审视的点。
+- 此外，`dealTaskThread()` 对 `base==NULL` 的提前返回也属于多线程分发路径里的资源管理问题，阅读和重构时要一起考虑。
 
 ---
 
@@ -512,8 +532,8 @@ PJLIB 在多线程环境中通常要求线程在使用 PJLIB API 前做线程注
 
 ## 10. 建议你下一步怎么学（围绕 GB28181 更贴近业务）
 
-1) 先把 `onRxRequest` 做成“按方法分发”的路由：REGISTER / MESSAGE / INVITE / BYE
-2) 先实现最简单的 stateless 回复（比如 REGISTER 的 200 OK 或 401 challenge）
-3) 再补“事务层/会话层”完整呼叫流程（INVITE 的对话建立与状态维护）
-4) 进入媒体：SDP 解析 + pjmedia RTP 发送/接收
-5) 如果有公网/内网：再引入 pjnath（ICE/TURN）
+1) 先把 SUB/SUP 两侧现有的 `onRxRequest()` 路由规则分别整理清楚，确认哪些方法/命令已经接管、哪些还只是预留。
+2) 明确 `onRxRequest()` 的返回值语义，决定异步接管的请求是否应该改成 `PJ_TRUE`。
+3) 修掉当前几处“意图已更新、代码未完全收口”的问题，例如线程注册辅助函数签名不一致、SUB 侧若 `base==NULL` 线程直接返回时的资源释放路径等。
+4) 再补“事务层/会话层”完整呼叫流程（INVITE 的对话建立与状态维护）。
+5) 进入媒体：SDP 解析 + pjmedia RTP 发送/接收；如果有公网/内网问题，再引入 pjnath（ICE/TURN）。

@@ -162,16 +162,16 @@ bool SipCore::InitSip(int sipPort)
     pj_log_set_level(0);
     do
     {
-        //【目的】初始化 pjlib 核心
-        //【详解】pjlib 是所有 PJSIP 组件的地基；内部会初始化线程、锁、内存、高精度时钟、异常处理等。失败则整个栈都不可用。
+        //【目的】初始化 pjlib 核心。
+        //【详解】该调用会初始化 PJLIB 的全局静态数据以及部分平台相关能力；这是后续使用 PJLIB/PJSIP 的前置条件。
         status=pj_init();
         if(PJ_SUCCESS!=status)
         {
             LOG(ERROR)<<"init pjlib faild,code:"<<status;
             break;
         }
-        //【目的】初始化 pjlib-util 附加库
-        //【详解】提供 MD5、SHA1、STUN、DNS、XML 等实用函数，供后续 SIP/SDP 解析、认证、ICE 使用。
+        //【目的】初始化 pjlib-util 组件。
+        //【详解】它提供 DNS、XML、扫描器、哈希/摘要、STUN 等通用工具；这是上层某些 SIP 辅助能力的基础，但不等同于初始化 ICE。
         status=pjlib_util_init();
         if(PJ_SUCCESS!=status)
         {
@@ -192,11 +192,11 @@ bool SipCore::InitSip(int sipPort)
             break;
         }
 
-          //【目的】取出端点内部已经建好的 I/O 队列
-        //【详解】pjlib 的 ioqueue 是对 select/epoll/kqueue/iocp 的跨平台封装；把它传给 pjmedia，可以让媒体层与 SIP 共用同一个事件循环。
+        //【目的】获取 SIP endpoint 当前使用的 ioqueue。
+        //【详解】把这个 ioqueue 传给 pjmedia 后，媒体层的 RTP/RTCP socket 就可以复用同一套事件轮询机制；它不要求一定是“端点内部新建”的队列。
         pj_ioqueue_t* ioqueue=pjsip_endpt_get_ioqueue(m_endpt);
         //【目的】创建 pjmedia 端点
-        //【详解】媒体端点负责加载 codec、创建 RTP/RTCP 会话、桥接声音设备等。第三个参数 0 表示让库自己选时钟源。
+        //【详解】该接口会初始化音频子系统并创建媒体端点对象；媒体端点持有 codec manager，并可基于传入的 ioqueue 管理 RTP/RTCP 所需的事件处理。
         status=pjmedia_endpt_create(&m_cachingPool.factory,ioqueue,0,&m_mediaEndpt);
         if(PJ_SUCCESS!=status)
         {
@@ -205,8 +205,8 @@ bool SipCore::InitSip(int sipPort)
         }
 
         //会话事务模块
-        //目的】注册 事务层 模块
-        //【详解】把 INVITE Client/Server Transaction、Non-INVITE Transaction 全部挂到 SIP 端点，提供状态机、定时器重传、ACK/CANCEL 处理。
+        //【目的】注册事务层模块。
+        //【详解】事务层为有状态 SIP 消息处理提供基础能力，包括 INVITE 与 non-INVITE 事务的状态机、定时器与重传处理。
         status=pjsip_tsx_layer_init_module(m_endpt);
         if(PJ_SUCCESS!=status)
         {
@@ -214,8 +214,8 @@ bool SipCore::InitSip(int sipPort)
             break;
         }
         //会话模块
-        //【目的】注册 UA (User Agent) 层 模块
-        //【详解】UA 层在事务层之上，负责 dialog、call-leg、自动 100 Trying、自动 BYE on Cancel 等高层逻辑。
+        //【目的】注册 UA（User Agent）基础层模块。
+        //【详解】UA 层主要提供 dialog/dialog-set 管理，供 INVITE session、订阅等更高层 dialog usage 使用。
          status = pjsip_ua_init_module(m_endpt,NULL);
         if(PJ_SUCCESS!=status)
         {
@@ -223,8 +223,8 @@ bool SipCore::InitSip(int sipPort)
             break;
         }
 
-        //sip 消息的发送和接收（tcp udp tls）
-        //【目的】（自定义函数）为 SIP 端点绑定 传输层（UDP/TCP/TLS 端口）
+        //sip 消息的发送和接收（tcp/udp）
+        //【目的】（自定义函数）为 SIP 端点启动 UDP/TCP 传输监听。
         status=init_transport_layer(sipPort);
         if(PJ_SUCCESS!=status)
         {
@@ -232,8 +232,8 @@ bool SipCore::InitSip(int sipPort)
             break;
         }
 
-        //【目的】注册用户自定义的 接收/分发模块
-        //【详解】recv_mod 里实现了回调 on_rx_request() / on_rx_response()，用来把收到的消息转给上层业务逻辑。
+        //【目的】注册用户自定义的接收/分发模块。
+        //【详解】当前模块只实现了 on_rx_request()，用于拦截并分发入站 SIP 请求；响应消息仍由其它模块或事务上下文处理。
         status=pjsip_endpt_register_module(m_endpt,&recv_mod);
         if(PJ_SUCCESS!=status)
         {
@@ -241,8 +241,8 @@ bool SipCore::InitSip(int sipPort)
             break;
         }
 
-        //【目的】加载 100rel（可靠临时响应）扩展模块
-        //【详解】让 UAS 可以发 183/180 PRACK 等可靠临时响应，符合 RFC 3262。
+        //【目的】注册 100rel（可靠临时响应）扩展模块。
+        //【详解】该模块为 INVITE 会话提供 RFC 3262 所需的 100rel/PRACK 支持；它会注册 PRACK 方法以及相关能力标记，本身不是“发送 PRACK 响应”。
         status=pjsip_100rel_init_module(m_endpt);
         if(PJ_SUCCESS!=status)
         {
@@ -253,17 +253,16 @@ bool SipCore::InitSip(int sipPort)
         pjsip_inv_callback inv_cb;
         pj_bzero(&inv_cb,sizeof(inv_cb));
         inv_cb.on_state_changed=&SipGbPlay::OnStateChanged; //请求会话状态发生变更时回调
-        inv_cb.on_new_session=&SipGbPlay::OnNewSession;//消息会话请求模块创建了一个新的对话框 上述两个会话pjsip需要强制初始化，可以不用但是必须强制初始化
+        inv_cb.on_new_session=&SipGbPlay::OnNewSession;//创建新的 INVITE session 时回调；这两个回调是 pjsip_inv_usage_init() 要求的必填项
         inv_cb.on_media_update=&SipGbPlay::OnMediaUpdate;//处理媒体相关事务，解析sdp协议，rtp传输等（下级发送200ok并且携带sdp时会触发）
-        inv_cb.on_send_ack = &SipGbPlay::OnSendAck; //这个回调是对响应的200ok的sdp进行校验
+        inv_cb.on_send_ack = &SipGbPlay::OnSendAck; //可选回调：在发送 ACK 前可检查或调整本次会话相关处理
         /*
         【目的】注册 INVITE会话（INVITE session）模块并挂回调
         【详解】
-        必须提供 4 个回调：
-        on_state_changed   – 会话状态迁移（EARLY→CONNECTING→CONFIRMED→DISCONNECTED）
-        on_new_session     – 新 dialog 产生
-        on_media_update    – SDP 有变更（收到/发出 200 OK 带 SDP 时触发）
-        on_send_ack        – 发送 ACK 前给一次校验/修改 SDP 的机会
+        pjsip_inv_usage_init() 要求回调结构体非空，且至少提供：
+        on_state_changed   – 会话状态迁移回调
+        on_new_session     – 新 INVITE session 创建回调
+        on_media_update、on_send_ack 等其余回调可按业务需要选择性提供。
         */
         status=pjsip_inv_usage_init(m_endpt,&inv_cb);
         if(PJ_SUCCESS!=status)
@@ -273,9 +272,9 @@ bool SipCore::InitSip(int sipPort)
         }
 
         /*
-        【目的】为 SIP 任务再建一个 持久内存池
-        【详解】大小参数：初始块 1 MB，扩容块 1 MB；线程轮询、定时器、应用层对象都从这里分配，生命周期与 SIP 端点相同。
-        【与m_caching_poll的区别】：在 SIP 栈（m_endpt）上先搭“大仓库”(pj_caching_pool)，再从仓库里拿一块“临时工地”(pj_pool)，最后用这块工地起一条 后台线程 不断调用 pjsip_endpt_handle_events()，让 PJSIP 能 7×24 小时收包、发包、跑定时器
+        【目的】从 endpoint 关联的 pool factory 申请一个应用侧内存池。
+        【详解】这个 pool 只是“由 endpoint 创建/归还”的 pj_pool，不天然等同于 endpoint 生命周期；当前代码把它当作长生命周期 pool，用于事件线程等对象的分配。
+        【与 m_cachingPool 的区别】m_cachingPool 是 pool factory；这里拿到的是从该 factory 派生出来的一块具体 pj_pool。
         */
         m_pool=pjsip_endpt_create_pool(m_endpt,NULL,SIP_ALLOC_POOL_1M,SIP_ALLOC_POOL_1M);//分配内存池
         if(NULL==m_pool)
@@ -286,7 +285,7 @@ bool SipCore::InitSip(int sipPort)
 
         pj_thread_t* eventThread = NULL;
         //【目的】创建 事件分发线程
-        //【详解】线程入口 pollingEvent 里通常死循环调用 pjsip_endpt_handle_events() 或 pj_ioqueue_poll()，让 SIP 栈持续处理网络 IO、定时器、重传等后台任务。
+        //【详解】这里创建的是 PJLIB 线程；线程入口持续调用 pjsip_endpt_handle_events()，以驱动传输层和 timer heap 上的事件处理。
         status=pj_thread_create(m_pool,NULL,&pollingEvent,m_endpt,0,0,&eventThread);//启动线程轮询处理endpt事务
         if(PJ_SUCCESS!=status)
         {
@@ -316,12 +315,14 @@ pj_status_t SipCore::init_transport_layer(int sipPort)
     pj_status_t status;
     do
     {
+        // 启动 UDP 监听并注册到 transport manager；NULL 的 published address 表示对外公布本地绑定地址。
         status=pjsip_udp_transport_start(m_endpt,&addr,NULL,1,NULL);
         if(PJ_SUCCESS!=status)
         {
             LOG(ERROR)<<"start udp server faild,code:"<<status;
             break;
         }
+        // 启动 TCP 监听工厂并注册到 transport manager；这里并未初始化 TLS。
         status=pjsip_tcp_transport_start(m_endpt,&addr,1,NULL);
         if(PJ_SUCCESS!=status)
         {
