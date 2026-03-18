@@ -163,7 +163,7 @@ void SipGbPlay::dealWithInvite(pjsip_rx_data *rdata)
 
     } while (0);
 
-    //resWithSdp(rdata,status_code,id,sdpInfo);
+    resWithSdp(rdata,status_code,id,sdpInfo);
 
     //sendPsRtpStream(&ps);
     
@@ -292,65 +292,65 @@ void SipGbPlay::dealWithInvite(pjsip_rx_data *rdata)
 //     return ret;
 // }
 
-// void SipGbPlay::resWithSdp(pjsip_rx_data *rdata,int status_code,string devid,MediaInfo sdpInfo)
-// {
-//     pjsip_tx_data* tdata;
-//     pjsip_endpt_create_response(GBOJ(gSipServer)->GetEndPoint(),rdata,status_code,NULL,&tdata);
-//     pj_str_t type = {"Application",11};
-//     pj_str_t sdptype = {"SDP",3};
-//     if(status_code != SIP_SUCCESS)
-//     {
-//         tdata->msg->body = pjsip_msg_body_create(tdata->pool,&type,&sdptype,&(pjsip_rdata_get_sdp_info(rdata)->body));
-//     }
-//     else
-//     {
-//         stringstream ss;
-//         ss<<"v="<<"0"<<"\r\n";
-//         ss<<"o="<<devid<<" 0 0 IN IP4 "<<GBOJ(gConfig)->sipIp()<<"\r\n";
-//         ss<<"s="<<"Play"<<"\r\n";
-//         ss<<"c="<<"IN IP4 "<<GBOJ(gConfig)->sipIp()<<"\r\n";
-//         ss<<"t="<<"0 0"<<"\r\n";
-//         ss<<"m=video "<<30000<<" "<<sdpInfo.sdp_protol<<" 96"<<"\r\n";
-//         ss<<"a=rtpmap:96 PS/90000"<<"\r\n";
-//         ss<<"a=sendonly"<<"\r\n";
-//         if(sdpInfo.setUp != "")
-//         {
-//             if(sdpInfo.setUp == "passive")
-//             {
-//                 ss<<"a=setup:"<<"active"<<"\r\n";
-//             }
-//             else if(sdpInfo.setUp == "active")
-//             {
-//                 ss<<"a=setup:"<<"passive"<<"\r\n";
-//             }
-//         }
+void SipGbPlay::resWithSdp(pjsip_rx_data *rdata,int status_code,string devid,MediaInfo sdpInfo)
+{
+    pjsip_tx_data* tdata;
+    pjsip_endpt_create_response(GBOJ(gSipServer)->GetEndPoint(),rdata,status_code,NULL,&tdata);
+    pj_str_t type = {"Application",11};
+    pj_str_t sdptype = {"SDP",3};
+    if(status_code != SIP_SUCCESS)
+    {
+        tdata->msg->body = pjsip_msg_body_create(tdata->pool,&type,&sdptype,&(pjsip_rdata_get_sdp_info(rdata)->body));
+    }
+    else
+    {
+        stringstream ss;
+        ss<<"v="<<"0"<<"\r\n";
+        ss<<"o="<<devid<<" 0 0 IN IP4 "<<GBOJ(gConfig)->sipIp()<<"\r\n";
+        ss<<"s="<<"Play"<<"\r\n";
+        ss<<"c="<<"IN IP4 "<<GBOJ(gConfig)->sipIp()<<"\r\n";
+        ss<<"t="<<"0 0"<<"\r\n";
+        ss<<"m=video "<<30000<<" "<<sdpInfo.sdp_protol<<" 96"<<"\r\n";
+        ss<<"a=rtpmap:96 PS/90000"<<"\r\n";
+        ss<<"a=sendonly"<<"\r\n";
+        if(sdpInfo.setUp != "")
+        {
+            if(sdpInfo.setUp == "passive")
+            {
+                ss<<"a=setup:"<<"active"<<"\r\n";
+            }
+            else if(sdpInfo.setUp == "active")
+            {
+                ss<<"a=setup:"<<"passive"<<"\r\n";
+            }
+        }
 
-//         string sResp = ss.str();
-//         pj_str_t sdpData = pj_str((char*)sResp.c_str());
-//         tdata->msg->body = pjsip_msg_body_create(tdata->pool,&type,&sdptype,&sdpData);
-//     }
-// 	SipMessage msg;
-// 	msg.setContact((char*)GBOJ(gConfig)->sipId().c_str(),(char*)GBOJ(gConfig)->sipIp().c_str(),GBOJ(gConfig)->sipPort());
-// 	const pj_str_t contactHeader = pj_str("Contact");
-// 	const pj_str_t param = pj_str(msg.Contact());
-// 	pjsip_generic_string_hdr* customHeader = pjsip_generic_string_hdr_create(tdata->pool,&contactHeader,&param);
-// 	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)customHeader);
-// 	pjsip_response_addr res_addr;
-// 	pj_status_t status = pjsip_get_response_addr(tdata->pool, rdata, &res_addr);
-//     if (PJ_SUCCESS != status)
-//     {
-//         pjsip_tx_data_dec_ref(tdata);
-//         return;
-//     }
-//     status = pjsip_endpt_send_response(GBOJ(gSipServer)->GetEndPoint(), &res_addr, tdata, NULL, NULL);
-//     if (PJ_SUCCESS != status)
-//     {
-//         pjsip_tx_data_dec_ref(tdata);
-//         return;
-//     }
+        string sResp = ss.str();
+        pj_str_t sdpData = pj_str((char*)sResp.c_str());
+        tdata->msg->body = pjsip_msg_body_create(tdata->pool,&type,&sdptype,&sdpData);
+    }
+	SipMessage msg;
+	msg.setContact((char*)GBOJ(gConfig)->sipId().c_str(),(char*)GBOJ(gConfig)->sipIp().c_str(),GBOJ(gConfig)->sipPort());
+	const pj_str_t contactHeader = pj_str("Contact");
+	const pj_str_t param = pj_str(msg.Contact());
+	pjsip_generic_string_hdr* customHeader = pjsip_generic_string_hdr_create(tdata->pool,&contactHeader,&param);
+	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)customHeader);
+	pjsip_response_addr res_addr;
+	pj_status_t status = pjsip_get_response_addr(tdata->pool, rdata, &res_addr);
+    if (PJ_SUCCESS != status)
+    {
+        pjsip_tx_data_dec_ref(tdata);
+        return;
+    }
+    status = pjsip_endpt_send_response(GBOJ(gSipServer)->GetEndPoint(), &res_addr, tdata, NULL, NULL);
+    if (PJ_SUCCESS != status)
+    {
+        pjsip_tx_data_dec_ref(tdata);
+        return;
+    }
 
-//     return;
-// }
+    return;
+}
 
 void SipGbPlay::OnStateChanged(pjsip_inv_session *inv, pjsip_event *e)
 {

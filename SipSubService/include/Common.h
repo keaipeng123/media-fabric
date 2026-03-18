@@ -7,6 +7,9 @@
 #include <stdlib.h>
 #include <memory>
 #include <string>
+#include <sstream>
+#include <semaphore.h>
+#include <unistd.h>
 
 using namespace std;
 
