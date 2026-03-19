@@ -1,5 +1,5 @@
 #include"SipGbPlay.h"
-//#include"Gb28181Session.h"
+#include"Gb28181Session.h"
 
 SipGbPlay::SipGbPlay()
 {
@@ -57,6 +57,8 @@ void SipGbPlay::OnMediaUpdate(pjsip_inv_session *inv_ses, pj_status_t status)
 
     //Gb28181Session* rtpsession = dynamic_cast<Gb28181Session*>((Session*)inv_ses->mod_data[0]);
     //rtpsession->CreateRtpSession(ip,sdp_port);
+    Gb28181Session* session = (Gb28181Session*)inv_ses->mod_data[0];
+    session->CreateRtpSession();
 
     return;
 

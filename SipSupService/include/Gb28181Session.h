@@ -87,7 +87,8 @@ class Gb28181Session : public RTPSession
         Gb28181Session();
         ~Gb28181Session();
 
-        // int CreateRtpSession(string dstip,int dstport);
+        int CreateRtpSession();
+        //int CreateRtpSession(string dstip,int dstport);
         // int RtpTcpInit(string dstip,int dstport,int time);
 		// int SendPacket(int media,char* data,int datalen,int codecId);
     protected:

@@ -2,7 +2,7 @@
 #include"SipDef.h"
 #include"SipMessage.h"
 #include"GlobalCtl.h"
-//#include"Gb28181Session.h"
+#include"Gb28181Session.h"
 
 //rtp负载类型定义
 static string rtpmap_ps="96 PS/90000";
@@ -248,9 +248,10 @@ void OpenStream::StreamGetProc(void* param)
         return;
    }
 
-//    Session* pSession=new Gb28181Session(info);
-//    pSession->m_rtpPort=rtp_port;
-//    inv->mod_data[0]=(void*)pSession;
+   //Session* pSession=new Gb28181Session(info);
+   //pSession->m_rtpPort=rtp_port;
+   Gb28181Session* session=new Gb28181Session();
+   inv->mod_data[0]=(void*)session;
 
    pjsip_tx_data* tdata;
    status=pjsip_inv_invite(inv,&tdata);

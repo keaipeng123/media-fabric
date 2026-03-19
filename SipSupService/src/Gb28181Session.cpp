@@ -271,24 +271,29 @@
 //     m_listenFd = -1;
 // }
 
-// Gb28181Session::~Gb28181Session()
-// {
-// 	//发送BYE数据包并离开会话 不用等待
-// 	BYEDestroy(RTPTime(0, 0), 0, 0);
-//     if(m_rtpTcpFd != -1)
-//     {
-//         close(m_rtpTcpFd);
-//         m_rtpTcpFd = -1;
-//     }
+Gb28181Session::Gb28181Session()
+{
+}
 
-//     if(m_listenFd != -1)
-//     {
-//         close(m_listenFd);
-//         m_listenFd = -1;
-//     }
+
+Gb28181Session::~Gb28181Session()
+{
+	//发送BYE数据包并离开会话 不用等待
+	// BYEDestroy(RTPTime(0, 0), 0, 0);
+    // if(m_rtpTcpFd != -1)
+    // {
+    //     close(m_rtpTcpFd);
+    //     m_rtpTcpFd = -1;
+    // }
+
+    // if(m_listenFd != -1)
+    // {
+    //     close(m_listenFd);
+    //     m_listenFd = -1;
+    // }
 	
 // 	GBOJ(gConfig)->pushOneRandNum(rtp_loaclport);
-// }
+}
 
 // void Gb28181Session::OnPollThreadStep()
 // {
@@ -471,62 +476,65 @@
 
 // }
 
-// int Gb28181Session::CreateRtpSession(string dstip,int dstport)
-// {
-// 	LOG(INFO)<<"CreateRtpSession";
-//     RTPSessionParams sessParams;
-//     sessParams.SetOwnTimestampUnit(1.0/90000.0);
-//     sessParams.SetAcceptOwnPackets(true);
-//     sessParams.SetUsePollThread(true);
-//     sessParams.SetNeedThreadSafety(true);
-//     sessParams.SetMinimumRTCPTransmissionInterval(RTPTime(5,0));
-// 	int ret = -1;
-//     if(protocal == 0)
-//     {
-//         RTPUDPv4TransmissionParams transparams;
-//         transparams.SetRTPReceiveBuffer(1024*1024);
-//         transparams.SetPortbase(rtp_loaclport);
+//int Gb28181Session::CreateRtpSession(string dstip,int dstport)
+int Gb28181Session::CreateRtpSession()
+{
+	LOG(INFO)<<"CreateRtpSession";
+    RTPSessionParams sessParams; //rtp会话参数设置
+    sessParams.SetOwnTimestampUnit(1.0/90000.0);//设置会话时间戳
+    sessParams.SetAcceptOwnPackets(true);//是否接收自己的数据包
+    sessParams.SetUsePollThread(true);//是否使用轮询线程
+    sessParams.SetNeedThreadSafety(true);//是否需要线程安全
+    sessParams.SetMinimumRTCPTransmissionInterval(RTPTime(5,0));//设置最小RTCP传输间隔，5s
+	int ret = -1;
+    // if(protocal == 0)
+    // {
+        RTPUDPv4TransmissionParams transparams;
+        transparams.SetRTPReceiveBuffer(1024*1024);
+        transparams.SetPortbase(20000);
+        //transparams.SetPortbase(rtp_loaclport);
         
 
-//         ret = Create(sessParams,&transparams);
-// 		LOG(INFO)<<"ret:"<<ret;
-//         if(ret < 0)
-//         {
-//             LOG(ERROR)<<"udp create fail";
-//         }
-//         else
-//         {
-//             LOG(INFO)<<"udp create ok,bind:"<<rtp_loaclport;
-//         }
-//     }
-//     else
-//     {
-//         sessParams.SetMaximumPacketSize(65535);
-//         RTPTCPTransmissionParams transParams;
-//         ret = Create(sessParams, &transParams, RTPTransmitter::TCPProto);
-//         if(ret < 0)
-//         {
-//             LOG(ERROR) << "Rtp tcp error: " << RTPGetErrorString(ret);
-//             return -1;
-//         }
+        ret = Create(sessParams,&transparams);
+		LOG(INFO)<<"creat rtp ret:"<<ret;
+        if(ret < 0)
+        {
+            LOG(ERROR)<<"udp create fail";
+        }
+        else
+        {
+            LOG(INFO)<<"udp create ok,bind:"<<20000;
+            //LOG(INFO)<<"udp create ok,bind:"<<rtp_loaclport;
+        }
+    //}
+    // else
+    // {
+    //     sessParams.SetMaximumPacketSize(65535);
+    //     RTPTCPTransmissionParams transParams;
+    //     ret = Create(sessParams, &transParams, RTPTransmitter::TCPProto);
+    //     if(ret < 0)
+    //     {
+    //         LOG(ERROR) << "Rtp tcp error: " << RTPGetErrorString(ret);
+    //         return -1;
+    //     }
 
-//         //会话创建成功后，接下来需要创建tcp连接
-//         int sessFd = RtpTcpInit(dstip,dstport,5);
-// 		LOG(INFO)<<"sessFd:"<<sessFd;
-//         if(sessFd < 0)
-//         {
-//             LOG(ERROR)<<"RtpTcpInit faild";
-//             return -1;
-//         }
-//         else
-//         {
-//             AddDestination(RTPTCPAddress(sessFd));
-//         }
-//     }
+    //     //会话创建成功后，接下来需要创建tcp连接
+    //     int sessFd = RtpTcpInit(dstip,dstport,5);
+	// 	LOG(INFO)<<"sessFd:"<<sessFd;
+    //     if(sessFd < 0)
+    //     {
+    //         LOG(ERROR)<<"RtpTcpInit faild";
+    //         return -1;
+    //     }
+    //     else
+    //     {
+    //         AddDestination(RTPTCPAddress(sessFd));
+    //     }
+    // }
     
 
-//     return ret;
-// }
+    return ret;
+}
 
 // int Gb28181Session::RtpTcpInit(string dstip,int dstport,int time)
 // {
