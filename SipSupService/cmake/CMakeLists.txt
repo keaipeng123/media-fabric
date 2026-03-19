@@ -19,6 +19,7 @@ INCLUDE_DIRECTORIES(../../3rd/include/jthread)
 INCLUDE_DIRECTORIES(../../3rd/include/tinyxml2)
 #INCLUDE_DIRECTORIES(../../3rd/include/json)
 INCLUDE_DIRECTORIES(../../3rd/include/libevent)
+INCLUDE_DIRECTORIES(../../3rd/include/mpege)
 #添加需要链接的库文件路径
 LINK_DIRECTORIES(../../3rd/lib)
 #将指定的源文件代码生成相应的可执行文件
@@ -34,4 +35,5 @@ TARGET_LINK_LIBRARIES(${EXE_NAME} libjrtp.a libjthread.a)
 TARGET_LINK_LIBRARIES(${EXE_NAME} libtinyxml2.a)
 TARGET_LINK_LIBRARIES(${EXE_NAME} libjsoncpp.a)
 TARGET_LINK_LIBRARIES(${EXE_NAME} libevent.a libevent_pthreads.a)
+TARGET_LINK_LIBRARIES(${EXE_NAME} libmpeg.a)
 TARGET_LINK_LIBRARIES(${EXE_NAME} ${OPENSSL_LIBRARIES})

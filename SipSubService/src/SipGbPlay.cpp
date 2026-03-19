@@ -2,7 +2,7 @@
 #include "GlobalCtl.h"
 #include "Common.h"
 #include "SipDef.h"
-//#include "Gb28181Session.h"
+#include "Gb28181Session.h"
 #include "SipMessage.h"
 
 
@@ -81,7 +81,7 @@ void SipGbPlay::dealWithInvite(pjsip_rx_data *rdata)
     int status_code = 200;
     string id;
     MediaInfo sdpInfo;
-    //SipPsCode* ps = NULL;
+    SipPsCode* ps = NULL;
     do
     {
        {
@@ -154,7 +154,9 @@ void SipGbPlay::dealWithInvite(pjsip_rx_data *rdata)
         }
 		
 		// sdpInfo.localRtpPort = GBOJ(gConfig)->popOneRandNum();
-        // ps = new SipPsCode(dst_ip,sdp_port,sdpInfo.localRtpPort,poto,sdpInfo.setUp,sdpInfo.startTime,sdpInfo.endTime);
+        ps = new SipPsCode(dst_ip,sdp_port);
+        ps->initPsEncode();
+        //ps = new SipPsCode(dst_ip,sdp_port,sdpInfo.localRtpPort,poto,sdpInfo.setUp,sdpInfo.startTime,sdpInfo.endTime);
         // {
         //     //需要在ps对象实例化后就插入到map中
         //     AutoMutexLock lck(&streamLock);
