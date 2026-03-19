@@ -3,21 +3,7 @@
 #include <iostream>
 
 #include <signal.h>
-#include <pjlib-util.h>
-#include <pjmedia.h>
-#include <pjsip.h>
-#include <pjsip_ua.h>
-#include <pjsip/sip_auth.h>
-#include"rtpsession.h"
-#include"rtpsourcedata.h"
-#include"rtptcptransmitter.h"
-#include"rtptcpaddress.h"
-#include"rtpudpv4transmitter.h"
-#include"rtpipv4address.h"
-#include"rtpsessionparams.h"
-#include"rtperrors.h"
-#include"rtplibraryversion.h"
-#include"rtcpsrpacket.h"
+
 
 #include"event2/event.h"
 #include"event2/listener.h"
