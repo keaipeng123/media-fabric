@@ -155,7 +155,6 @@ void SipGbPlay::dealWithInvite(pjsip_rx_data *rdata)
 		
 		// sdpInfo.localRtpPort = GBOJ(gConfig)->popOneRandNum();
         ps = new SipPsCode(dst_ip,sdp_port);
-        ps->initPsEncode();
         //ps = new SipPsCode(dst_ip,sdp_port,sdpInfo.localRtpPort,poto,sdpInfo.setUp,sdpInfo.startTime,sdpInfo.endTime);
         // {
         //     //需要在ps对象实例化后就插入到map中
@@ -164,9 +163,9 @@ void SipGbPlay::dealWithInvite(pjsip_rx_data *rdata)
         // }
 
     } while (0);
-
+    ps->initPsEncode();
     resWithSdp(rdata,status_code,id,sdpInfo);
-
+    recvFrame(&ps);
     //sendPsRtpStream(&ps);
     
     
@@ -203,96 +202,115 @@ void SipGbPlay::dealWithInvite(pjsip_rx_data *rdata)
 // 	//是否为I帧
 // 	int keyFrame;
 // };
-// int SipGbPlay::recvFrame(SipPsCode** ps)
-// {
-//     // string out_video_path = "/home/ap/safm/ccbc/bin/forkCancer/out222222222.h264";
-//     // FILE* h264_fp = fopen(out_video_path.c_str(),"wb");
-//     // FILE* fp = fopen("/home/ap/safm/ccbc/bin/forkCancer/stream.file","rb");
-//     // if(!fp)
-//         // return -1;
+int SipGbPlay::recvFrame(SipPsCode** ps)
+{
+    // string out_video_path = "/home/ap/safm/ccbc/bin/forkCancer/out222222222.h264";
+    // FILE* h264_fp = fopen(out_video_path.c_str(),"wb");
+    // FILE* fp = fopen("/home/ap/safm/ccbc/bin/forkCancer/stream.file","rb");
+    // if(!fp)
+        // return -1;
 	
-// 	string out_video_path = "../../conf/out.h264";
-//     FILE* h264_fp = fopen(out_video_path.c_str(),"wb");
-//     FILE* fp = fopen("../../conf/stream.file","rb");
-//     if(!fp)
-//         return -1;
+	string out_video_path = "../conf/out.h264";
+    FILE* h264_fp = fopen(out_video_path.c_str(),"wb");
+    FILE* fp = fopen("../conf/stream.file","rb");
+    if(!fp)
+        return -1;
 	
-// 	//在这里我们先对录像时间进行个转换，转成毫秒,因为数据的头部里的pts为毫秒级别
-// 	int start = 0;
-// 	int end = 0;
-// 	bool backflag = false;  //定义个回放flag
-// 	if((*ps)->m_sTime >= 0 && (*ps)->m_eTime > 0)
-// 	{
-// 		start = (*ps)->m_sTime * 1000;
-// 		end = (*ps)->m_eTime * 1000;
-// 		backflag = true;
-// 	}
-//     int ret = 0;
-//     unsigned char* buf = new unsigned char[sizeof(StreamHeader)];
-//     while(!feof(fp))
-//     {
-//         //需要判断下结束的flag
-//         //为true则发送rtp层的bye，并退出当前取流和推流的线程
-//         if((*ps)->stopFlag)
-//         {
-//             delete *ps;
-//             *ps = NULL;
-//             break;
-//         }
-//         memset(buf,0,sizeof(StreamHeader));
-//         int size = fread(buf,1,sizeof(StreamHeader),fp);
-//         if(size < 0)
-//         {
-//             ret = -1;
-//             break;
-//         }
-//         StreamHeader* header = (StreamHeader*)buf;
-// 		LOG(INFO)<<"header->pts:"<<header->pts;
-// 		unsigned char* data = new unsigned char[header->length];
-// 		fread(data,1,header->length,fp);
-//         if(header->type == 2)
-//         {
-// 			if(backflag)
-// 			{
-// 				if(header->pts < start)
-// 				{
-// 					continue;  //协议头里的pts小于起始时间，那么我们就不推流
-// 				}
-// 				else if(header->pts > end)
-// 				{
-// 					break;   //当pts大于录像结束时间后我们断流
-// 				}
-// 			}
+	//在这里我们先对录像时间进行个转换，转成毫秒,因为数据的头部里的pts为毫秒级别
+	//int start = 0;
+	//int end = 0;
+	//bool backflag = false;  //定义个回放flag
+	//if((*ps)->m_sTime >= 0 && (*ps)->m_eTime > 0)
+	//{
+	//	start = (*ps)->m_sTime * 1000;
+	//	end = (*ps)->m_eTime * 1000;
+	//	backflag = true;
+	//}
+    int ret = 0;
+    unsigned char* buf = new unsigned char[sizeof(StreamHeader)];
+    while(!feof(fp))
+    {
+        //需要判断下结束的flag
+        //为true则发送rtp层的bye，并退出当前取流和推流的线程
+        // if((*ps)->stopFlag)
+        // {
+        //     delete *ps;
+        //     *ps = NULL;
+        //     break;
+        // }
+        memset(buf,0,sizeof(StreamHeader));
+        int size = fread(buf,1,sizeof(StreamHeader),fp);//读帧头
+        if(size < 0)
+        {
+            ret = -1;
+            break;
+        }
+        StreamHeader* header = (StreamHeader*)buf;
+        if(header->type==2)
+        {
+            unsigned char* data = new unsigned char[header->length];
+            fread(data,1,header->length,fp);//读帧数据
+
+            if((*ps)->incomeVideoData(data,header->length,header->pts,header->keyFrame)<0)
+            {
+                continue;
+            }
+
+
+            size = fwrite(data,1,header->length,h264_fp);
+            LOG(INFO)<<"write size:"<<size;
+            delete data;
+        }
+        else
+        {
+            continue;
+        }
+		// LOG(INFO)<<"header->pts:"<<header->pts;
+		// unsigned char* data = new unsigned char[header->length];
+		// fread(data,1,header->length,fp);
+        // if(header->type == 2)
+        // {
+		// 	if(backflag)
+		// 	{
+		// 		if(header->pts < start)
+		// 		{
+		// 			continue;  //协议头里的pts小于起始时间，那么我们就不推流
+		// 		}
+		// 		else if(header->pts > end)
+		// 		{
+		// 			break;   //当pts大于录像结束时间后我们断流
+		// 		}
+		// 	}
             
 
-//             //ps demetex
-//             if((*ps)->incomeVideoData(data,header->length,header->pts,header->keyFrame)<0)
-//             {
-//                 continue;
-//             }
-// 			//LOG(INFO)<<"header->length:"<<header->length;
-//             size = fwrite(data,1,header->length,h264_fp);
-//             //LOG(INFO)<<"write size:"<<size;
-//             delete data;
-//         }
-//         else
-//         {
-//             continue;
-//         }
-//         usleep(90000);
-//     }
-//     delete buf;
-//     fclose(h264_fp);
-//     fclose(fp);
-//     if((*ps) != NULL)
-//     {
-//         delete *ps;
-//         *ps = NULL;
-//     }
+        //     //ps demetex
+        //     if((*ps)->incomeVideoData(data,header->length,header->pts,header->keyFrame)<0)
+        //     {
+        //         continue;
+        //     }
+		// 	//LOG(INFO)<<"header->length:"<<header->length;
+        //     size = fwrite(data,1,header->length,h264_fp);
+        //     //LOG(INFO)<<"write size:"<<size;
+        //     delete data;
+        // }
+        // else
+        // {
+        //     continue;
+        // }
+        // usleep(90000);
+    }
+    delete buf;
+    fclose(h264_fp);
+    fclose(fp);
+    if((*ps) != NULL)
+    {
+        delete *ps;
+        *ps = NULL;
+    }
    
 
-//     return ret;
-// }
+    return ret;
+}
 
 void SipGbPlay::resWithSdp(pjsip_rx_data *rdata,int status_code,string devid,MediaInfo sdpInfo)
 {

@@ -76,4 +76,16 @@ class JsonParse
     Json::Value m_json;
 };
 
+struct StreamHeader
+{
+	//媒体类型，1-》audio 2-》video
+	char type;
+	//显示时间戳  毫秒级
+	int pts;
+	//本帧长度, 指后续负载长度, bytes
+	int length;
+	//是否为I帧
+	int keyFrame;
+};
+
 #endif

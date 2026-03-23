@@ -172,53 +172,53 @@ int SipPsCode::gbRtpInit()
    return m_gbRtpHandle->CreateRtpSession(this->m_dstip, this->m_dstport);
 }
 
-// int SipPsCode::incomeVideoData(unsigned char* avdata,int len,int pts,int isIframe)
-// {
-//     if(m_avStreamIndex==-1) //h264的流只初始化一次
-//     {
-//         m_avStreamIndex=ps_muxer_add_stream(m_muxer,STREAM_VIDEO_H264,NULL,0);//向m_muxer封装器添加需要封装流的信息,返回添加流的索引值
-//         LOG(INFO)<<"add stream index:"<<m_avStreamIndex;
-//     }
-//     if(m_gbRtpHandle->CheckAlive())
-//     {
-//         LOG(ERROR)<<"recv rtcp RR error";
-//         this->stopFlag=true;
-//         return -1;
-//     }
-//     //关键帧：ps h | ps sys h | ps sys map | pes h | h264 raw
-//     //非关键帧： ps h | pes h | h264 raw
-//     //音频：pes h |aac raw
-//     int ret=ps_muxer_input(m_muxer,m_avStreamIndex,isIframe,pts,pts,avdata,len);//isIframe是否I帧
-//     if(ret<0)
-//     {
-//         LOG(INFO)<<"error to push frame:"<<ret;
-//     }
-//     return ret;
-// }
+int SipPsCode::incomeVideoData(unsigned char* avdata,int len,int pts,int isIframe)
+{
+    if(m_avStreamIndex==-1) //h264的流只初始化一次
+    {
+        m_avStreamIndex=ps_muxer_add_stream(m_muxer,STREAM_VIDEO_H264,NULL,0);//向m_muxer封装器添加需要封装流的信息,返回添加流的索引值
+        LOG(INFO)<<"add stream index:"<<m_avStreamIndex;
+    }
+    // if(m_gbRtpHandle->CheckAlive())
+    // {
+    //     LOG(ERROR)<<"recv rtcp RR error";
+    //     this->stopFlag=true;
+    //     return -1;
+    // }
+    //关键帧：ps h | ps sys h | ps sys map | pes h | h264 raw
+    //非关键帧： ps h | pes h | h264 raw
+    //音频：pes h |aac raw
+    int ret=ps_muxer_input(m_muxer,m_avStreamIndex,isIframe,pts,pts,avdata,len);//isIframe是否I帧
+    if(ret<0)
+    {
+        LOG(INFO)<<"error to push frame:"<<ret;
+    }
+    return ret;
+}
 
-// int SipPsCode::incomeAudioData(unsigned char* audata,int len,int pts)
-// {
-//     if(m_auStreamIndex==-1) //h264的流只初始化一次
-//     {
-//         m_auStreamIndex=ps_muxer_add_stream(m_muxer,STREAM_AUDIO_AAC,NULL,0);//向m_muxer封装器添加需要封装流的信息,返回添加流的索引值
-//         LOG(INFO)<<"add stream index:"<<m_auStreamIndex;
-//     }
-//     if(m_gbRtpHandle->CheckAlive())
-//     {
-//         LOG(ERROR)<<"recv rtcp RR error";
-//         this->stopFlag=true;
-//         return -1;
-//     }
-//     //关键帧：ps h | ps sys h | ps sys map | pes h | h264 raw
-//     //非关键帧： ps h | pes h | h264 raw
-//     //音频：pes h |aac raw
-//     int ret=ps_muxer_input(m_muxer,m_auStreamIndex,0,pts,pts,audata,len);//isIframe是否I帧
-//     if(ret<0)
-//     {
-//         LOG(INFO)<<"error to push frame:"<<ret;
-//     }
-//     return ret;
-// }
+int SipPsCode::incomeAudioData(unsigned char* audata,int len,int pts)
+{
+    if(m_auStreamIndex==-1) //h264的流只初始化一次
+    {
+        m_auStreamIndex=ps_muxer_add_stream(m_muxer,STREAM_AUDIO_AAC,NULL,0);//向m_muxer封装器添加需要封装流的信息,返回添加流的索引值
+        LOG(INFO)<<"add stream index:"<<m_auStreamIndex;
+    }
+    // if(m_gbRtpHandle->CheckAlive())
+    // {
+    //     LOG(ERROR)<<"recv rtcp RR error";
+    //     this->stopFlag=true;
+    //     return -1;
+    // }
+    //关键帧：ps h | ps sys h | ps sys map | pes h | h264 raw
+    //非关键帧： ps h | pes h | h264 raw
+    //音频：pes h |aac raw
+    int ret=ps_muxer_input(m_muxer,m_auStreamIndex,0,pts,pts,audata,len);//isIframe是否I帧
+    if(ret<0)
+    {
+        LOG(INFO)<<"error to push frame:"<<ret;
+    }
+    return ret;
+}
 
 // int SipPsCode::sendPackData(void* packet, size_t bytes)
 // {

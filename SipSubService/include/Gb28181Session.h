@@ -170,8 +170,8 @@ class SipPsCode
     {
         m_dstip=dstip;
         m_dstport=dstport;
-        // m_avStreamIndex=-1;
-        // m_auStreamIndex=-1;
+        m_avStreamIndex=-1;
+        m_auStreamIndex=-1;
         // stopFlag=false;
         // m_rtpPort=rtpPort;
         // m_sTime=s;
@@ -183,15 +183,15 @@ class SipPsCode
     ~SipPsCode()
     {
         // stopFlag=false;
-        // if(m_muxer)
-        // {
-        //     ps_muxer_destroy(m_muxer);
-        // }
-        // if(m_gbRtpHandle)
-        // {
-        //     delete m_gbRtpHandle;
-        //     m_gbRtpHandle=NULL;
-        // }
+        if(m_muxer)
+        {
+            ps_muxer_destroy(m_muxer);
+        }
+        if(m_gbRtpHandle)
+        {
+            delete m_gbRtpHandle;
+            m_gbRtpHandle=NULL;
+        }
         // GBOJ(gConfig)->pushOneRandNum(m_rtpPort);
     }
 
@@ -202,8 +202,8 @@ class SipPsCode
     static void Free(void* param, void* packet);
     static int onPsPacket(void* param, int stream, void* packet, size_t bytes);
 
-//     int incomeVideoData(unsigned char* avdata,int len,int pts,int isIframe);//ps流封装
-//     int incomeAudioData(unsigned char* audata,int len,int pts);
+    int incomeVideoData(unsigned char* avdata,int len,int pts,int isIframe);//ps流封装
+    int incomeAudioData(unsigned char* audata,int len,int pts);
 //     int sendPackData(void* packet, size_t bytes);
 //     bool stopFlag;
 //     int m_sTime;
@@ -216,8 +216,8 @@ class SipPsCode
     int m_dstport;
     Gb28181Session* m_gbRtpHandle;
     ps_muxer_t* m_muxer;
-//     int m_avStreamIndex;
-//     int m_auStreamIndex;
+    int m_avStreamIndex;
+    int m_auStreamIndex;
 //     int m_rtpPort;
 };
 

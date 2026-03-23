@@ -481,7 +481,7 @@ int Gb28181Session::CreateRtpSession()
 {
 	LOG(INFO)<<"CreateRtpSession";
     RTPSessionParams sessParams; //rtp会话参数设置
-    sessParams.SetOwnTimestampUnit(1.0/90000.0);//设置会话时间戳
+    sessParams.SetOwnTimestampUnit(1.0/90000.0);//设置会话时间戳，1个rtp时间戳单位，RTP 头里 timestamp 字段每增加 1，表示媒体时间前进了多少
     sessParams.SetAcceptOwnPackets(true);//是否接收自己的数据包
     sessParams.SetUsePollThread(true);//是否使用轮询线程
     sessParams.SetNeedThreadSafety(true);//是否需要线程安全

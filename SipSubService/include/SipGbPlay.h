@@ -1,7 +1,7 @@
 #ifndef _SIPGBPLAY_H
 #define _SIPGBPLAY_H
 #include "SipTaskBase.h"
-//#include "Gb28181Session.h"
+#include "Gb28181Session.h"
 #include <unordered_map>
 class SipGbPlay : public SipTaskBase
 {
@@ -47,7 +47,7 @@ class SipGbPlay : public SipTaskBase
         static void OnMediaUpdate(pjsip_inv_session *inv_ses, pj_status_t status);
 
         // void sendPsRtpStream(SipPsCode** ps);
-        // int recvFrame(SipPsCode** ps);
+        int recvFrame(SipPsCode** ps);
 
 };
 #endif

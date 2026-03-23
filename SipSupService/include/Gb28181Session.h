@@ -16,13 +16,13 @@
 
 //#include "SipDef.h"
 
-#ifdef __cplusplus
-extern "C"{
-#endif
-#include "jthread.h"
-#ifdef __cplusplus
-}
-#endif
+#ifdef __cplusplus  // 开头1：检查是否是C++编译器
+extern "C"{         // 若是，执行这行（打开C规则包裹）
+#endif              // 结束1：闭合开头1的判断（不管是不是C++，都到这一步）
+#include "jthread.h"// 核心操作：引入头文件，无论 C/C++ 环境都要引入
+#ifdef __cplusplus  // 开头2：再次检查是否是C++编译器
+}                   // 若是，执行这行（闭合C规则包裹）
+#endif              // 结束2：闭合开头2的判断
 //#include "GlobalCtl.h"
 using namespace jrtplib;
 
