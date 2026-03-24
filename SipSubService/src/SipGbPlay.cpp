@@ -265,6 +265,7 @@ int SipGbPlay::recvFrame(SipPsCode** ps)
         {
             continue;
         }
+        usleep(80000);
 		// LOG(INFO)<<"header->pts:"<<header->pts;
 		// unsigned char* data = new unsigned char[header->length];
 		// fread(data,1,header->length,fp);

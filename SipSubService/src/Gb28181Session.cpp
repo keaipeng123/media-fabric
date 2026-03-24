@@ -141,6 +141,7 @@ int SipPsCode::onPsPacket(void* param, int stream, void* packet, size_t bytes)
     LOG(INFO)<<bytes<<" packet demutex";
     SipPsCode* self=(SipPsCode*)param; //静态需要指定对象指针
    //self->sendPackData(packet,bytes);
+    return 0;
 }
 
 int SipPsCode::initPsEncode()
@@ -188,7 +189,8 @@ int SipPsCode::incomeVideoData(unsigned char* avdata,int len,int pts,int isIfram
     //关键帧：ps h | ps sys h | ps sys map | pes h | h264 raw
     //非关键帧： ps h | pes h | h264 raw
     //音频：pes h |aac raw
-    int ret=ps_muxer_input(m_muxer,m_avStreamIndex,isIframe,pts,pts,avdata,len);//isIframe是否I帧
+    int64_t pts90k=(int64_t)pts*90;
+    int ret=ps_muxer_input(m_muxer,m_avStreamIndex,isIframe,pts90k,pts90k,avdata,len);//isIframe是否I帧
     if(ret<0)
     {
         LOG(INFO)<<"error to push frame:"<<ret;
@@ -212,7 +214,8 @@ int SipPsCode::incomeAudioData(unsigned char* audata,int len,int pts)
     //关键帧：ps h | ps sys h | ps sys map | pes h | h264 raw
     //非关键帧： ps h | pes h | h264 raw
     //音频：pes h |aac raw
-    int ret=ps_muxer_input(m_muxer,m_auStreamIndex,0,pts,pts,audata,len);//isIframe是否I帧
+    int64_t pts90k=(int64_t)pts*90;
+    int ret=ps_muxer_input(m_muxer,m_auStreamIndex,0,pts90k,pts90k,audata,len);//isIframe是否I帧
     if(ret<0)
     {
         LOG(INFO)<<"error to push frame:"<<ret;
