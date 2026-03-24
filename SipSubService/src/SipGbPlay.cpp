@@ -163,33 +163,33 @@ void SipGbPlay::dealWithInvite(pjsip_rx_data *rdata)
         // }
 
     } while (0);
-    ps->initPsEncode();
+    //ps->initPsEncode();
     resWithSdp(rdata,status_code,id,sdpInfo);
-    recvFrame(&ps);
-    //sendPsRtpStream(&ps);
+    //recvFrame(&ps);
+    sendPsRtpStream(&ps);
     
     
     
 }
 
-// void SipGbPlay::sendPsRtpStream(SipPsCode** ps)
-// {
-//     int ret = (*ps)->initPsEncode();
-//     if(ret < 0)
-//     {
-//         LOG(ERROR)<<"initPsEncode error:"<<ret;
-//         return;
-//     }
+void SipGbPlay::sendPsRtpStream(SipPsCode** ps)
+{
+    int ret = (*ps)->initPsEncode();
+    if(ret < 0)
+    {
+        LOG(ERROR)<<"initPsEncode error:"<<ret;
+        return;
+    }
 
-//     ret = recvFrame(&(*ps));
-//     if(ret < 0)
-//     {
-//         LOG(ERROR)<<"recvFrame error";
-//     }
-//     return;
+    ret = recvFrame(&(*ps));
+    if(ret < 0)
+    {
+        LOG(ERROR)<<"recvFrame error";
+    }
+    return;
 
 
-// }
+}
 
 // struct StreamHeader
 // {

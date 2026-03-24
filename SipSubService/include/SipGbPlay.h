@@ -46,7 +46,7 @@ class SipGbPlay : public SipTaskBase
         static void OnNewSession(pjsip_inv_session *inv, pjsip_event *e);
         static void OnMediaUpdate(pjsip_inv_session *inv_ses, pj_status_t status);
 
-        // void sendPsRtpStream(SipPsCode** ps);
+        void sendPsRtpStream(SipPsCode** ps);
         int recvFrame(SipPsCode** ps);
 
 };

@@ -140,7 +140,7 @@ int SipPsCode::onPsPacket(void* param, int stream, void* packet, size_t bytes)
 {
     LOG(INFO)<<bytes<<" packet demutex";
     SipPsCode* self=(SipPsCode*)param; //静态需要指定对象指针
-   //self->sendPackData(packet,bytes);
+    self->sendPackData(packet,bytes);
     return 0;
 }
 
@@ -223,43 +223,43 @@ int SipPsCode::incomeAudioData(unsigned char* audata,int len,int pts)
     return ret;
 }
 
-// int SipPsCode::sendPackData(void* packet, size_t bytes)
-// {
-//     int ps_buff_len=1300;//每次发送的rtp包字节
-//     int size=0;
-//     int status=0;
-//     while(size<bytes)
-//     {
-//         int packlen=(bytes-size)>=ps_buff_len?ps_buff_len:(bytes-size);
-//         if(bytes<ps_buff_len)
-//         {
-//             status=m_gbRtpHandle->SendPacket(packet,bytes,96,true,PS_SEND_TIMESTAME);//mark对于视频来说代表一帧数据的结尾，对于音频来说代表数据的开始
-//             if(status<0)
-//             {
-//                 LOG(ERROR)<<RTPGetErrorString(status);
-//             }
-//         }
-//         else
-//         {
-//             if((bytes-size)>ps_buff_len)
-//             {
-//                 status=m_gbRtpHandle->SendPacket(packet+size,packlen,96,false,0);//mark对于视频来说代表一帧数据的结尾，对于音频来说代表数据的开始
-//                 if(status<0)
-//                 {
-//                     LOG(ERROR)<<RTPGetErrorString(status);
-//                 }
-//             }
-//             else
-//             {
-//                 status=m_gbRtpHandle->SendPacket(packet+size,packlen,96,true,PS_SEND_TIMESTAME);//mark对于视频来说代表一帧数据的结尾，对于音频来说代表数据的开始
-//                 if(status<0)
-//                 {
-//                     LOG(ERROR)<<RTPGetErrorString(status);
-//                 }
-//             }
-//         }
-//         size+=packlen;
-//     }
-//     return status;
+int SipPsCode::sendPackData(void* packet, size_t bytes)
+{
+    int ps_buff_len=1300;//每次发送的rtp包字节，小于mtu，需要对原数据进行拆解
+    int size=0;
+    int status=0;
+    while(size<bytes)
+    {
+        int packlen=(bytes-size)>=ps_buff_len?ps_buff_len:(bytes-size);
+        if(bytes<ps_buff_len)//当前包小于设定的rtp包字节，直接发送，并且mark位置1（音频包）
+        {
+            status=m_gbRtpHandle->SendPacket(packet,bytes,96,true,PS_SEND_TIMESTAME);//mark对于视频来说代表一帧数据的结尾，对于音频来说代表数据的开始
+            if(status<0)
+            {
+                LOG(ERROR)<<RTPGetErrorString(status);
+            }
+        }
+        else
+        {
+            if((bytes-size)>ps_buff_len)//当前包大于设定的rtp包字节，说明需要拆包发送，拆包后mark位置0（视频包）
+            {
+                status=m_gbRtpHandle->SendPacket(packet+size,packlen,96,false,0);//mark对于视频来说代表一帧数据的结尾，对于音频来说代表数据的开始
+                if(status<0)
+                {
+                    LOG(ERROR)<<RTPGetErrorString(status);
+                }
+            }
+            else//最后一个包，直接发送，并且mark位置1（视频包）
+            {
+                status=m_gbRtpHandle->SendPacket(packet+size,packlen,96,true,PS_SEND_TIMESTAME);//mark对于视频来说代表一帧数据的结尾，对于音频来说代表数据的开始
+                if(status<0)
+                {
+                    LOG(ERROR)<<RTPGetErrorString(status);
+                }
+            }
+        }
+        size+=packlen;
+    }
+    return status;
 
-// }
+}

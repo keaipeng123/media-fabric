@@ -204,7 +204,7 @@ class SipPsCode
 
     int incomeVideoData(unsigned char* avdata,int len,int pts,int isIframe);//ps流封装
     int incomeAudioData(unsigned char* audata,int len,int pts);
-//     int sendPackData(void* packet, size_t bytes);
+    int sendPackData(void* packet, size_t bytes);
 //     bool stopFlag;
 //     int m_sTime;
 //     int m_eTime;
