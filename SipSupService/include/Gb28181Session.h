@@ -26,58 +26,58 @@ extern "C"{         // 若是，执行这行（打开C规则包裹）
 //#include "GlobalCtl.h"
 using namespace jrtplib;
 
-// typedef struct _PackProcStat
-// {
-//     _PackProcStat()
-//     {
-//         rSeq = -1;
-//         rTimeStamp = 0;
-//         rState = 1;
-//         rlen = 10*1024;
-//         rNow = 0;
-//         rBuf = (char*)malloc(rlen);
-//         unpackHnd = NULL;
-//         psFp = NULL;
-//         sCodec = 0;
-//         sBuf = (char*)malloc(rlen);
-//         slen = 10*1024;;
-//         sNow = 0;
-//         sKeyFrame = 0;
-// 		sPts = 0;
-// 		sFp = NULL;
-// 		session = NULL;
-//     }
-//     ~_PackProcStat()
-//     {
-//         if(rBuf)
-//         {
-//             free(rBuf);
-//             rBuf = NULL;
-//         }
-//         if(psFp)
-//         {
-//             fclose(psFp);
-//             psFp = NULL;
-//         }
-//     }
-//     int rSeq;
-//     int rTimeStamp;
-//     int rState;
-//     int rlen;   //当前buf的总大小
-//     int rNow;   //当前已经收到的数据包大小
-//     char* rBuf;  //当前收取数据的buf
-//     char* sBuf;
-//     int slen;
-//     int sNow;
-//     void* unpackHnd;
-//     FILE* psFp;
-//     int sCodec;
-//     int sKeyFrame;
-// 	int sPts;
-// 	FILE* sFp;
-// 	void* session;
+typedef struct _PackProcStat
+{
+    _PackProcStat()
+    {
+        rSeq = -1;
+        rTimeStamp = 0;
+        rState = 1;
+        rlen = 10*1024;
+        rNow = 0;
+        rBuf = (char*)malloc(rlen);
+        unpackHnd = NULL;
+        psFp = NULL;
+        sCodec = 0;
+        sBuf = (char*)malloc(rlen);
+        slen = 10*1024;;
+        sNow = 0;
+        sKeyFrame = 0;
+		sPts = 0;
+		sFp = NULL;
+		session = NULL;
+    }
+    ~_PackProcStat()
+    {
+        if(rBuf)
+        {
+            free(rBuf);
+            rBuf = NULL;
+        }
+        if(psFp)
+        {
+            fclose(psFp);
+            psFp = NULL;
+        }
+    }
+    int rSeq;//序号
+    int rTimeStamp;//时间戳
+    int rState;//丢包标识 ，默认1不丢包
+    int rlen;   //当前buf的总大小
+    int rNow;   //当前已经收到的数据包大小
+    char* rBuf;  //当前收取数据的buf ps流
+    char* sBuf;
+    int slen;
+    int sNow;
+    void* unpackHnd; //ps解码句柄
+    FILE* psFp;
+    int sCodec;
+    int sKeyFrame;
+	int sPts;
+	FILE* sFp;
+	void* session;
 
-// }PackProcStat;
+}PackProcStat;
 
 //class Gb28181Session : public RTPSession,public Session
 class Gb28181Session : public RTPSession
@@ -92,15 +92,16 @@ class Gb28181Session : public RTPSession
         // int RtpTcpInit(string dstip,int dstport,int time);
 		// int SendPacket(int media,char* data,int datalen,int codecId);
     protected:
-        // enum
-        // {
-        //     RtpPack_FrameContinue = 0,
-        //     RtpPack_FrameCurFinsh,
-        //     RtpPack_FrameNextStart,
-        // };
-        // void OnPollThreadStep();
-        // void ProcessRTPPacket(RTPSourceData& srcdat,RTPPacket& pack);
-        // void OnRTPPacketProcPs(int mark,int curSeq,int timestamp,unsigned char* payloadData,int payloadLen);
+        enum
+        {
+            RtpPack_FrameContinue = 0,//当前帧未结束
+            RtpPack_FrameCurFinsh,//帧结束（边界）
+            RtpPack_FrameNextStart,//下个帧开始
+        };
+        //回调，当接收对端rtp/rtcp数据时触发或者本端发送rtcp数据时触发
+        void OnPollThreadStep();
+        void ProcessRTPPacket(RTPSourceData& srcdat,RTPPacket& pack);
+        void OnRTPPacketProcPs(int mark,int curSeq,int timestamp,unsigned char* payloadData,int payloadLen);//处理ps数据包
         //当有新的数据源被添加到源表时会调用该接口
         void OnNewSource(RTPSourceData *srcdat)
         {
@@ -202,8 +203,8 @@ class Gb28181Session : public RTPSession
 			LOG(INFO) << " Deleting destination " << std::string(inet_ntoa(inaddr)) << ":" << port;
         }
 
-    // private:
-    //     PackProcStat* m_proc;
+    private:
+        PackProcStat* m_proc;
 	// 	int m_count;
     //     int m_rtpTcpFd;
     //     int m_listenFd;

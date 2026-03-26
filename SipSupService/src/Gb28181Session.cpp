@@ -273,6 +273,7 @@
 
 Gb28181Session::Gb28181Session()
 {
+     m_proc = new PackProcStat();
 }
 
 
@@ -295,186 +296,193 @@ Gb28181Session::~Gb28181Session()
 // 	GBOJ(gConfig)->pushOneRandNum(rtp_loaclport);
 }
 
-// void Gb28181Session::OnPollThreadStep()
-// {
-//     BeginDataAccess();
+void Gb28181Session::OnPollThreadStep()
+{
+    //开始准备访问接听到的数据
+    BeginDataAccess();
 
-//     if(GotoFirstSourceWithData())
-//     {
-//         do
-//         {
-//             RTPSourceData* srcdat = NULL;
-//             RTPPacket* pack = NULL;
-//             srcdat = GetCurrentSourceInfo();
-//             while((pack = GetNextPacket()) != NULL)
-//             {
-//                 //
-//                 ProcessRTPPacket(*srcdat,*pack);
+    if(GotoFirstSourceWithData())//检查是否有传入的数据包，在接收到的数据包列表中查找到第一个数据包，并将当前数据源设置为包含该数据包的数据源
+    {
+        do
+        {
+            RTPSourceData* srcdat = NULL;
+            RTPPacket* pack = NULL;
+            srcdat = GetCurrentSourceInfo();//获取当前源的数据包信息
+            while((pack = GetNextPacket()) != NULL)//循环获取当前源的下一个数据包
+            {
+                //进行完整帧数据的组包
+                ProcessRTPPacket(*srcdat,*pack);
 
-//                 DeletePacket(pack);
-//             }
+                //删除数据包释放资源
+                DeletePacket(pack);
+            }
 
-//         } while (GotoNextSourceWithData());  
-//     }
-//     EndDataAccess();
+        } while (GotoNextSourceWithData());  //循环遍历每个数据源，并处理每个数据源中的数据包，直到没有更多的数据源包含数据包为止
+    }
+    //和BeginDataAccess相互对应
+    EndDataAccess();
 
-// }
+}
 
-// void Gb28181Session::ProcessRTPPacket(RTPSourceData& srcdat,RTPPacket& pack)
-// {
-//     int payloadType = pack.GetPayloadType();
-//     int payloadLen = pack.GetPayloadLength();
-//     int mark = pack.HasMarker();
-//     int curSeq = pack.GetExtendedSequenceNumber();
-//     int timestamp = pack.GetTimestamp();
-//     unsigned char* payloadData = pack.GetPayloadData();
+void Gb28181Session::ProcessRTPPacket(RTPSourceData& srcdat,RTPPacket& pack)
+{
+    int payloadType = pack.GetPayloadType();//获取负载类型
+    int payloadLen = pack.GetPayloadLength();//获取负载长度
+    int mark = pack.HasMarker();//获取标志位
+    int curSeq = pack.GetExtendedSequenceNumber();//获取扩展序列号
+    int timestamp = pack.GetTimestamp();//获取时间戳
+    unsigned char* payloadData = pack.GetPayloadData();//获取负载数据
 
-//     if(payloadType != 96  && payloadType != 98)
-//     {
-//         LOG(ERROR)<<"rtp unknown payload type:"<<payloadType;
-//         return;
-//     }
-//     //在这里更新下下级最后有rtp包推送的时间
-// 	gettimeofday(&m_curTime, NULL);
-// 	//那么就在接收rtp包的时机给这个session进行赋值
-//     //这里需要先判断下
-//     if(m_proc && m_proc->session == NULL)
-//     {
-//         m_proc->session = (void*)this;
-//     }
+    if(payloadType != 96  && payloadType != 98)
+    {
+        LOG(ERROR)<<"rtp unknown payload type:"<<payloadType;
+        return;
+    }
+    // //在这里更新下下级最后有rtp包推送的时间
+	// gettimeofday(&m_curTime, NULL);
+	// //那么就在接收rtp包的时机给这个session进行赋值
+    // //这里需要先判断下
+    // if(m_proc && m_proc->session == NULL)
+    // {
+    //     m_proc->session = (void*)this;
+    // }
 
 
-//     if(payloadType == 96)
-//     {
-//         OnRTPPacketProcPs(mark,curSeq,timestamp,payloadData,payloadLen);
-//     }
-//     else if(payloadType == 98)
-//     {
+    if(payloadType == 96)//ps
+    {
+        OnRTPPacketProcPs(mark,curSeq,timestamp,payloadData,payloadLen);
+    }
+    else if(payloadType == 98)//h264
+    {
 
-//     }
-// }
+    }
+}
 
-// void Gb28181Session::OnRTPPacketProcPs(int mark,int curSeq,int timestamp,unsigned char* payloadData,int payloadLen)
-// {
+void Gb28181Session::OnRTPPacketProcPs(int mark,int curSeq,int timestamp,unsigned char* payloadData,int payloadLen)
+{
 // 	//LOG(INFO)<<"mark:"<<mark;
-//     int FrameStat = mark;
+    int FrameStat = mark;
 
-//     if(m_proc->rSeq == -1)
-//         m_proc->rSeq = curSeq;
+    if(m_proc->rSeq == -1)
+        m_proc->rSeq = curSeq;
     
-//     if(m_proc->rTimeStamp == 0)
-//         m_proc->rTimeStamp = timestamp;
+    if(m_proc->rTimeStamp == 0)
+        m_proc->rTimeStamp = timestamp;
 
-//     if(curSeq - m_proc->rSeq > 1)
-//     {
-//         m_proc->rState = 2;
-//         LOG(ERROR)<<"rtp drop pack diff:"<<curSeq - m_proc->rSeq;
-//     }
+    if(curSeq - m_proc->rSeq > 1)//丢包
+    {
+        m_proc->rState = 2;
+        LOG(ERROR)<<"rtp drop pack diff:"<<curSeq - m_proc->rSeq;
+    }
 
-//     if(FrameStat == 0)
-//     {
-// 		//LOG(INFO)<<"m_proc->rTimeStamp:"<<m_proc->rTimeStamp"<< timestamp:"<<timestamp;
+    if(FrameStat == 0)
+    {
+		//LOG(INFO)<<"m_proc->rTimeStamp:"<<m_proc->rTimeStamp"<< timestamp:"<<timestamp;
 		
-//         if(timestamp != m_proc->rTimeStamp)
-//         {
-//             FrameStat = RtpPack_FrameNextStart;
-//         }
-//     }
+        if(timestamp != m_proc->rTimeStamp)//当前时间戳不等于上一个，意味着下一个数据帧的开始
+        {
+            FrameStat = RtpPack_FrameNextStart;
+        }
+    }
 
-//     m_proc->rSeq = curSeq;
-//     m_proc->rTimeStamp = timestamp;
+    m_proc->rSeq = curSeq;
+    m_proc->rTimeStamp = timestamp;
 
-//     if(m_proc->rState == 1)
-//     {
-//         if(FrameStat == RtpPack_FrameContinue || FrameStat == RtpPack_FrameCurFinsh)
-//         {
-//             if(m_proc->rlen < payloadLen + m_proc->rNow)
-//             {
-//                 m_proc->rlen = payloadLen + m_proc->rNow + 1024;
-//                 m_proc->rBuf = (char*)realloc(m_proc->rBuf,m_proc->rlen);
-//             }
-//             memcpy(m_proc->rBuf + m_proc->rNow,payloadData,payloadLen);
-//             m_proc->rNow += payloadLen;
-//         }
-//     }
-//     else if(m_proc->rState == 2)
-//     {
-//         m_proc->rState = 1;
+    if(m_proc->rState == 1)//不丢包
+    {
+        if(FrameStat == RtpPack_FrameContinue || FrameStat == RtpPack_FrameCurFinsh)//如果当前数据包不是下一帧的开始，那么就继续将数据包的数据保存到buffer中
+        {
+            if(m_proc->rlen < payloadLen + m_proc->rNow)//需要扩容
+            {
+                m_proc->rlen = payloadLen + m_proc->rNow + 1024;//1024避免每来一个稍大的包都立刻重新分配内存，属于一种简单的“预留空间”策略
+                m_proc->rBuf = (char*)realloc(m_proc->rBuf,m_proc->rlen);
+            }
+            memcpy(m_proc->rBuf + m_proc->rNow,payloadData,payloadLen);//从 payloadData 取出 payloadLen 字节，复制到 rBuf 的偏移 rNow 位置
+            m_proc->rNow += payloadLen;
+        }
+    }
+    else if(m_proc->rState == 2)//丢包
+    {
+        m_proc->rState = 1;
 
-//         memset(m_proc->rBuf,0,m_proc->rNow);
-//         m_proc->rNow = 0;
-//         m_proc->rSeq = -1;
-//         m_proc->rTimeStamp = 0;
+        if(FrameStat!=RtpPack_FrameContinue)
+        {
+            memset(m_proc->rBuf,0,m_proc->rNow);
+            m_proc->rNow = 0;
+            m_proc->rSeq = -1;
+            m_proc->rTimeStamp = 0;
 
-//         if(FrameStat == RtpPack_FrameNextStart)
-//         {
-//             if(m_proc->rlen < payloadLen + m_proc->rNow)
-//             {
-//                 m_proc->rlen = payloadLen + m_proc->rNow + 1024;
-//                 m_proc->rBuf = (char*)realloc(m_proc->rBuf,m_proc->rlen);
-//             }
-//             memcpy(m_proc->rBuf + m_proc->rNow,payloadData,payloadLen);
-//             m_proc->rNow += payloadLen;
-//         }
-//         return;
+        }
+
+        if(FrameStat == RtpPack_FrameNextStart)//新帧
+        {
+            if(m_proc->rlen < payloadLen + m_proc->rNow)
+            {
+                m_proc->rlen = payloadLen + m_proc->rNow + 1024;
+                m_proc->rBuf = (char*)realloc(m_proc->rBuf,m_proc->rlen);
+            }
+            memcpy(m_proc->rBuf + m_proc->rNow,payloadData,payloadLen);
+            m_proc->rNow += payloadLen;
+        }
+        return;
         
-//     }
-// 	//LOG(INFO)<<"FrameStat:"<<FrameStat;
-//     if(FrameStat)
-//     {
-//         if(m_proc->psFp == NULL)
-//         {
-//             m_proc->psFp = fopen("../../conf/data.ps","w+");
-//         }
-//         if(m_proc->psFp)
-//         {
-//             fwrite(m_proc->rBuf,1,m_proc->rNow,m_proc->psFp);
-//         }
-//         //ps demutex
-//         if(m_proc->unpackHnd == NULL)
-// 		{
-// 			LOG(INFO)<<"ps_demuxer_create";
-//             //这里需要定义一个回调接口，用来接收处理的解封装后的音视频数据
-// 			m_proc->unpackHnd = (void *)ps_demuxer_create((ps_dumuxer_onpacket)ps_demux_callback, (void *)m_proc);
-// 		}
+    }
+	//LOG(INFO)<<"FrameStat:"<<FrameStat;
+    if(FrameStat)//帧边界
+    {
+        if(m_proc->psFp == NULL)
+        {
+            m_proc->psFp = fopen("../conf/data.ps","w+");
+        }
+        if(m_proc->psFp)
+        {
+            fwrite(m_proc->rBuf,1,m_proc->rNow,m_proc->psFp);
+        }
+        //ps demutex
+        // if(m_proc->unpackHnd == NULL)
+		// {
+		// 	LOG(INFO)<<"ps_demuxer_create";
+        //     //这里需要定义一个回调接口，用来接收处理的解封装后的音视频数据
+		// 	m_proc->unpackHnd = (void *)ps_demuxer_create((ps_dumuxer_onpacket)ps_demux_callback, (void *)m_proc);
+		// }
 
-// 		if(m_proc->unpackHnd)
-// 		{
-// 			//LOG(INFO)<<"PS SIZE:"<<m_proc->rNow;
-// 			int offset = 0;
-// 			while(offset < m_proc->rNow)
-// 			{
-// 				//这里需将缓存的数据传入到ps解封装接口中，
-// 				int ret = ps_demuxer_input((struct ps_demuxer_t *)m_proc->unpackHnd, (const uint8_t*)m_proc->rBuf+offset , m_proc->rNow-offset);
-// 				if(ret == 0)
-// 				{
-// 					LOG(ERROR) << "wrong payload data !!!!! can't demux the PS data";
-// 				}
-// 				offset += ret;
-// 			}
+		// if(m_proc->unpackHnd)
+		// {
+		// 	//LOG(INFO)<<"PS SIZE:"<<m_proc->rNow;
+		// 	int offset = 0;
+		// 	while(offset < m_proc->rNow)
+		// 	{
+		// 		//这里需将缓存的数据传入到ps解封装接口中，
+		// 		int ret = ps_demuxer_input((struct ps_demuxer_t *)m_proc->unpackHnd, (const uint8_t*)m_proc->rBuf+offset , m_proc->rNow-offset);
+		// 		if(ret == 0)
+		// 		{
+		// 			LOG(ERROR) << "wrong payload data !!!!! can't demux the PS data";
+		// 		}
+		// 		offset += ret;
+		// 	}
 			
-// 		}
+		// }
 
 
-//         memset(m_proc->rBuf,0,m_proc->rNow);
-//         m_proc->rNow = 0;
+        memset(m_proc->rBuf,0,m_proc->rNow);
+        m_proc->rNow = 0;
 
-//         if(FrameStat == RtpPack_FrameNextStart)
-//         {
-//             if(m_proc->rlen < payloadLen + m_proc->rNow)
-//             {
-//                 m_proc->rlen = payloadLen + m_proc->rNow + 1024;
-//                 m_proc->rBuf = (char*)realloc(m_proc->rBuf,m_proc->rlen);
-//             }
-//             memcpy(m_proc->rBuf + m_proc->rNow,payloadData,payloadLen);
-//             m_proc->rNow += payloadLen;
-//         }
+        if(FrameStat == RtpPack_FrameNextStart)
+        {
+            if(m_proc->rlen < payloadLen + m_proc->rNow)
+            {
+                m_proc->rlen = payloadLen + m_proc->rNow + 1024;
+                m_proc->rBuf = (char*)realloc(m_proc->rBuf,m_proc->rlen);
+            }
+            memcpy(m_proc->rBuf + m_proc->rNow,payloadData,payloadLen);
+            m_proc->rNow += payloadLen;
+        }
 
-//     }
+    }
 
-//     return;
+    return;
 
-// }
+}
 
 //int Gb28181Session::CreateRtpSession(string dstip,int dstport)
 int Gb28181Session::CreateRtpSession()
@@ -490,7 +498,7 @@ int Gb28181Session::CreateRtpSession()
     // if(protocal == 0)
     // {
         RTPUDPv4TransmissionParams transparams;
-        transparams.SetRTPReceiveBuffer(1024*1024);
+        transparams.SetRTPReceiveBuffer(1024*1024);//这里设置过小会导致业务层来不及处理接收到的rtp导致业务侧的丢包
         transparams.SetPortbase(20000);
         //transparams.SetPortbase(rtp_loaclport);
         

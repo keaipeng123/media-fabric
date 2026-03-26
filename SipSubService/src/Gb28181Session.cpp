@@ -226,7 +226,7 @@ int SipPsCode::incomeAudioData(unsigned char* audata,int len,int pts)
 int SipPsCode::sendPackData(void* packet, size_t bytes)
 {
     int ps_buff_len=1300;//每次发送的rtp包字节，小于mtu，需要对原数据进行拆解
-    int size=0;
+    int size=0;//已经发送的大小
     int status=0;
     while(size<bytes)
     {
@@ -251,6 +251,7 @@ int SipPsCode::sendPackData(void* packet, size_t bytes)
             }
             else//最后一个包，直接发送，并且mark位置1（视频包）
             {
+                //PS_SEND_TIMESTAME 每一帧使用同一个时间戳
                 status=m_gbRtpHandle->SendPacket(packet+size,packlen,96,true,PS_SEND_TIMESTAME);//mark对于视频来说代表一帧数据的结尾，对于音频来说代表数据的开始
                 if(status<0)
                 {
