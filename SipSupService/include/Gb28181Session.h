@@ -12,7 +12,7 @@
 #include "rtplibraryversion.h"
 #include "rtcpsrpacket.h"
 #include "Common.h"
-//#include "mpeg-ps.h"
+#include "mpeg-ps.h"
 
 //#include "SipDef.h"
 
@@ -43,7 +43,7 @@ typedef struct _PackProcStat
         slen = 10*1024;;
         sNow = 0;
         sKeyFrame = 0;
-		sPts = 0;
+		sPts = -1;
 		sFp = NULL;
 		session = NULL;
     }
@@ -59,6 +59,16 @@ typedef struct _PackProcStat
             fclose(psFp);
             psFp = NULL;
         }
+        if(sBuf)
+        {
+            free(sBuf);
+            sBuf = NULL;
+        }
+        if(sFp)
+        {
+            fclose(sFp);
+            sFp = NULL;
+        }
     }
     int rSeq;//序号
     int rTimeStamp;//时间戳
@@ -66,14 +76,14 @@ typedef struct _PackProcStat
     int rlen;   //当前buf的总大小
     int rNow;   //当前已经收到的数据包大小
     char* rBuf;  //当前收取数据的buf ps流
-    char* sBuf;
-    int slen;
-    int sNow;
+    char* sBuf;  //发送数据的buf h264/265流
+    int slen;  //发送buf的总长度
+    int sNow; //当前发送数据的大小
     void* unpackHnd; //ps解码句柄
     FILE* psFp;
-    int sCodec;
-    int sKeyFrame;
-	int sPts;
+    int sCodec; //媒体流判断
+    int sKeyFrame; //关键帧标识
+	int sPts; //pts显示时间戳
 	FILE* sFp;
 	void* session;
 

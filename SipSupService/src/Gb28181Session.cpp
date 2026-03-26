@@ -53,111 +53,115 @@
 // 	return 0;
 // }
 
-// //需要用codecid来判别裸流是音频还是视频数据
-// //stream 流的编号  用不上
-// //flags 视频关键帧的标识
-// static void ps_demux_callback(void* param, int stream, int codecid, int flags, int64_t pts, int64_t dts, const void* data, size_t bytes)
-// {
+//接收ps解封装之后的裸流数据
+//codecid音频/视频编解码器，需要用codecid来判别裸流是音频还是视频数据
+//stream 流的编号
+//flags 视频关键帧的标识
+//data ps解封装后的流，data不一定是完整的一帧视频数据或者音频通道数据
+static void ps_demux_callback(void* param, int stream, int codecid, int flags, int64_t pts, int64_t dts, const void* data, size_t bytes)
+{
     
-// 	PackProcStat* pProc = (PackProcStat*)param;
-//     //然后需要在结构体里再添加几个成员
+	PackProcStat* pProc = (PackProcStat*)param;
+    //然后需要在结构体里再添加几个成员
 
-//     //数据流类型(音/视频)
-//     int media = -1;
-//     //视频帧类型(I/P帧)
-//     int frameType = 1;
+    //数据流类型(音/视频)
+    int media = -1;
+    //视频帧类型(I/P帧)
+    int frameType = 1;
     
-//     //我们先判别下当前的codecid是否有效
-// 	if(codecid == 0) // unknown codec id
-// 	{
-// 		return;
-// 	}
+    //我们先判别下当前的codecid是否有效
+	if(codecid == 0) // unknown codec id
+	{
+		return;
+	}
 	
-//     //首先先处理同一类型的流数据被拆成多个包的情况
-//     //当前回调被第一次调用时，不会走这个逻辑
-// 	if(pProc->sCodec == codecid && pProc->sPts == pts)
-// 	{
-//         //我们需要将当前的裸流保存到buffer，后续我们再处理buffer的数据
-// 		if(pProc->slen < pProc->sNow + (int)bytes)
-// 		{
-// 			pProc->slen = pProc->sNow + (int)bytes + 1024;
-// 			pProc->sBuf = (char *)realloc(pProc->sBuf, pProc->slen);
-// 		}
-// 		memcpy(pProc->sBuf + pProc->sNow, data, bytes);
-// 		pProc->sNow += bytes;
-// 		pProc->sKeyFrame = flags;
-// 		return;
-// 	}
+    //首先先处理同一类型的同一帧流数据被拆成多个包的情况
+    //当前回调被第一次调用时，不会走这个逻辑
+	if(pProc->sCodec == codecid && pProc->sPts == pts)
+	{
+        //我们需要将当前的裸流保存到buffer，后续我们再处理buffer的数据
+		if(pProc->slen < pProc->sNow + (int)bytes)
+		{
+			pProc->slen = pProc->sNow + (int)bytes + 1024;
+			pProc->sBuf = (char *)realloc(pProc->sBuf, pProc->slen);
+		}
+		memcpy(pProc->sBuf + pProc->sNow, data, bytes);
+		pProc->sNow += bytes;
+		pProc->sKeyFrame = flags;
+		return;
+	}
 
-//     //当前这个接口第一次调用时，会走这个逻辑
-//     //后续这个逻辑是来处理当前传入的data为下一帧数据或者不同类型的数据，
-// 	else 
-// 	{
-// 		//如果发送buffer的数据大于0，那么我们就进行发送，发送前还需要进行header的设定，一会我们再做
-// 		if(pProc->sNow > 0)
-// 		{
-// 			do{
-// 				if(pProc->sCodec == STREAM_VIDEO_H264
-// 					|| pProc->sCodec == STREAM_VIDEO_H265)
-// 				{
-//                     //在这里可以先区分媒体流的类型，和当前视频帧是否为关键帧
-// 					media = 2;
-// 					//frameType = pProc->sKeyFrame > 1 ? FORMAT_VIDEO_I : FORMAT_VIDEO_P;
-// #if 1
-// 					if(pProc->sFp == NULL)
-// 					{
-// 						pProc->sFp = fopen("../../conf/send.h264", "w+");
-// 					}
+    //当前这个接口第一次调用时，会走这个逻辑
+    //后续这个逻辑是来处理当前传入的data为下一帧数据或者不同类型的数据，
+	else 
+	{
+		//如果发送buffer的数据大于0，那么我们就进行发送，发送前还需要进行header的设定，一会我们再做
+		if(pProc->sNow > 0)
+		{
+			//do{
+				if(pProc->sCodec == STREAM_VIDEO_H264
+					|| pProc->sCodec == STREAM_VIDEO_H265)
+				{ 
+                    //在这里可以先区分媒体流的类型，和当前视频帧是否为关键帧
+					media = 2;
+					//frameType = pProc->sKeyFrame > 1 ? FORMAT_VIDEO_I : FORMAT_VIDEO_P;
+                    #if 1
+					if(pProc->sFp == NULL)
+					{
+						pProc->sFp = fopen("../conf/send.h264", "w+");
+					}
 
-// 					if(pProc->sFp != NULL)
-// 					{
-// 						fwrite(pProc->sBuf, 1, pProc->sNow, pProc->sFp);
-// 					}
-// #endif
-// 				}
-// 				else if(pProc->sCodec == STREAM_AUDIO_AAC
-// 						|| pProc->sCodec == STREAM_AUDIO_G711
-// 						|| pProc->sCodec == STREAM_AUDIO_G711U)
-// 				{
-// 					media = 1;
-// 				}
-// 				else
-// 				{
-// 				// 	if(pProc->unknownCodecCnt == 0)
-// 				// 		LOG(INFO) << " unknown codec: " << pProc->sCodec;
+					if(pProc->sFp != NULL)
+					{
+						fwrite(pProc->sBuf, 1, pProc->sNow, pProc->sFp);
+					}
+                    #endif
+				}
+				else if(pProc->sCodec == STREAM_AUDIO_AAC
+						|| pProc->sCodec == STREAM_AUDIO_G711A
+						|| pProc->sCodec == STREAM_AUDIO_G711U)
+				{
+					media = 1;
+				}
+				//else
+				//{
+				// 	if(pProc->unknownCodecCnt == 0)
+				// 		LOG(INFO) << " unknown codec: " << pProc->sCodec;
 
-// 				// 	if(pProc->unknownCodecCnt ++ > 200)
-// 				// 		pProc->unknownCodecCnt = 0;
+				// 	if(pProc->unknownCodecCnt ++ > 200)
+				// 		pProc->unknownCodecCnt = 0; 
 
-// 					break;
-// 				}
+					//break;
+				//}
 
-// 				//unsigned long long microsecIn = pProc->sDts * 1000 / 90000;
-//                 Gb28181Session* pGbSesson = (Gb28181Session*)pProc->session;
-// 				int sendLen = pGbSesson->SendPacket(media, (char *)pProc->sBuf, pProc->sNow, pProc->sCodec);
-// 			}while(0);
-// 		}
-// 		//LOG(INFO)<<"33333333";
-// 		// copy new data to send buffer
-// 		pProc->sNow = 0;
-// 		pProc->sKeyFrame = 0;
-//         //将当前数据copy到buffer中
-// 		if(pProc->slen < pProc->sNow + (int)bytes)
-// 		{
-// 			pProc->slen = pProc->sNow + bytes + 1024;
-// 			pProc->sBuf = (char *)realloc(pProc->sBuf, pProc->slen);
-// 		}
-// 		memcpy(pProc->sBuf + pProc->sNow, data, bytes);
-// 		pProc->sNow += bytes;
-// 		pProc->sKeyFrame = flags;
+				//unsigned long long microsecIn = pProc->sDts * 1000 / 90000;
+                //Gb28181Session* pGbSesson = (Gb28181Session*)pProc->session;
+				//int sendLen = pGbSesson->SendPacket(media, (char *)pProc->sBuf, pProc->sNow, pProc->sCodec);
+			//}while(0);
+		}
+		//LOG(INFO)<<"33333333";
+		// copy new data to send buffer
+        //代码首先走这里
+        memset(pProc->sBuf, 0, pProc->sNow);
+		pProc->sNow = 0;
+		pProc->sKeyFrame = 0;
+        //将当前数据copy到buffer中
+		if(pProc->slen < pProc->sNow + (int)bytes)
+		{
+			pProc->slen = pProc->sNow + bytes + 1024;
+			pProc->sBuf = (char *)realloc(pProc->sBuf, pProc->slen);
+		}
+		memcpy(pProc->sBuf + pProc->sNow, data, bytes);
+		pProc->sNow += bytes;
+		pProc->sKeyFrame = flags;
 
-// 		pProc->sPts = pts;
+		pProc->sPts = pts;
 		
-// 		pProc->sCodec = codecid;
-// 	}
+		pProc->sCodec = codecid;
+	}
 
-// 	return;
-// }
+	return;
+}
 
 // //需要使用codecId来区分码流的编码方式，然后来进行相应的解码获取分别率以及帧率
 // int Gb28181Session::SendPacket(int media,char* data,int datalen,int codecId)
@@ -430,6 +434,7 @@ void Gb28181Session::OnRTPPacketProcPs(int mark,int curSeq,int timestamp,unsigne
 	//LOG(INFO)<<"FrameStat:"<<FrameStat;
     if(FrameStat)//帧边界
     {
+        #if 0
         if(m_proc->psFp == NULL)
         {
             m_proc->psFp = fopen("../conf/data.ps","w+");
@@ -438,30 +443,31 @@ void Gb28181Session::OnRTPPacketProcPs(int mark,int curSeq,int timestamp,unsigne
         {
             fwrite(m_proc->rBuf,1,m_proc->rNow,m_proc->psFp);
         }
+        #endif
         //ps demutex
-        // if(m_proc->unpackHnd == NULL)
-		// {
-		// 	LOG(INFO)<<"ps_demuxer_create";
-        //     //这里需要定义一个回调接口，用来接收处理的解封装后的音视频数据
-		// 	m_proc->unpackHnd = (void *)ps_demuxer_create((ps_dumuxer_onpacket)ps_demux_callback, (void *)m_proc);
-		// }
+        if(m_proc->unpackHnd == NULL)
+		{
+			LOG(INFO)<<"ps_demuxer_create"; 
+            //这里需要定义一个回调接口，用来接收处理的解封装后的音视频数据
+			m_proc->unpackHnd = (void *)ps_demuxer_create((ps_demuxer_onpacket)ps_demux_callback, (void *)m_proc);
+		}
 
-		// if(m_proc->unpackHnd)
-		// {
-		// 	//LOG(INFO)<<"PS SIZE:"<<m_proc->rNow;
-		// 	int offset = 0;
-		// 	while(offset < m_proc->rNow)
-		// 	{
-		// 		//这里需将缓存的数据传入到ps解封装接口中，
-		// 		int ret = ps_demuxer_input((struct ps_demuxer_t *)m_proc->unpackHnd, (const uint8_t*)m_proc->rBuf+offset , m_proc->rNow-offset);
-		// 		if(ret == 0)
-		// 		{
-		// 			LOG(ERROR) << "wrong payload data !!!!! can't demux the PS data";
-		// 		}
-		// 		offset += ret;
-		// 	}
+		if(m_proc->unpackHnd)
+		{
+			//LOG(INFO)<<"PS SIZE:"<<m_proc->rNow;
+			int offset = 0;
+			while(offset < m_proc->rNow)
+			{
+				//这里需将缓存的数据传入到ps解封装接口中，
+				int ret = ps_demuxer_input((struct ps_demuxer_t *)m_proc->unpackHnd, (const uint8_t*)m_proc->rBuf+offset , m_proc->rNow-offset);
+				if(ret == 0)
+				{
+					LOG(ERROR) << "wrong payload data !!!!! can't demux the PS data";
+				}
+				offset += ret;
+			}
 			
-		// }
+		}
 
 
         memset(m_proc->rBuf,0,m_proc->rNow);
