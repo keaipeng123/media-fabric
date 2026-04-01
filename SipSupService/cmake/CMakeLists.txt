@@ -9,8 +9,10 @@ ADD_DEFINITIONS(-g)
 FIND_PACKAGE(OpenSSL REQUIRED)
 #指定需要编译的源文件路径，并指定相应的变量名
 AUX_SOURCE_DIRECTORY(../src SRC)
+AUX_SOURCE_DIRECTORY(../src/h26x SRC1)
 #添加头文件路径
 INCLUDE_DIRECTORIES(../include)
+INCLUDE_DIRECTORIES(../include/h26x)
 INCLUDE_DIRECTORIES(../../3rd/include)
 INCLUDE_DIRECTORIES(../../3rd/include/pjsip)
 INCLUDE_DIRECTORIES(../../3rd/include/pjsip)
@@ -23,7 +25,7 @@ INCLUDE_DIRECTORIES(../../3rd/include/mpege)
 #添加需要链接的库文件路径
 LINK_DIRECTORIES(../../3rd/lib)
 #将指定的源文件代码生成相应的可执行文件
-ADD_EXECUTABLE(${EXE_NAME} ${SRC})
+ADD_EXECUTABLE(${EXE_NAME}  ${SRC} ${SRC1})
 
 #将生成的目标文件与指定的库文件链接
 TARGET_LINK_LIBRARIES(${EXE_NAME} libglog.a)

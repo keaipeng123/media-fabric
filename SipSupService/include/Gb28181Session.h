@@ -215,7 +215,7 @@ class Gb28181Session : public RTPSession
 
     private:
         PackProcStat* m_proc;
-	// 	int m_count;
+	    int m_count;
     //     int m_rtpTcpFd;
     //     int m_listenFd;
 };

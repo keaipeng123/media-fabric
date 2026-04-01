@@ -1,57 +1,55 @@
 #include "Gb28181Session.h"
 #include "SipDef.h"
-// #include "mpeg4-avc.h"
-// #include "h264_stream.hpp"
-// #include "h265_stream.hpp"
-// #include "mpeg4-hevc.h"  
+#include "mpeg4-avc.h"
+#include "h264_stream.hpp"
+#include "h265_stream.hpp"
+#include "mpeg4-hevc.h"  
 // #include "ECSocket.h"
 // using namespace EC;
 
+typedef struct 
+{
+    uint16_t width;
+    uint16_t height;
+    float max_framerate;
+} Picinfo;
+//实现从h264的编码中获取分辨率和帧率
+int GetH264pic(const uint8_t* data,uint16_t size,Picinfo* info)
+{
+    if (data == NULL || size == 0) {
+        return 1;
+    }
+    if (info == NULL) {
+        return 1;
+    }
+    memset(info, 0, sizeof(Picinfo));
 
-// //定义个结构体
-// typedef struct 
-// {
-//     uint16_t width;
-//     uint16_t height;
-//     float max_framerate;
-// } Picinfo;
-// //这里定义个接口来实现从h264的编码中获取分辨率和帧率
-// int GetH264pic(const uint8_t* data,uint16_t size,Picinfo* info)
-// {
-//     if (data == NULL || size == 0) {
-//         return 1;
-//     }
-//     if (info == NULL) {
-//         return 1;
-//     }
-//     memset(info, 0, sizeof(Picinfo));
+   //int ret = 999;
+    char s_buffer[4 * 1024];
+    memset(s_buffer, 0, sizeof(s_buffer));
+    struct mpeg4_avc_t avc;
+    memset(&avc, 0, sizeof(mpeg4_avc_t));
+    // struct mpeg4_hevc_t hevc;
+    // memset(&hevc, 0, sizeof(mpeg4_hevc_t));
 
-//     int ret = 999;
-//     char s_buffer[4 * 1024];
-//     memset(s_buffer, 0, sizeof(s_buffer));
-//     struct mpeg4_avc_t avc;
-//     memset(&avc, 0, sizeof(mpeg4_avc_t));
-//     struct mpeg4_hevc_t hevc;
-//     memset(&hevc, 0, sizeof(mpeg4_hevc_t));
+	int ret =(int)mpeg4_annexbtomp4(&avc, data, size, s_buffer, sizeof(s_buffer));
+	if (avc.nb_sps <= 0) {
+		return 1;
+	}
 
-// 	ret =(int)mpeg4_annexbtomp4(&avc, data, size, s_buffer, sizeof(s_buffer));
-// 	if (avc.nb_sps <= 0) {
-// 		return 1;
-// 	}
-
-// 	h264_stream_t* h4 = h264_new();
-// 	ret =h264_configure_parse(h4, avc.sps[0].data, avc.sps[0].bytes, H264_SPS);
-// 	if (ret != 0) {
-// 		h264_free(h4);
-// 		return 1;
-// 	}
-// 	info->width = h4->info->width;
-// 	info->height = h4->info->height;
-// 	info->max_framerate = h4->info->max_framerate;
-// 	h264_free(h4);
+	h264_stream_t* h4 = h264_new();
+	ret =h264_configure_parse(h4, avc.sps[0].data, avc.sps[0].bytes, H264_SPS);
+	if (ret != 0) {
+		h264_free(h4);
+		return 1;
+	}
+	info->width = h4->info->width;
+	info->height = h4->info->height;
+	info->max_framerate = h4->info->max_framerate;
+	h264_free(h4);
 	
-// 	return 0;
-// }
+	return 0;
+}
 
 //接收ps解封装之后的裸流数据
 //codecid音频/视频编解码器，需要用codecid来判别裸流是音频还是视频数据
@@ -147,8 +145,8 @@ static void ps_demux_callback(void* param, int stream, int codecid, int flags, i
 				//}
 
 				//unsigned long long microsecIn = pProc->sDts * 1000 / 90000;
-                //Gb28181Session* pGbSesson = (Gb28181Session*)pProc->session;
-				//int sendLen = pGbSesson->SendPacket(media, (char *)pProc->sBuf, pProc->sNow, pProc->sCodec);
+                Gb28181Session* pGbSesson = (Gb28181Session*)pProc->session;
+				pGbSesson->SendPacket(media, (char *)pProc->sBuf, pProc->sNow, pProc->sCodec);
 			//}while(0);
 		}
 		//LOG(INFO)<<"33333333";
@@ -278,12 +276,12 @@ int Gb28181Session::SendPacket(int media,char* data,int datalen,int codecId)
 						}
 						if(info.max_framerate > 0)
 						{
-							//header->format[0] = info.max_framerate;
+							header->format[0] = info.max_framerate;
 							LOG(INFO)<<"info.max_framerate:"<<info.max_framerate;
 						}
 						else if(info.max_framerate == 0)
 						{
-							//header->format[0] = 25;
+							header->format[0] = 25;
 						}
 						if(m_count >50)
 						{
@@ -301,9 +299,9 @@ int Gb28181Session::SendPacket(int media,char* data,int datalen,int codecId)
 				}
 				
 				//最后再保存下帧类型
-				//header->format[1] = keyFrame;  
+				header->format[1] = keyFrame;  
 				//将编码器类型也保存下
-				//header->format[2] = codecId;   
+				header->format[2] = codecId;   
             }
 			
 
@@ -325,6 +323,7 @@ int Gb28181Session::SendPacket(int media,char* data,int datalen,int codecId)
 Gb28181Session::Gb28181Session()
 {
      m_proc = new PackProcStat();
+     m_count = 0;
 }
 
 
@@ -409,7 +408,7 @@ void Gb28181Session::ProcessRTPPacket(RTPSourceData& srcdat,RTPPacket& pack)
 
 void Gb28181Session::OnRTPPacketProcPs(int mark,int curSeq,int timestamp,unsigned char* payloadData,int payloadLen)
 {
- 	LOG(INFO)<<"mark:"<<mark;
+ 	//LOG(INFO)<<"mark:"<<mark;
     int FrameStat = mark;
 
     if(m_proc->rSeq == -1)
@@ -476,7 +475,7 @@ void Gb28181Session::OnRTPPacketProcPs(int mark,int curSeq,int timestamp,unsigne
         return;
         
     }
-	LOG(INFO)<<"FrameStat:"<<FrameStat;
+	//LOG(INFO)<<"FrameStat:"<<FrameStat;
     //如果改成 == 1，就会漏掉值为 2 的 NextStart。这样当代码通过时间戳判断出“新帧开始”时，就不会先处理上一帧已经缓存好的数据，逻辑上是有风险的
     if(FrameStat)//帧边界
     {
@@ -500,10 +499,10 @@ void Gb28181Session::OnRTPPacketProcPs(int mark,int curSeq,int timestamp,unsigne
 
 		if(m_proc->unpackHnd)
 		{
-			LOG(INFO)<<"PS SIZE:"<<m_proc->rNow;
+			//LOG(INFO)<<"PS SIZE:"<<m_proc->rNow;
             if(m_proc->rBuf == NULL || m_proc->rNow <= 0)
             {
-                LOG(ERROR) << "PS buffer empty/null, skip demux";
+                //LOG(ERROR) << "PS buffer empty/null, skip demux";
             }
             else
             {
