@@ -83,7 +83,7 @@ typedef struct _PackProcStat
     FILE* psFp;
     int sCodec; //媒体流判断
     int sKeyFrame; //关键帧标识
-	int sPts; //pts显示时间戳
+    int64_t sPts; //pts显示时间戳
 	FILE* sFp;
 	void* session;
 
@@ -221,3 +221,11 @@ class Gb28181Session : public RTPSession
 };
 
 #endif
+
+
+
+
+
+
+
+

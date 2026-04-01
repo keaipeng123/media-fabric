@@ -108,12 +108,24 @@ static void ps_demux_callback(void* param, int stream, int codecid, int flags, i
                     #if 1
 					if(pProc->sFp == NULL)
 					{
-						pProc->sFp = fopen("../conf/send.h264", "w+");
+                        pProc->sFp = fopen("../conf/send.h264", "wb");
 					}
 
 					if(pProc->sFp != NULL)
 					{
-						fwrite(pProc->sBuf, 1, pProc->sNow, pProc->sFp);
+                        // 防止长时间运行无限落盘导致文件异常变大（调试用途）
+                        const long cur = ftell(pProc->sFp);//返回当前文件读写位置
+                        const long kMaxDumpBytes = 64L * 1024L * 1024L; // 64MB
+                        if(cur >= 0 && cur >= kMaxDumpBytes)
+                        {
+                            LOG(WARNING) << "send.h264 dump reached limit (" << cur << "), stop dumping";
+                            fclose(pProc->sFp);
+                            pProc->sFp = NULL;
+                        }
+                        else
+                        {
+                            fwrite(pProc->sBuf, 1, pProc->sNow, pProc->sFp);//把缓冲区 sBuf 中当前累计的 sNow 字节数据，写入到文件 sFp 对应的文件里
+                        }
 					}
                     #endif
 				}
@@ -364,7 +376,7 @@ void Gb28181Session::ProcessRTPPacket(RTPSourceData& srcdat,RTPPacket& pack)
 
 void Gb28181Session::OnRTPPacketProcPs(int mark,int curSeq,int timestamp,unsigned char* payloadData,int payloadLen)
 {
-// 	//LOG(INFO)<<"mark:"<<mark;
+ 	LOG(INFO)<<"mark:"<<mark;
     int FrameStat = mark;
 
     if(m_proc->rSeq == -1)
@@ -407,15 +419,11 @@ void Gb28181Session::OnRTPPacketProcPs(int mark,int curSeq,int timestamp,unsigne
     }
     else if(m_proc->rState == 2)//丢包
     {
-        m_proc->rState = 1;
-
-        if(FrameStat!=RtpPack_FrameContinue)
+        // 已发生丢包：当前帧内容不再可信，丢弃已缓存的残帧，并等待下一帧起始包再恢复组帧。
+        if(m_proc->rNow > 0)
         {
-            memset(m_proc->rBuf,0,m_proc->rNow);
+            memset(m_proc->rBuf, 0, m_proc->rNow);
             m_proc->rNow = 0;
-            m_proc->rSeq = -1;
-            m_proc->rTimeStamp = 0;
-
         }
 
         if(FrameStat == RtpPack_FrameNextStart)//新帧
@@ -427,11 +435,16 @@ void Gb28181Session::OnRTPPacketProcPs(int mark,int curSeq,int timestamp,unsigne
             }
             memcpy(m_proc->rBuf + m_proc->rNow,payloadData,payloadLen);
             m_proc->rNow += payloadLen;
+            // 找到新的帧起始点后才回到正常状态
+            m_proc->rState = 1;
         }
+
+        // 其它情况(Continue/CurFinsh)：忽略，继续保持丢包状态等待NextStart
         return;
         
     }
-	//LOG(INFO)<<"FrameStat:"<<FrameStat;
+	LOG(INFO)<<"FrameStat:"<<FrameStat;
+    //如果改成 == 1，就会漏掉值为 2 的 NextStart。这样当代码通过时间戳判断出“新帧开始”时，就不会先处理上一帧已经缓存好的数据，逻辑上是有风险的
     if(FrameStat)//帧边界
     {
         #if 0
@@ -454,24 +467,72 @@ void Gb28181Session::OnRTPPacketProcPs(int mark,int curSeq,int timestamp,unsigne
 
 		if(m_proc->unpackHnd)
 		{
-			//LOG(INFO)<<"PS SIZE:"<<m_proc->rNow;
-			int offset = 0;
-			while(offset < m_proc->rNow)
-			{
-				//这里需将缓存的数据传入到ps解封装接口中，
-				int ret = ps_demuxer_input((struct ps_demuxer_t *)m_proc->unpackHnd, (const uint8_t*)m_proc->rBuf+offset , m_proc->rNow-offset);
-				if(ret == 0)
-				{
-					LOG(ERROR) << "wrong payload data !!!!! can't demux the PS data";
-				}
-				offset += ret;
-			}
+			LOG(INFO)<<"PS SIZE:"<<m_proc->rNow;
+            if(m_proc->rBuf == NULL || m_proc->rNow <= 0)
+            {
+                LOG(ERROR) << "PS buffer empty/null, skip demux";
+            }
+            else
+            {
+                size_t offset = 0;
+                const size_t total = (size_t)m_proc->rNow;
+                int last_ret = 0;
+                while(offset < total)
+                {
+                    const size_t remain = total - offset;
+                    // 这里需将缓存的数据传入到ps解封装接口中
+                    // m_proc->rBuf + offset，不是在做数值相加，而是在做指针偏移：把起始地址往后挪 offset 个字节，从“还没处理的那一段”开始继续喂给 ps_demuxer_input
+                    //1. 第一次 offset = 0，从缓冲区开头开始解析。
+                    //2.如果 ps_demuxer_input 返回 ret = 120，通常表示这次消费了 120 字节。
+                    //3.然后 offset += 120。
+                    //4.下一轮再传 rBuf + 120，也就是从第 121 个字节开始继续处理。
+                    int ret = ps_demuxer_input(
+                        (struct ps_demuxer_t *)m_proc->unpackHnd,
+                        (const uint8_t*)m_proc->rBuf + offset,
+                        remain);
+                    last_ret = ret;
+                    // ret 语义通常为“消费的字节数”，<=0 表示错误或无法继续
+                    if(ret <= 0)
+                    {
+                        LOG(ERROR) << "ps_demuxer_input failed/blocked, ret=" << ret << ", remain=" << remain;
+                        break;
+                    }
+                    if((size_t)ret > remain)
+                    {
+                        LOG(ERROR) << "ps_demuxer_input over-consumed, ret=" << ret << ", remain=" << remain;
+                        break;
+                    }
+                    offset += (size_t)ret;
+                }
+
+                // 针对上面while循环break的情况，说明当前缓存的数据还没有被完全消费掉，可能是因为数据不完整（比如最后一个包不完整），也可能是因为数据损坏导致解封装失败。无论哪种情况，我们都需要保留剩余未消费的数据，并在下一次接收新数据时将它们合并后再继续解析。
+                // 按 mpeg-ps.h 约定：未消费的数据需要保留并与下一次输入合并
+                if(offset < total)
+                {
+                    const size_t left = total - offset;
+
+                    // ret < 0: 解析错误，通常是 PS 流不同步/数据损坏。重置 demuxer 并丢弃缓存。
+                    // ret == 0: 数据不足(包尾不完整)，保留 left 字节等待下次合并。
+                    if(last_ret < 0)
+                    {
+                        LOG(ERROR) << "ps demux error, reset demuxer and drop buffer, last_ret=" << last_ret;
+                        ps_demuxer_destroy((struct ps_demuxer_t*)m_proc->unpackHnd);
+                        m_proc->unpackHnd = NULL;
+                        m_proc->rNow = 0;//表示逻辑上缓冲区为空，虽然物理内存里可能还残留着之前的数据，但我们不再认为它们是有效数据了，下一次新数据来的时候会覆盖掉这些残留数据，所以不需要单独清理
+                    }
+                    else
+                    {
+                        memmove(m_proc->rBuf, m_proc->rBuf + offset, left);
+                        m_proc->rNow = (int)left;
+                    }
+                }
+                else
+                {
+                    m_proc->rNow = 0;
+                }
+            }
 			
 		}
-
-
-        memset(m_proc->rBuf,0,m_proc->rNow);
-        m_proc->rNow = 0;
 
         if(FrameStat == RtpPack_FrameNextStart)
         {

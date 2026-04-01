@@ -258,7 +258,7 @@ int SipGbPlay::recvFrame(SipPsCode** ps)
 
 
             size = fwrite(data,1,header->length,h264_fp);
-            LOG(INFO)<<"write size:"<<size;
+            //LOG(INFO)<<"write size:"<<size;
             delete data;
         }
         else
