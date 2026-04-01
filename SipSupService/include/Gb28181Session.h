@@ -85,7 +85,7 @@ typedef struct _PackProcStat
     int sKeyFrame; //关键帧标识
     int64_t sPts; //pts显示时间戳
 	FILE* sFp;
-	void* session;
+	void* session;//由于是静态函数调用此结构体，需要透传gbsession对象指针，以便在静态函数里调用非静态成员函数
 
 }PackProcStat;
 
@@ -100,7 +100,7 @@ class Gb28181Session : public RTPSession
         int CreateRtpSession();
         //int CreateRtpSession(string dstip,int dstport);
         // int RtpTcpInit(string dstip,int dstport,int time);
-		// int SendPacket(int media,char* data,int datalen,int codecId);
+		int SendPacket(int media,char* data,int datalen,int codecId);//发送给前端
     protected:
         enum
         {

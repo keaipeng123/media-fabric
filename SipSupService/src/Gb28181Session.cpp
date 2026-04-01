@@ -175,108 +175,143 @@ static void ps_demux_callback(void* param, int stream, int codecid, int flags, i
 	return;
 }
 
-// //需要使用codecId来区分码流的编码方式，然后来进行相应的解码获取分别率以及帧率
-// int Gb28181Session::SendPacket(int media,char* data,int datalen,int codecId)
-// {
-//     //先计算下推送包的整个长度，header部分+负载部分
-//     int len = sizeof(struct StreamHeader) + datalen;
+//需要使用codecId来区分码流的编码方式，然后来进行相应的解码获取分别率以及帧率
+int Gb28181Session::SendPacket(int media,char* data,int datalen,int codecId)
+{
+    //先计算下推送包的整个长度，header部分+负载部分
+    int len = sizeof(struct StreamHeader) + datalen;
 
-//     char* streamBuf = new char[len];
-//     memset(streamBuf,0,len);
+    char* streamBuf = new char[len];
+    memset(streamBuf,0,len);
 
-//     //先给header部分的参数进行赋值
-//     StreamHeader* header = (StreamHeader*)streamBuf;
-//     header->length = datalen;
-//     if(media == 2)
-//     {
-//         header->type = media;
-//         //需要进行IDR帧的判断，并从SPS序列集中解出帧率和分别率
-//         //判断下当前流的codeid是否属于h264编码
-//         if(codecId == STREAM_VIDEO_H264)
-//         {
-//             int nalType = 0,keyFrame = 0;
-// 			int videoW = 0, videoH = 0;
-// 			int videoFps = 25;
-//             //先保存下当前流的编码格式，将int类型转为char，4-》1，其实就是存储了ascll码的值
-//             //header->format[0] = 1;
-//             //然后再获取nalu类型，我们之前说过nalu的startcode为三个字节或者四个字节
-//             if(data[0] == 0x0 && data[1] == 0x0 && data[2] == 0x0 && data[3] == 0x01)
-// 			{
-//                 nalType = data[4] & 0x1F;
-// 			}
-//             else if(data[0] == 0x0 && data[1] == 0x0 && data[2] == 0x01)
-//             {
-//                 nalType = data[3] & 0x1F;
-//             }
-// 			else
-// 			{
-// 				LOG(ERROR) << "Invalid h264 data, please check!";
-// 				return -1;
-// 			}
+    //先给header部分的参数进行赋值
+    StreamHeader* header = (StreamHeader*)streamBuf;
+    header->length = datalen;
+    if(media == 2)
+    {
+        header->type = media;
+        //先解析nalu nalu的开始头 4字节的开始头或者四字节的
+        //解析nalu的type，是否是p，i，idr帧
+        //解析是否是IDR帧数，如果是，获取到IDR的SPS参数集，并根据参数集计算视频的分辨率，宽和高，帧率
+        //需要进行IDR帧的判断，并从SPS序列集中解出帧率和分别率
+        //判断下当前流的codeid是否属于h264编码
+        if(codecId == STREAM_VIDEO_H264)
+        {
+            int nalType = 0,keyFrame = 0;
+			int videoW = 0, videoH = 0;
+			int videoFps = 25;
+            //先保存下当前流的编码格式，将int类型转为char，4-》1，其实就是存储了ascll码的值
+            //header->format[0] = 1;
+            //然后再获取nalu类型，我们之前说过nalu的startcode为三个字节或者四个字节
+            if(data[0] == 0x0 && data[1] == 0x0 && data[2] == 0x0 && data[3] == 0x01)
+			{
+                nalType = data[4] & 0x1F;//第五个字节的后五位是nalu的type
+			}
+            else if(data[0] == 0x0 && data[1] == 0x0 && data[2] == 0x01)//3自己的startCode
+            {
+                nalType = data[3] & 0x1F;
+            }
+			else
+			{
+				LOG(ERROR) << "Invalid h264 data, please check!";
+				return -1;
+			}
 
-//             //如果说nalType为7，那么就代表这帧数据包含了SPS序列集，也就是IDR帧
-//             //那么定义个变量标识下当前帧为关键帧
-//             if(nalType == 7)
-//             {
-//                 keyFrame = 1;
-//             }
-//             else //这里只需要将包含了SPS参数集的数据看作为关键帧，其他都为非关键帧
-//             {
-//                 keyFrame = 0;
-//             }
+            //naluType对应 sps 7 pps 8 i 5
+            //如果说nalType为7，那么就代表这帧数据包含了SPS序列集，也就是IDR帧
+            //那么定义个变量标识下当前帧为IDR
+            if(nalType == 7)//iDR帧的第一个startcode后面的第一个nalutype一定是sps类型,nalutype等于7的是IDR帧
+            {
+                keyFrame = 1;
+            }
+            else //这里只需要将包含了SPS参数集的数据看作为关键帧，其他都为非关键帧
+            {
+                keyFrame = 0;
+            }
 
-//             if(keyFrame == 1)
-//             {
-// 				//这里查询帧率和分辨率信息的频率不要太频繁，这里我们设置每50个关键帧查询一次
-// 				if(m_count == 0 || m_count >50)
-// 				{
-// 					Picinfo info;
-// 					if(GetH264pic((unsigned char *)data, datalen, &info) == 0)
-// 					{
-// 						if(info.height != 0 && info.width != 0)
-// 						{
-// 							header->videoH = info.height;
-// 							header->videoW = info.width;
+            if(keyFrame == 1)
+            {
+                //编码是为了提高数据的压缩率
+                //u(1) 无符号二进制 表示0/1
+                //ue(v) 无符号指数哥伦布编码
+                //se(v) 有符号指数哥伦布编码
+                /*
+                ue(v)
+                v=5
+                编码
+                1.v+1=6
+                2.6转二进制110
+                3.计算编码序列长度M=3
+                4.在二进制前面补充M-1个0，结果00110
+                解码
+                1.从编码中的高位开始找到连续0的数量n,此时n=2
+                2.计算编码序列的长度m=n+1=3
+                3.从编码数据的高位开始，从m位开始提取，110
+                4.将提取的二进制转为十进制再减1,6-1=5
+
+                se(v)
+                v=5
+                编码
+                1.v转为二进制,101
+                2.计算编码结果的序列长度M，M=3
+                3.再编码后补充符号位，整数0，负数1，补充后的结果为1010
+                4.在第三步的结果前面再补充M个0，补充后的结果是0001010
+                解码
+                1.从编码的高位开始找到连续0的数量n，此时n=3
+                2.从编码的高位开始，从n的位置开始提取,提取结果0101，不包括符号位
+                3.将提取的结果转为十进制，结果为5
+                4.再获取最后的符号位，结果为正5
+                */
+				//这里查询帧率和分辨率信息的频率不要太频繁，这里我们设置每50个关键帧查询一次
+				if(m_count == 0 || m_count >50)
+				{
+					Picinfo info;
+					if(GetH264pic((unsigned char *)data, datalen, &info) == 0)
+					{
+						if(info.height != 0 && info.width != 0)
+						{
+							header->videoH = info.height;
+							header->videoW = info.width;
 							
-// 							LOG(INFO)<<"header->videoH:"<<header->videoH<<",header->videoW:"<<header->videoW;
-// 							m_count++;
-// 						}
-// 						if(info.max_framerate > 0)
-// 						{
-// 							//header->format[0] = info.max_framerate;
-// 							LOG(INFO)<<"info.max_framerate:"<<info.max_framerate;
-// 						}
-// 						else if(info.max_framerate == 0)
-// 						{
-// 							//header->format[0] = 25;
-// 						}
-// 						if(m_count >50)
-// 						{
-// 							m_count = 0;
-// 						}
-// 					}
-// 					else
-// 					{
-// 						LOG(ERROR) << "can't analysis video data !! data: " << (void *)data << ", dataLen: " << datalen;
-// 					}
-// 				}
-// 				else 
-// 				{
-// 					m_count++;
-// 				}
+							LOG(INFO)<<"header->videoH:"<<header->videoH<<",header->videoW:"<<header->videoW;
+							m_count++;
+						}
+						if(info.max_framerate > 0)
+						{
+							//header->format[0] = info.max_framerate;
+							LOG(INFO)<<"info.max_framerate:"<<info.max_framerate;
+						}
+						else if(info.max_framerate == 0)
+						{
+							//header->format[0] = 25;
+						}
+						if(m_count >50)
+						{
+							m_count = 0;
+						}
+					}
+					else
+					{
+						LOG(ERROR) << "can't analysis video data !! data: " << (void *)data << ", dataLen: " << datalen;
+					}
+				}
+				else 
+				{
+					m_count++;
+				}
 				
-// 				//最后再保存下帧类型
-// 				//header->format[1] = keyFrame;  
-// 				//将编码器类型也保存下
-// 				//header->format[2] = codecId;   
-//             }
+				//最后再保存下帧类型
+				//header->format[1] = keyFrame;  
+				//将编码器类型也保存下
+				//header->format[2] = codecId;   
+            }
 			
 
-//         }
-//     }
+        }
+    }
     
-//     return 0;
-// }
+    return 0;
+}
 
 // Gb28181Session::Gb28181Session(const DeviceInfo& devInfo)
 // :Session(devInfo)
@@ -354,14 +389,12 @@ void Gb28181Session::ProcessRTPPacket(RTPSourceData& srcdat,RTPPacket& pack)
         LOG(ERROR)<<"rtp unknown payload type:"<<payloadType;
         return;
     }
-    // //在这里更新下下级最后有rtp包推送的时间
-	// gettimeofday(&m_curTime, NULL);
-	// //那么就在接收rtp包的时机给这个session进行赋值
-    // //这里需要先判断下
-    // if(m_proc && m_proc->session == NULL)
-    // {
-    //     m_proc->session = (void*)this;
-    // }
+    //在这里更新下下级最后有rtp包推送的时间
+	//gettimeofday(&m_curTime, NULL);
+    if(m_proc && m_proc->session == NULL)
+    {
+        m_proc->session = (void*)this;
+    }
 
 
     if(payloadType == 96)//ps
