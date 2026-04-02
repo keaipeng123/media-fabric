@@ -32,12 +32,14 @@ int GetH264pic(const uint8_t* data,uint16_t size,Picinfo* info)
     // struct mpeg4_hevc_t hevc;
     // memset(&hevc, 0, sizeof(mpeg4_hevc_t));
 
+    //让 avc 结构里拿到 SPS
 	int ret =(int)mpeg4_annexbtomp4(&avc, data, size, s_buffer, sizeof(s_buffer));
 	if (avc.nb_sps <= 0) {
 		return 1;
 	}
 
 	h264_stream_t* h4 = h264_new();
+    //用 avc.sps[0] 去解析分辨率和帧率
 	ret =h264_configure_parse(h4, avc.sps[0].data, avc.sps[0].bytes, H264_SPS);
 	if (ret != 0) {
 		h264_free(h4);
@@ -188,10 +190,8 @@ int Gb28181Session::SendPacket(int media,char* data,int datalen,int codecId)
     if(media == 2)
     {
         header->type = media;
-        //先解析nalu nalu的开始头 4字节的开始头或者四字节的
-        //解析nalu的type，是否是p，i，idr帧
-        //解析是否是IDR帧数，如果是，获取到IDR的SPS参数集，并根据参数集计算视频的分辨率，宽和高，帧率
-        //需要进行IDR帧的判断，并从SPS序列集中解出帧率和分别率
+        //先解析nalu nalu的开始头 4字节的开始头或者3字节的
+        //解析nalu的type，是否是sps帧，如果是sps帧，那么就从sps帧中解析出视频的分辨率和帧率等参数，保存到header里，后续发送给前端，前端根据这些参数来设置播放器的相关参数
         //判断下当前流的codeid是否属于h264编码
         if(codecId == STREAM_VIDEO_H264)
         {
@@ -215,10 +215,8 @@ int Gb28181Session::SendPacket(int media,char* data,int datalen,int codecId)
 				return -1;
 			}
 
-            //naluType对应 sps 7 pps 8 i 5
-            //如果说nalType为7，那么就代表这帧数据包含了SPS序列集，也就是IDR帧
-            //那么定义个变量标识下当前帧为IDR
-            if(nalType == 7)//iDR帧的第一个startcode后面的第一个nalutype一定是sps类型,nalutype等于7的是IDR帧
+            //naluType对应 sps 7 pps 8 idr slice 5  非 IDR slice 1
+            if(nalType == 7)//nalutype等于7的是sps
             {
                 keyFrame = 1;
             }
