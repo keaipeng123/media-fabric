@@ -23,7 +23,7 @@ extern "C"{         // 若是，执行这行（打开C规则包裹）
 #ifdef __cplusplus  // 开头2：再次检查是否是C++编译器
 }                   // 若是，执行这行（闭合C规则包裹）
 #endif              // 结束2：闭合开头2的判断
-//#include "GlobalCtl.h"
+#include "time.h"
 using namespace jrtplib;
 
 typedef struct _PackProcStat
@@ -101,7 +101,7 @@ class Session
         protocal=info.protocal;
         startTime=info.startTime;
         endTime=info.endTime;
-        //gettimeofday(&m_curTime,NULL);
+        gettimeofday(&m_curTime,NULL);
         //m_rtpPort=0;
     }
     virtual ~Session(){}
@@ -113,7 +113,7 @@ class Session
     int protocal;//tcp udp
     int startTime;
     int endTime;
-    //timeval m_curTime;//检测下级推流异常
+    timeval m_curTime;//检测下级推流异常
 
     //int m_rtpPort;
 };

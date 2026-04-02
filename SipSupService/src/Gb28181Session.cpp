@@ -322,7 +322,7 @@ Gb28181Session::Gb28181Session(const DeviceInfo& devInfo)
 Gb28181Session::~Gb28181Session()
 {
 	//发送BYE数据包并离开会话 不用等待
-	// BYEDestroy(RTPTime(0, 0), 0, 0);
+	BYEDestroy(RTPTime(0, 0), 0, 0);
     // if(m_rtpTcpFd != -1)
     // {
     //     close(m_rtpTcpFd);
@@ -381,7 +381,7 @@ void Gb28181Session::ProcessRTPPacket(RTPSourceData& srcdat,RTPPacket& pack)
         return;
     }
     //在这里更新下下级最后有rtp包推送的时间
-	//gettimeofday(&m_curTime, NULL);
+	gettimeofday(&m_curTime, NULL);
     if(m_proc && m_proc->session == NULL)
     {
         m_proc->session = (void*)this;

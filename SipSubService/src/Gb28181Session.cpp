@@ -22,7 +22,7 @@ Gb28181Session::~Gb28181Session()
     //     close(m_listenFd);
     //     m_listenFd=-1;
     // }
-    // BYEDestroy(RTPTime(0,0),0,0);
+    BYEDestroy(RTPTime(0,0),0,0);
 }
 
 //int Gb28181Session::CreateRtpSession(int poto,string setup,string dstip,int dstport,int rtpPort)

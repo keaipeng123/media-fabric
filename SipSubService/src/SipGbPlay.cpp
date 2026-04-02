@@ -305,8 +305,9 @@ int SipGbPlay::recvFrame(SipPsCode** ps)
     fclose(fp);
     if((*ps) != NULL)
     {
-        delete *ps;
-        *ps = NULL;
+        //注释掉是模拟下级断流后没有主动发送bye包的情况，来测试上级的超时机制是否生效
+        // delete *ps;
+        // *ps = NULL;
     }
    
 

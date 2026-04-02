@@ -10,7 +10,7 @@ static string rtpmap_ps="96 PS/90000";
 OpenStream::OpenStream()
 {
     m_pStreamTimer=new TaskTimer(3);
-    //m_pCheckSessionTimer=new TaskTimer(5);
+    m_pCheckSessionTimer=new TaskTimer(5);
 }
 
 OpenStream::~OpenStream()
@@ -20,53 +20,53 @@ OpenStream::~OpenStream()
         delete m_pStreamTimer;
         m_pStreamTimer=NULL;
     }
-    // if(m_pCheckSessionTimer)
-    // {
-    //     delete m_pCheckSessionTimer;
-    //     m_pCheckSessionTimer=NULL;
-    // }
+    if(m_pCheckSessionTimer)
+    {
+        delete m_pCheckSessionTimer;
+        m_pCheckSessionTimer=NULL;
+    }
 
 }
 
 void OpenStream::StreamServiceStart()
 {
-    //if(m_pStreamTimer && m_pCheckSessionTimer)
-    if(m_pStreamTimer)
+    if(m_pStreamTimer && m_pCheckSessionTimer)
     {
         m_pStreamTimer->setTimerFun(OpenStream::StreamGetProc,this);
         m_pStreamTimer->start();
 
-        // m_pCheckSessionTimer->setTimerFun(OpenStream::CheckSession,this);
-        // m_pCheckSessionTimer->start();
+        m_pCheckSessionTimer->setTimerFun(OpenStream::CheckSession,this);
+        m_pCheckSessionTimer->start();
     }
 }
 
-// void OpenStream::CheckSession(void* param)
-// {
-//     AutoMutexLock lck(&GlobalCtl::gStreamLock);
-//     GlobalCtl::ListSession::iterator iter=GlobalCtl::glistSession.begin();
-//     while(iter!=GlobalCtl::glistSession.end())
-//     {
-//         timeval currtime;
-//         gettimeofday(&currtime,NULL);
-//         Session* session=*iter;
-//         if(session!=NULL&&currtime.tv_sec-session->m_curTime.tv_sec>10)//10s的时间差，认为rtp中断
-//         {
-//             //发送sip层的bye
-//             OpenStream::StreamStop(session->playformId,session->devid);
-//             //再发送rtp层的bye
-//             Gb28181Session* gb28181Session=dynamic_cast<Gb28181Session*>(session);
-//             //gb28181Session->Destroy();
-//             LOG(INFO)<<"gb28181Session->Destroy()";
-//             delete gb28181Session;
-//             iter=GlobalCtl::glistSession.erase(iter);//从list中删掉 这里用iter接了一下为了防止内存溢出为何？
-//         }
-//         else
-//         {
-//             iter++;
-//         }
-//     }
-// }
+void OpenStream::CheckSession(void* param)
+{
+    AutoMutexLock lck(&GlobalCtl::gStreamLock);
+    GlobalCtl::ListSession::iterator iter=GlobalCtl::glistSession.begin();
+    while(iter!=GlobalCtl::glistSession.end())
+    {
+        timeval currtime;
+        gettimeofday(&currtime,NULL);
+        Session* session=*iter;
+        if(session!=NULL&&currtime.tv_sec-session->m_curTime.tv_sec>10)//10s的时间差，认为rtp中断
+        {
+            //发送sip层的bye
+            //OpenStream::StreamStop(session->playformId,session->devid);
+            //再发送rtp层的bye
+            Gb28181Session* gb28181Session=dynamic_cast<Gb28181Session*>(session);
+            //gb28181Session->Destroy();
+            LOG(INFO)<<"gb28181Session->Destroy()";
+            delete gb28181Session;
+            iter=GlobalCtl::glistSession.erase(iter);//从list中删掉 防止迭代器失效
+        }
+        else
+        {
+            iter++;
+        }
+    }
+    return;
+}
 
 // void OpenStream::StreamStop(string platformId ,string devId)
 // {
