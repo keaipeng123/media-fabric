@@ -111,9 +111,9 @@ void OpenStream::StreamGetProc(void* param)
 {
     if(!GlobalCtl::gRcvIpc)
         return;
-    LOG(INFO)<<"gRcvIpc is true";
+    LOG(INFO)<<"start stream";
     //模拟上级客户端请求    
-    DeviceInfo info;
+    DeviceInfo info;   
     info.devid="11000000001310000059";
     info.playformId="11000000002000000001";
     info.streamName="PlayBack";
@@ -122,17 +122,17 @@ void OpenStream::StreamGetProc(void* param)
     info.protocal=0;//0udp 1tcp
     //info.setupType="passive";
     
-    // {
-    //     AutoMutexLock lck(&GlobalCtl::gStreamLock);
-    //     GlobalCtl::ListSession::iterator iter=GlobalCtl::glistSession.begin();
-    //     while(iter!=GlobalCtl::glistSession.end())
-    //     {
-    //         if((*iter)->devid==info.devid&&(*iter)->streamName==info.streamName)
-    //         {
-    //             return;
-    //         }
-    //     }
-    // }
+    {
+        AutoMutexLock lck(&GlobalCtl::gStreamLock);
+        GlobalCtl::ListSession::iterator iter=GlobalCtl::glistSession.begin();
+        while(iter!=GlobalCtl::glistSession.end())
+        {
+            if((*iter)->devid==info.devid&&(*iter)->streamName==info.streamName)
+            {
+                return;
+            }
+        }
+    }
    
 
     
@@ -248,10 +248,10 @@ void OpenStream::StreamGetProc(void* param)
         return;
    }
 
-   //Session* pSession=new Gb28181Session(info);
+   Session* pSession=new Gb28181Session(info);
    //pSession->m_rtpPort=rtp_port;
-   Gb28181Session* session=new Gb28181Session();
-   inv->mod_data[0]=(void*)session;
+   //Gb28181Session* session=new Gb28181Session();
+   inv->mod_data[0]=(void*)pSession;
 
    pjsip_tx_data* tdata;
    status=pjsip_inv_invite(inv,&tdata);
@@ -278,8 +278,8 @@ void OpenStream::StreamGetProc(void* param)
    }
 
 
-//    AutoMutexLock lck(&GlobalCtl::gStreamLock);
-//    GlobalCtl::glistSession.push_back(pSession);
+   AutoMutexLock lck(&GlobalCtl::gStreamLock);
+   GlobalCtl::glistSession.push_back(pSession);
 
     GlobalCtl::gRcvIpc=false;
 //    //sleep(3);

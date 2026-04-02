@@ -55,10 +55,11 @@ void SipGbPlay::OnMediaUpdate(pjsip_inv_session *inv_ses, pj_status_t status)
 
     LOG(INFO)<<"remote rtp ip:"<<ip<<" remote rtp port:"<<sdp_port;
 
-    //Gb28181Session* rtpsession = dynamic_cast<Gb28181Session*>((Session*)inv_ses->mod_data[0]);
+    //程序从一个基类指针 Session* 出发，想安全地恢复成真实的派生类 Gb28181Session*，以便调用派生类特有的方法；而且这个类还是多继承结构，dynamic_cast 能同时保证“运行时类型检查”和“正确的指针调整”
+    Gb28181Session* rtpsession = dynamic_cast<Gb28181Session*>((Session*)inv_ses->mod_data[0]);//父转子
     //rtpsession->CreateRtpSession(ip,sdp_port);
-    Gb28181Session* session = (Gb28181Session*)inv_ses->mod_data[0];
-    session->CreateRtpSession();
+    //Gb28181Session* session = (Gb28181Session*)inv_ses->mod_data[0];
+    rtpsession->CreateRtpSession();
 
     return;
 

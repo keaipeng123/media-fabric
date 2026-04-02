@@ -14,7 +14,7 @@
 #include "Common.h"
 #include "mpeg-ps.h"
 
-//#include "SipDef.h"
+#include "SipDef.h"
 
 #ifdef __cplusplus  // 开头1：检查是否是C++编译器
 extern "C"{         // 若是，执行这行（打开C规则包裹）
@@ -89,12 +89,39 @@ typedef struct _PackProcStat
 
 }PackProcStat;
 
-//class Gb28181Session : public RTPSession,public Session
-class Gb28181Session : public RTPSession
+class Session
 {
     public:
-        //Gb28181Session(const DeviceInfo& devInfo);
-        Gb28181Session();
+    Session(const DeviceInfo& info)
+    {
+        devid=info.devid;
+        playformId=info.playformId;
+        streamName=info.streamName;
+        setupType=info.setupType;
+        protocal=info.protocal;
+        startTime=info.startTime;
+        endTime=info.endTime;
+        //gettimeofday(&m_curTime,NULL);
+        //m_rtpPort=0;
+    }
+    virtual ~Session(){}
+    public:
+    string devid;
+    string playformId;//中心平台id
+    string streamName;//实时流还是回放流
+    string setupType; //指定rtp流为tcp时，需要指定setup为active主动或者passive被动
+    int protocal;//tcp udp
+    int startTime;
+    int endTime;
+    //timeval m_curTime;//检测下级推流异常
+
+    //int m_rtpPort;
+};
+
+class Gb28181Session : public RTPSession,public Session
+{
+    public:
+        Gb28181Session(const DeviceInfo& devInfo);
         ~Gb28181Session();
 
         int CreateRtpSession();

@@ -8,6 +8,7 @@
 #include<time.h>
 #include<random>
 #include<sstream>
+#include"Gb28181Session.h"
 
 class GlobalCtl;
 #define GBOJ(obj) GlobalCtl::instance()->obj //宏定义简化单例成员访问
@@ -78,6 +79,10 @@ class GlobalCtl
     }
 
     static pthread_mutex_t globalLock;
+
+    typedef list<Session*> ListSession;
+    static ListSession glistSession;
+    static pthread_mutex_t gStreamLock;
 
     static bool gStopPool;
     static bool gRcvIpc;

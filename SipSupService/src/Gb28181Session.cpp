@@ -309,19 +309,13 @@ int Gb28181Session::SendPacket(int media,char* data,int datalen,int codecId)
     return 0;
 }
 
-// Gb28181Session::Gb28181Session(const DeviceInfo& devInfo)
-// :Session(devInfo)
-// {
-//     m_proc = new PackProcStat();
-// 	m_count = 0;
-//     m_rtpTcpFd = -1;
-//     m_listenFd = -1;
-// }
-
-Gb28181Session::Gb28181Session()
+Gb28181Session::Gb28181Session(const DeviceInfo& devInfo)
+:Session(devInfo)
 {
-     m_proc = new PackProcStat();
-     m_count = 0;
+    m_proc = new PackProcStat();
+	m_count = 0;
+    //m_rtpTcpFd = -1;
+    //m_listenFd = -1;
 }
 
 
