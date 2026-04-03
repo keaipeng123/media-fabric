@@ -172,7 +172,7 @@ class SipPsCode
         m_dstport=dstport;
         m_avStreamIndex=-1;
         m_auStreamIndex=-1;
-        // stopFlag=false;
+        stopFlag=false;
         // m_rtpPort=rtpPort;
         // m_sTime=s;
         // m_eTime=e;
@@ -205,7 +205,7 @@ class SipPsCode
     int incomeVideoData(unsigned char* avdata,int len,int pts,int isIframe);//ps流封装
     int incomeAudioData(unsigned char* audata,int len,int pts);
     int sendPackData(void* packet, size_t bytes);
-//     bool stopFlag;
+    bool stopFlag;
 //     int m_sTime;
 //     int m_eTime;
 //     int m_poto;
