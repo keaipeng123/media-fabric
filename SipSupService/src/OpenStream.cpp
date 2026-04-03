@@ -52,7 +52,7 @@ void OpenStream::CheckSession(void* param)
         if(session!=NULL&&currtime.tv_sec-session->m_curTime.tv_sec>10)//10s的时间差，认为rtp中断
         {
             //发送sip层的bye
-            //OpenStream::StreamStop(session->playformId,session->devid);
+            OpenStream::StreamStop(session->playformId,session->devid);
             //再发送rtp层的bye
             Gb28181Session* gb28181Session=dynamic_cast<Gb28181Session*>(session);
             //gb28181Session->Destroy();
@@ -68,44 +68,44 @@ void OpenStream::CheckSession(void* param)
     return;
 }
 
-// void OpenStream::StreamStop(string platformId ,string devId)
-// {
-//     LOG(INFO)<<"StreamStop";
-//     pj_thread_desc desc;
-//     pjcall_thread_register(desc);//pjlib注册
-//     SipMessage msg;
-//     AutoMutexLock lock(&GlobalCtl::globalLock);
-//     GlobalCtl::SUBDOMAININFOLIST::iterator iter=GlobalCtl::instance()->getSubDomainInfoList().begin();
-//     for(;iter!=GlobalCtl::instance()->getSubDomainInfoList().end();iter++)
-//     {
-//         if(iter->sipId==platformId)
-//         {
-//             msg.setFrom((char*)GBOJ(gConfig)->sipId().c_str(),(char*)GBOJ(gConfig)->sipIp().c_str());
-//             msg.setTo((char*)devId.c_str(),(char*)iter->addrIp.c_str());
-//             msg.setUrl((char*)devId.c_str(),(char*)iter->addrIp.c_str(),iter->sipPort);
-//         } 
-//         pjsip_tx_data* tdata;
-//         pj_str_t from=pj_str(msg.FromHeader());
-//         pj_str_t to=pj_str(msg.ToHeader());
-//         pj_str_t line=pj_str(msg.RequestUrl());
-//         string method="BYE";
-//         pjsip_method reqMethod={PJSIP_OTHER_METHOD,{(char*)method.c_str(),method.length()}};
-//         pj_status_t status= pjsip_endpt_create_request(GBOJ(gSipServer)->GetEndPoint(),&reqMethod,&line,&from,&to,NULL,NULL,-1,NULL,&tdata);
-//         if(PJ_SUCCESS!=status)
-//         {
-//             LOG(ERROR)<<"pjsip_endpt_create_request ERROR";
-//             return;
-//         }
+void OpenStream::StreamStop(string platformId ,string devId)
+{
+    LOG(INFO)<<"StreamStop";
+    pj_thread_desc desc;
+    pjcall_thread_register(desc);//pjlib注册
+    SipMessage msg;
+    AutoMutexLock lock(&GlobalCtl::globalLock);
+    GlobalCtl::SUBDOMAININFOLIST::iterator iter=GlobalCtl::instance()->getSubDomainInfoList().begin();
+    for(;iter!=GlobalCtl::instance()->getSubDomainInfoList().end();iter++)
+    {
+        if(iter->sipId==platformId)
+        {
+            msg.setFrom((char*)GBOJ(gConfig)->sipId().c_str(),(char*)GBOJ(gConfig)->sipIp().c_str());
+            msg.setTo((char*)devId.c_str(),(char*)iter->addrIp.c_str());
+            msg.setUrl((char*)devId.c_str(),(char*)iter->addrIp.c_str(),iter->sipPort);
+        } 
+        pjsip_tx_data* tdata;
+        pj_str_t from=pj_str(msg.FromHeader());
+        pj_str_t to=pj_str(msg.ToHeader());
+        pj_str_t line=pj_str(msg.RequestUrl());
+        string method="BYE";
+        pjsip_method reqMethod={PJSIP_OTHER_METHOD,{(char*)method.c_str(),method.length()}};
+        pj_status_t status= pjsip_endpt_create_request(GBOJ(gSipServer)->GetEndPoint(),&reqMethod,&line,&from,&to,NULL,NULL,-1,NULL,&tdata);
+        if(PJ_SUCCESS!=status)
+        {
+            LOG(ERROR)<<"pjsip_endpt_create_request ERROR";
+            return;
+        }
 
-//         status=pjsip_endpt_send_request(GBOJ(gSipServer)->GetEndPoint(),tdata,-1,NULL,NULL);
-//         if(PJ_SUCCESS!=status)
-//         {
-//             LOG(ERROR)<<"pjsip_endpt_send_request ERROR";
-//             return;
-//         }
-//         return;
-//     }
-// }
+        status=pjsip_endpt_send_request(GBOJ(gSipServer)->GetEndPoint(),tdata,-1,NULL,NULL);
+        if(PJ_SUCCESS!=status)
+        {
+            LOG(ERROR)<<"pjsip_endpt_send_request ERROR";
+            return;
+        }
+        return;
+    }
+}
 
 void OpenStream::StreamGetProc(void* param)
 {
