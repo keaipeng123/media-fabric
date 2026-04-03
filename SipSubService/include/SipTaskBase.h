@@ -24,5 +24,6 @@ class SipTaskBase
     static tinyxml2::XMLElement* parseXmlData(pjsip_msg* msg,string& rootType,const string xmlkey,string& xmlvalue);
     protected://只能由派生类去调用
     string parseFromId(pjsip_msg* msg);
+    string parseToId(pjsip_msg* msg);
 };
 #endif

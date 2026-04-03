@@ -18,6 +18,25 @@ string SipTaskBase::parseFromId(pjsip_msg* msg)
     return fromId;
 }
 
+string SipTaskBase::parseToId(pjsip_msg *msg)
+{
+	pjsip_to_hdr* to = (pjsip_to_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_TO, NULL);
+	if(NULL == to)
+    {
+        return "";
+    }
+	char buf[1024] = { 0 };
+	string toId = "";
+	int size = to->vptr->print_on(to, buf, 1024);
+	//LOG(INFO)<<"to:"<<buf;
+	if (size > 0)
+	{
+		toId = buf;
+		toId = toId.substr(9, 20);
+	}
+	return toId;
+}
+
 tinyxml2::XMLElement* SipTaskBase::parseXmlData(pjsip_msg* msg,string& rootType,const string xmlkey,string& xmlvalue)
 {
     tinyxml2::XMLDocument* pxmlDoc=NULL;

@@ -6,8 +6,8 @@
 #include "SipMessage.h"
 
 
-//SipGbPlay::MediaStreamInfo SipGbPlay::mediaInfoMap;
-//pthread_mutex_t SipGbPlay::streamLock = PTHREAD_MUTEX_INITIALIZER;
+SipGbPlay::MediaStreamInfo SipGbPlay::mediaInfoMap;
+pthread_mutex_t SipGbPlay::streamLock = PTHREAD_MUTEX_INITIALIZER;
 
 SipGbPlay::SipGbPlay()
 {
@@ -35,42 +35,42 @@ void SipGbPlay::run(pjsip_rx_data *rdata)
 
 void SipGbPlay::dealWithBye(pjsip_rx_data *rdata)
 {
-	// int code = SIP_SUCCESS;
+	int code = SIP_SUCCESS;
 
-	// std::string devId = parseToId(rdata->msg_info.msg);
-	// LOG(INFO)<<"======BYE  devId:"<<devId;
-	// do
-	// {
-	// 	if(devId == "")
-	// 	{
-	// 		code = SIP_BADREQUEST;
-	// 		break;
-	// 	}
-	// 	AutoMutexLock lck(&streamLock);
-	// 	auto iter = mediaInfoMap.find(devId);
-	// 	if(iter != mediaInfoMap.end())
-	// 	{
-    //         //我们先判断下SipPsCode句柄是否不为空
-	// 		if(iter->second != NULL)
-	// 		{
-	// 			iter->second->stopFlag = true;
-	// 		}
-    //         //delete iter->second;
-    //         //最后还需要从map中删除当前的键值对
-	// 		iter = mediaInfoMap.erase(iter);
-	// 	}
-	// 	else
-	// 	{
-	// 		code = SIP_FORBIDDEN;
-	// 	}
-	// }while(false);
+	string devId = parseToId(rdata->msg_info.msg);
+	LOG(INFO)<<"======BYE  devId:"<<devId;
+	do
+	{
+		if(devId == "")
+		{
+			code = SIP_BADREQUEST;
+			break;
+		}
+		AutoMutexLock lck(&streamLock);
+		auto iter = mediaInfoMap.find(devId);
+		if(iter != mediaInfoMap.end())
+		{
+            //我们先判断下SipPsCode句柄是否不为空
+			if(iter->second != NULL)
+			{
+				iter->second->stopFlag = true;
+			}
+            //delete iter->second;
+            //最后还需要从map中删除当前的键值对
+			iter = mediaInfoMap.erase(iter);
+		}
+		else
+		{
+			code = SIP_FORBIDDEN;
+		}
+	}while(false);
 	
-	// pj_status_t status = pjsip_endpt_respond(GBOJ(gSipServer)->GetEndPoint(), NULL, rdata, code, NULL,NULL, NULL, NULL);
-	// if (PJ_SUCCESS != status)
-	// {
-	// 	LOG(ERROR)<<"create response failed";
-	// 	return;
-	// }
+	pj_status_t status = pjsip_endpt_respond(GBOJ(gSipServer)->GetEndPoint(), NULL, rdata, code, NULL,NULL, NULL, NULL);
+	if (PJ_SUCCESS != status)
+	{
+		LOG(ERROR)<<"create response failed";
+		return;
+	}
 	
 }
 
@@ -156,11 +156,11 @@ void SipGbPlay::dealWithInvite(pjsip_rx_data *rdata)
 		// sdpInfo.localRtpPort = GBOJ(gConfig)->popOneRandNum();
         ps = new SipPsCode(dst_ip,sdp_port);
         //ps = new SipPsCode(dst_ip,sdp_port,sdpInfo.localRtpPort,poto,sdpInfo.setUp,sdpInfo.startTime,sdpInfo.endTime);
-        // {
-        //     //需要在ps对象实例化后就插入到map中
-        //     AutoMutexLock lck(&streamLock);
-		// 	mediaInfoMap.insert(pair<string, SipPsCode*>(devId, ps));
-        // }
+        {
+            //需要在ps对象实例化后就插入到map中
+            AutoMutexLock lck(&streamLock);
+		 	mediaInfoMap.insert(pair<string, SipPsCode*>(devId, ps));
+        }
 
     } while (0);
     //ps->initPsEncode();
@@ -232,12 +232,12 @@ int SipGbPlay::recvFrame(SipPsCode** ps)
     {
         //需要判断下结束的flag
         //为true则发送rtp层的bye，并退出当前取流和推流的线程
-        // if((*ps)->stopFlag)
-        // {
-        //     delete *ps;
-        //     *ps = NULL;
-        //     break;
-        // }
+        if((*ps)->stopFlag)
+        {
+            delete *ps;
+            *ps = NULL;
+            break;
+        }
         memset(buf,0,sizeof(StreamHeader));
         int size = fread(buf,1,sizeof(StreamHeader),fp);//读帧头
         if(size < 0)
@@ -306,8 +306,8 @@ int SipGbPlay::recvFrame(SipPsCode** ps)
     if((*ps) != NULL)
     {
         //注释掉是模拟下级断流后没有主动发送bye包的情况，来测试上级的超时机制是否生效
-        // delete *ps;
-        // *ps = NULL;
+        delete *ps;
+        *ps = NULL;
     }
    
 
