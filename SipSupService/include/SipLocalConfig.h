@@ -4,6 +4,7 @@
 #include "Common.h"
 #include <list>
 #include<algorithm>
+#include<queue>
 class SipLocalConfig
 {
     public:
@@ -11,6 +12,9 @@ class SipLocalConfig
     ~SipLocalConfig();
 
     int ReadConf();
+    int initRandPort();
+    int popOneRandNum();
+    int pushOneRandNum(int num);
 
     inline string localIp(){return m_localIp;}
     inline string sipId(){return m_sipId;}
@@ -45,6 +49,11 @@ class SipLocalConfig
     int m_subNodePort;
     int m_subNodePoto;
     int m_subNodeAuth;
+    int m_rtpPortBegin;
+    int m_rtpPortEnd;
+
+    queue<int> m_RandNum;
+    pthread_mutex_t m_rtpPortLock;
 
 };
 

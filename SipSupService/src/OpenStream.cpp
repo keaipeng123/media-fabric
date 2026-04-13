@@ -123,6 +123,7 @@ void OpenStream::StreamGetProc(void* param)
     //info.setupType="passive";
     
     {
+        //已经在推，返回
         AutoMutexLock lck(&GlobalCtl::gStreamLock);
         GlobalCtl::ListSession::iterator iter=GlobalCtl::glistSession.begin();
         while(iter!=GlobalCtl::glistSession.end())
@@ -138,7 +139,7 @@ void OpenStream::StreamGetProc(void* param)
     
 
     //request INVITE
-    //int rtp_port=GBOJ(gConfig)->popOneRandNum();
+    int rtp_port=GBOJ(gConfig)->popOneRandNum();
     SipMessage msg;
     {   //缩小栈空间，即时释放智能锁
         AutoMutexLock lock(&(GlobalCtl::globalLock));
@@ -206,7 +207,7 @@ void OpenStream::StreamGetProc(void* param)
    pjmedia_sdp_media* m=(pjmedia_sdp_media*)pj_pool_zalloc(GBOJ(gSipServer)->GetPool(),sizeof(pjmedia_sdp_media));
    sdp->media[0]=m;
    m->desc.media=pj_str("video");
-   m->desc.port=20000;
+   m->desc.port=rtp_port;//rtp端口
    m->desc.port_count=1;
    if(info.protocal)
    {
@@ -249,8 +250,7 @@ void OpenStream::StreamGetProc(void* param)
    }
 
    Session* pSession=new Gb28181Session(info);
-   //pSession->m_rtpPort=rtp_port;
-   //Gb28181Session* session=new Gb28181Session();
+   pSession->m_rtpPort=rtp_port;
    inv->mod_data[0]=(void*)pSession;
 
    pjsip_tx_data* tdata;

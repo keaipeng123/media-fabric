@@ -3,6 +3,7 @@
 #include"ConfReader.h"
 #include "Common.h"
 #include <list>
+#include<queue>
 
 class SipLocalConfig
 {
@@ -11,6 +12,9 @@ class SipLocalConfig
     ~SipLocalConfig();
 
     int ReadConf();
+    int initRandPort();
+    int popOneRandNum();
+    int pushOneRandNum(int num);
 
     inline string localIp(){return m_localIp;}
     inline int localPort(){return m_localPort;}
@@ -44,6 +48,11 @@ class SipLocalConfig
     int m_supNodePort;
     int m_supNodePoto;
     int m_supNodeAuth;
+    int m_rtpPortBegin;
+    int m_rtpPortEnd;
+
+    queue<int> m_RandNum;
+    pthread_mutex_t m_rtpPortLock;
 
 };
 

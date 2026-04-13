@@ -153,8 +153,8 @@ void SipGbPlay::dealWithInvite(pjsip_rx_data *rdata)
             sdpInfo.setUp = setup;
         }
 		
-		// sdpInfo.localRtpPort = GBOJ(gConfig)->popOneRandNum();
-        ps = new SipPsCode(dst_ip,sdp_port);
+		sdpInfo.localRtpPort = GBOJ(gConfig)->popOneRandNum();
+        ps = new SipPsCode(dst_ip,sdp_port,sdpInfo.localRtpPort);
         //ps = new SipPsCode(dst_ip,sdp_port,sdpInfo.localRtpPort,poto,sdpInfo.setUp,sdpInfo.startTime,sdpInfo.endTime);
         {
             //需要在ps对象实例化后就插入到map中
@@ -332,7 +332,7 @@ void SipGbPlay::resWithSdp(pjsip_rx_data *rdata,int status_code,string devid,Med
         ss<<"s="<<"Play"<<"\r\n";
         ss<<"c="<<"IN IP4 "<<GBOJ(gConfig)->sipIp()<<"\r\n";
         ss<<"t="<<"0 0"<<"\r\n";
-        ss<<"m=video "<<30000<<" "<<sdpInfo.sdp_protol<<" 96"<<"\r\n";
+        ss<<"m=video "<<sdpInfo.localRtpPort<<" "<<sdpInfo.sdp_protol<<" 96"<<"\r\n";
         ss<<"a=rtpmap:96 PS/90000"<<"\r\n";
         ss<<"a=sendonly"<<"\r\n";
         if(sdpInfo.setUp != "")

@@ -101,7 +101,7 @@ static void ps_demux_callback(void* param, int stream, int codecid, int flags, i
 			//do{
 				if(pProc->sCodec == STREAM_VIDEO_H264
 					|| pProc->sCodec == STREAM_VIDEO_H265)
-				{ 
+				{
                     //在这里可以先区分媒体流的类型，和当前视频帧是否为关键帧
 					media = 2;
 					//frameType = pProc->sKeyFrame > 1 ? FORMAT_VIDEO_I : FORMAT_VIDEO_P;
@@ -308,7 +308,11 @@ int Gb28181Session::SendPacket(int media,char* data,int datalen,int codecId)
     
     return 0;
 }
-
+// 类名(参数列表)
+//     : 成员1(值1), 成员2(值2), 基类(参数)
+// {
+//     // 构造函数体
+// }
 Gb28181Session::Gb28181Session(const DeviceInfo& devInfo)
 :Session(devInfo)
 {
@@ -590,8 +594,8 @@ int Gb28181Session::CreateRtpSession()
     // {
         RTPUDPv4TransmissionParams transparams;
         transparams.SetRTPReceiveBuffer(1024*1024);//这里设置过小会导致业务层来不及处理接收到的rtp导致业务侧的丢包
-        transparams.SetPortbase(20000);
-        //transparams.SetPortbase(rtp_loaclport);
+        //transparams.SetPortbase(20000);
+        transparams.SetPortbase(m_rtpPort);
         
 
         ret = Create(sessParams,&transparams);
@@ -602,7 +606,7 @@ int Gb28181Session::CreateRtpSession()
         }
         else
         {
-            LOG(INFO)<<"udp create ok,bind:"<<20000;
+            LOG(INFO)<<"udp create ok,bind:"<<m_rtpPort;
             //LOG(INFO)<<"udp create ok,bind:"<<rtp_loaclport;
         }
     //}

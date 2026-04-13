@@ -26,7 +26,7 @@ Gb28181Session::~Gb28181Session()
 }
 
 //int Gb28181Session::CreateRtpSession(int poto,string setup,string dstip,int dstport,int rtpPort)
-int Gb28181Session::CreateRtpSession(string dstip,int dstport)
+int Gb28181Session::CreateRtpSession(string dstip,int dstport,int rtpPort)
 {
     LOG(INFO)<<"CreateRtpSession:m_dstip:"<<dstip;
     uint32_t destip=inet_addr(dstip.c_str());
@@ -43,7 +43,7 @@ int Gb28181Session::CreateRtpSession(string dstip,int dstport)
     // {
         //设置udp传输端口配置
         RTPUDPv4TransmissionParams transparams;
-        transparams.SetPortbase(30000);
+        transparams.SetPortbase(rtpPort);
         transparams.SetRTPSendBuffer(JRTP_SET_SEND_BUFFER);//设置发送缓冲区大小
         transparams.SetMulticastTTL(JRTP_SET_MULITTTL);//设置最大跳数
 
@@ -170,7 +170,7 @@ int SipPsCode::gbRtpInit()
 {
     m_gbRtpHandle=new Gb28181Session();
    // return m_gbRtpHandle->CreateRtpSession(this->m_poto,this->m_setup,this->m_dstip,this->m_dstport,this->m_rtpPort);
-   return m_gbRtpHandle->CreateRtpSession(this->m_dstip, this->m_dstport);
+   return m_gbRtpHandle->CreateRtpSession(this->m_dstip, this->m_dstport,this->m_rtpPort);
 }
 
 int SipPsCode::incomeVideoData(unsigned char* avdata,int len,int pts,int isIframe)

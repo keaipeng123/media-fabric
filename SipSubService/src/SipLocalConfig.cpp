@@ -11,6 +11,8 @@ static const string keyLocalPort="local_port";
 static const string keySipId="sip_id";
 static const string keySipIp="sip_ip";
 static const string keySipPort="sip_port";
+static const string keyRtpPortBegin="rtp_port_begin";
+static const string keyRtpPortEnd="rtp_port_end";
 
 static const string keySupNodeNum="supnode_num";
 static const string keySupNodeId="sip_supnode_id";
@@ -36,6 +38,9 @@ SipLocalConfig::SipLocalConfig()
     m_supNodePort=0;
     m_supNodePoto=0;
     m_supNodeAuth=0;
+    m_rtpPortBegin=0;
+    m_rtpPortEnd=0;
+    m_rtpPortLock=PTHREAD_MUTEX_INITIALIZER;
 
 }
 
@@ -88,6 +93,23 @@ int SipLocalConfig::ReadConf()
     LOG(INFO)<<"localip:"<<m_localIp<<",localPort:"<<m_localPort<<",sipId:"<<m_sipId<<",sipIp:"<<m_sipIp\
     <<",sipPort:"<<m_sipPort;
 
+    m_rtpPortBegin=m_conf.readInt(keyRtpPortBegin);
+    if(m_rtpPortBegin<=0)
+    {
+        ret=-1;
+        LOG(ERROR)<<"rtpPortBegin is NULL";
+        return ret;
+    }
+
+    m_rtpPortEnd=m_conf.readInt(keyRtpPortEnd);
+    if(m_rtpPortEnd<=0)
+    {
+        ret=-1;
+        LOG(ERROR)<<"rtpPortEnd is NULL";
+        return ret;
+    }
+    initRandPort();
+
     int num=m_conf.readInt(keySupNodeNum);
     for(int i=1;i<num+1;++i)
     {
@@ -121,4 +143,57 @@ int SipLocalConfig::ReadConf()
     LOG(INFO)<<"upNodeInfoList.SIZE:"<<upNodeInfoList.size();
 
     return ret;
+}
+
+
+int SipLocalConfig::initRandPort()
+{
+    //将队列的起始端口设置为偶数，结束设置为奇数
+    //通常rtp为偶数，rtcp为奇数
+    while(m_rtpPortBegin%2)
+    {
+        m_rtpPortBegin++;
+    }
+
+    while(m_rtpPortEnd%2==0)
+    {
+        m_rtpPortEnd--;
+    }
+
+    AutoMutexLock lck(&m_rtpPortLock);
+    for(int i=m_rtpPortBegin;i<=m_rtpPortEnd;i++)
+    {
+        m_RandNum.push(i);
+    }
+    LOG(INFO)<<"m_RandNum.SIZE:"<<m_RandNum.size();
+}
+
+int SipLocalConfig::popOneRandNum()
+{
+    int rtpPort=0;
+    AutoMutexLock lck(&m_rtpPortLock);
+    if(m_RandNum.size()>0)
+    {
+        rtpPort=m_RandNum.front();
+        m_RandNum.pop();//rtp的
+        if(rtpPort%2)//如果取的是奇数，重新取一个偶数
+        {
+            rtpPort=m_RandNum.front();
+            m_RandNum.pop();
+        }
+        m_RandNum.pop();//rtcp的
+    }
+    return rtpPort;
+}
+
+int SipLocalConfig::pushOneRandNum(int num)
+{
+    if(num<m_rtpPortBegin||num>m_rtpPortEnd)
+    {
+        return -1;
+    }
+    AutoMutexLock lck(&m_rtpPortLock);
+    m_RandNum.push(num);
+    m_RandNum.push(num+1);
+    LOG(INFO)<<"push rtp port:"<<num<<",rtcp port:"<<num+1;
 }

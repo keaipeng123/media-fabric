@@ -102,7 +102,7 @@ class Session
         startTime=info.startTime;
         endTime=info.endTime;
         gettimeofday(&m_curTime,NULL);
-        //m_rtpPort=0;
+        m_rtpPort=0;
     }
     virtual ~Session(){}
     public:
@@ -115,7 +115,7 @@ class Session
     int endTime;
     timeval m_curTime;//检测下级推流异常
 
-    //int m_rtpPort;
+    int m_rtpPort;
 };
 
 class Gb28181Session : public RTPSession,public Session

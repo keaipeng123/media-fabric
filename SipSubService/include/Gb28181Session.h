@@ -49,7 +49,7 @@ class Gb28181Session : public RTPSession
     //     }
     //     return 0;
     // } 
-    int CreateRtpSession(string dstip,int dstport);
+    int CreateRtpSession(string dstip,int dstport,int rtpPort);
     //int CreateRtpSession(int poto,string setup,string dstip,int dstport,int rtpPort);
     //int RtpTcpinit(string setup,int localport,string dstip,int dstport,int time);
 
@@ -166,14 +166,14 @@ class SipPsCode
 {
     public:
     //SipPsCode(int poto,string setup,string dstip,int dstport,int rtpPort,int s,int e)
-    SipPsCode(string dstip,int dstport)
+    SipPsCode(string dstip,int dstport,int rtpPort)
     {
         m_dstip=dstip;
         m_dstport=dstport;
         m_avStreamIndex=-1;
         m_auStreamIndex=-1;
         stopFlag=false;
-        // m_rtpPort=rtpPort;
+        m_rtpPort=rtpPort;
         // m_sTime=s;
         // m_eTime=e;
         // m_poto=poto;
@@ -218,7 +218,7 @@ class SipPsCode
     ps_muxer_t* m_muxer;
     int m_avStreamIndex;
     int m_auStreamIndex;
-//     int m_rtpPort;
+    int m_rtpPort;
 };
 
 #endif
