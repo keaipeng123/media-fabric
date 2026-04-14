@@ -3,7 +3,7 @@
 #include "mpeg4-avc.h"
 #include "h264_stream.hpp"
 #include "h265_stream.hpp"
-#include "mpeg4-hevc.h"  
+#include "mpeg4-hevc.h"
 // #include "ECSocket.h"
 // using namespace EC;
 
@@ -339,7 +339,7 @@ Gb28181Session::~Gb28181Session()
     //     m_listenFd = -1;
     // }
 	
-// 	GBOJ(gConfig)->pushOneRandNum(rtp_loaclport);
+ 	GBOJ(gConfig)->pushOneRandNum(m_rtpPort);
 }
 
 void Gb28181Session::OnPollThreadStep()

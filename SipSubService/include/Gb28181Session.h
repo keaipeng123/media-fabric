@@ -182,7 +182,7 @@ class SipPsCode
 
     ~SipPsCode()
     {
-        // stopFlag=false;
+        stopFlag=false;
         if(m_muxer)
         {
             ps_muxer_destroy(m_muxer);
@@ -192,7 +192,7 @@ class SipPsCode
             delete m_gbRtpHandle;
             m_gbRtpHandle=NULL;
         }
-        // GBOJ(gConfig)->pushOneRandNum(m_rtpPort);
+        GBOJ(gConfig)->pushOneRandNum(m_rtpPort);
     }
 
     int initPsEncode(); //初始化ps封装器

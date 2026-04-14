@@ -15,6 +15,7 @@
 #include "mpeg-ps.h"
 
 #include "SipDef.h"
+#include "GlobalCtl.h"
 
 #ifdef __cplusplus  // 开头1：检查是否是C++编译器
 extern "C"{         // 若是，执行这行（打开C规则包裹）
@@ -88,35 +89,6 @@ typedef struct _PackProcStat
 	void* session;//由于是静态函数调用此结构体，需要透传gbsession对象指针，以便在静态函数里调用非静态成员函数
 
 }PackProcStat;
-
-class Session
-{
-    public:
-    Session(const DeviceInfo& info)
-    {
-        devid=info.devid;
-        playformId=info.playformId;
-        streamName=info.streamName;
-        setupType=info.setupType;
-        protocal=info.protocal;
-        startTime=info.startTime;
-        endTime=info.endTime;
-        gettimeofday(&m_curTime,NULL);
-        m_rtpPort=0;
-    }
-    virtual ~Session(){}
-    public:
-    string devid;
-    string playformId;//中心平台id
-    string streamName;//实时流还是回放流
-    string setupType; //指定rtp流为tcp时，需要指定setup为active主动或者passive被动
-    int protocal;//tcp udp
-    int startTime;
-    int endTime;
-    timeval m_curTime;//检测下级推流异常
-
-    int m_rtpPort;
-};
 
 class Gb28181Session : public RTPSession,public Session
 {

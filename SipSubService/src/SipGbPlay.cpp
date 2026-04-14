@@ -76,6 +76,7 @@ void SipGbPlay::dealWithBye(pjsip_rx_data *rdata)
 
 void SipGbPlay::dealWithInvite(pjsip_rx_data *rdata)
 {
+    LOG(INFO)<<"======INVITE";
     string fromId = parseFromId(rdata->msg_info.msg);
     bool flag = false;
     int status_code = 200;

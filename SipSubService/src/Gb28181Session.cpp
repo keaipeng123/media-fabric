@@ -55,14 +55,14 @@ int Gb28181Session::CreateRtpSession(string dstip,int dstport,int rtpPort)
         else
         {
             RTPIPv4Address dest(destip,dstport); //上级的onNewSource会被触发
-            LOG(ERROR)<<"dest create:"<<"destip:"<<destip<<"dstport"<<dstport;
+            LOG(INFO)<<"dest create:"<<"destip:"<<destip<<"dstport"<<dstport;
             ret=AddDestination(dest);
             if(ret<0)
             {
                 LOG(ERROR)<<"udp create failed";
             }
 
-            //LOG(INFO)<<"udp create ok rtp port:"<<rtpPort;
+            LOG(INFO)<<"udp create ok rtp port:"<<rtpPort;
         }
     //}
     // else

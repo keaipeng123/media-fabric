@@ -9,8 +9,8 @@ static string rtpmap_ps="96 PS/90000";
 
 OpenStream::OpenStream()
 {
-    m_pStreamTimer=new TaskTimer(3);
-    m_pCheckSessionTimer=new TaskTimer(5);
+    m_pStreamTimer=new TaskTimer(10);
+    //m_pCheckSessionTimer=new TaskTimer(5);
 }
 
 OpenStream::~OpenStream()
@@ -30,13 +30,13 @@ OpenStream::~OpenStream()
 
 void OpenStream::StreamServiceStart()
 {
-    if(m_pStreamTimer && m_pCheckSessionTimer)
+    if(m_pStreamTimer /*&& m_pCheckSessionTimer*/)
     {
         m_pStreamTimer->setTimerFun(OpenStream::StreamGetProc,this);
         m_pStreamTimer->start();
 
-        m_pCheckSessionTimer->setTimerFun(OpenStream::CheckSession,this);
-        m_pCheckSessionTimer->start();
+        // m_pCheckSessionTimer->setTimerFun(OpenStream::CheckSession,this);
+        // m_pCheckSessionTimer->start();
     }
 }
 
@@ -116,12 +116,12 @@ void OpenStream::StreamGetProc(void* param)
     DeviceInfo info;   
     info.devid="11000000001310000059";
     info.playformId="11000000002000000001";
-    info.streamName="PlayBack";
+    info.streamName="Play";
     info.startTime=0;
     info.endTime=0;
     info.protocal=0;//0udp 1tcp
     //info.setupType="passive";
-    
+    #if 0
     {
         //已经在推，返回
         AutoMutexLock lck(&GlobalCtl::gStreamLock);
@@ -134,6 +134,7 @@ void OpenStream::StreamGetProc(void* param)
             }
         }
     }
+    #endif
    
 
     
@@ -281,9 +282,9 @@ void OpenStream::StreamGetProc(void* param)
    AutoMutexLock lck(&GlobalCtl::gStreamLock);
    GlobalCtl::glistSession.push_back(pSession);
 
-    GlobalCtl::gRcvIpc=false;
-//    //sleep(3);
-//    //OpenStream::StreamStop("11000000002000000001","11000000001310000059");
+   //GlobalCtl::gRcvIpc=false;
+   sleep(3);
+   OpenStream::StreamStop("11000000002000000001","11000000001310000059");
 
 
    return;
