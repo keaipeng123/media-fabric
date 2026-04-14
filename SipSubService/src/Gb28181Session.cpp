@@ -4,7 +4,7 @@
 
 Gb28181Session::Gb28181Session()
 {
-    // m_rtpRRTime=0;
+    m_rtpRRTime=0;
     // m_rtpTcpFd=-1;
     // m_listenFd=-1;
 }
@@ -105,27 +105,27 @@ int Gb28181Session::CreateRtpSession(string dstip,int dstport,int rtpPort)
 //     return m_rtpTcpFd;
 // }
 
-// void Gb28181Session::OnRTCPCompoundPacket(RTCPCompoundPacket *pack,const RTPTime &receivetime,
-//     const RTPAddress *senderaddress)
-// {
-//     RTCPPacket* rtcpPack;
-//     pack->GotoFirstPacket();//获取第一个包
-//     while((rtcpPack=pack->GetNextPacket())!=NULL)//循环获取包
-//     {
-//         if(rtcpPack->IsKnownFormat())//是否是符合rtcp协议的有效包
-//         {
-//             switch(rtcpPack->GetPacketType())
-//             case RTCPPacket::RR: //下级只需要检查rr包，上级则检查sr包
-//                 {
-//                     //每次收到rr包，更新获取到的时间戳
-//                     time_t now_time=time(NULL);
-//                     m_rtpRRTime=now_time;
-//                     LOG(INFO)<<"m_rtpRRTime:"<<m_rtpRRTime;
-//                     break;
-//                 }
-//         }
-//     }
-// }
+void Gb28181Session::OnRTCPCompoundPacket(RTCPCompoundPacket *pack,const RTPTime &receivetime,
+    const RTPAddress *senderaddress)
+{
+    RTCPPacket* rtcpPack;
+    pack->GotoFirstPacket();//获取第一个包
+    while((rtcpPack=pack->GetNextPacket())!=NULL)//循环获取包
+    {
+        if(rtcpPack->IsKnownFormat())//是否是符合rtcp协议的有效包
+        {
+            switch(rtcpPack->GetPacketType())
+            case RTCPPacket::RR: //下级只需要检查rr包，上级则检查sr包
+                {
+                    //每次收到rr包，更新获取到的时间戳
+                    time_t now_time=time(NULL);
+                    m_rtpRRTime=now_time;
+                    LOG(INFO)<<"m_rtpRRTime:"<<m_rtpRRTime;
+                    break;
+                }
+        }
+    }
+}
 
 void* SipPsCode::Alloc(void* param, size_t bytes)
 {
@@ -180,12 +180,12 @@ int SipPsCode::incomeVideoData(unsigned char* avdata,int len,int pts,int isIfram
         m_avStreamIndex=ps_muxer_add_stream(m_muxer,STREAM_VIDEO_H264,NULL,0);//向m_muxer封装器添加需要封装流的信息,返回添加流的索引值
         LOG(INFO)<<"add stream index:"<<m_avStreamIndex;
     }
-    // if(m_gbRtpHandle->CheckAlive())
-    // {
-    //     LOG(ERROR)<<"recv rtcp RR error";
-    //     this->stopFlag=true;
-    //     return -1;
-    // }
+    if(m_gbRtpHandle->CheckAlive())
+    {
+        LOG(ERROR)<<"recv rtcp RR error";
+        this->stopFlag=true;
+        return -1;
+    }
     //关键帧：ps h | ps sys h | ps sys map | pes h | h264 raw
     //非关键帧： ps h | pes h | h264 raw
     //音频：pes h |aac raw
@@ -205,12 +205,12 @@ int SipPsCode::incomeAudioData(unsigned char* audata,int len,int pts)
         m_auStreamIndex=ps_muxer_add_stream(m_muxer,STREAM_AUDIO_AAC,NULL,0);//向m_muxer封装器添加需要封装流的信息,返回添加流的索引值
         LOG(INFO)<<"add stream index:"<<m_auStreamIndex;
     }
-    // if(m_gbRtpHandle->CheckAlive())
-    // {
-    //     LOG(ERROR)<<"recv rtcp RR error";
-    //     this->stopFlag=true;
-    //     return -1;
-    // }
+    if(m_gbRtpHandle->CheckAlive())
+    {
+        LOG(ERROR)<<"recv rtcp RR error";
+        this->stopFlag=true;
+        return -1;
+    }
     //关键帧：ps h | ps sys h | ps sys map | pes h | h264 raw
     //非关键帧： ps h | pes h | h264 raw
     //音频：pes h |aac raw

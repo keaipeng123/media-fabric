@@ -36,19 +36,19 @@ class Gb28181Session : public RTPSession
     Gb28181Session();
     ~Gb28181Session();
 
-    // int CheckAlive()//检查rtcp包
-    // {
-    //     time_t cm_time=time(NULL);
-    //     if(m_rtpRRTime==0)
-    //     {
-    //         m_rtpRRTime=cm_time;
-    //     }
-    //     if((cm_time-m_rtpRRTime)>10)
-    //     {
-    //         return 1;//10s没有收到rr，认定为无效的rtcp
-    //     }
-    //     return 0;
-    // } 
+    int CheckAlive()//检查rtcp包
+    {
+        time_t cm_time=time(NULL);
+        if(m_rtpRRTime==0)
+        {
+            m_rtpRRTime=cm_time;
+        }
+        if((cm_time-m_rtpRRTime)>10)
+        {
+            return 1;//10s没有收到rr，认定为无效的rtcp
+        }
+        return 0;
+    } 
     int CreateRtpSession(string dstip,int dstport,int rtpPort);
     //int CreateRtpSession(int poto,string setup,string dstip,int dstport,int rtpPort);
     //int RtpTcpinit(string setup,int localport,string dstip,int dstport,int time);
@@ -56,8 +56,8 @@ class Gb28181Session : public RTPSession
     protected:
 
     //检测到对方发送rtcp包时回调
-    // void OnRTCPCompoundPacket(RTCPCompoundPacket *pack,const RTPTime &receivetime,
-    //     const RTPAddress *senderaddress);
+    void OnRTCPCompoundPacket(RTCPCompoundPacket *pack,const RTPTime &receivetime,
+        const RTPAddress *senderaddress);
 
     //新的数据源被添加到源表中
     void OnNewSource(RTPSourceData *srcdat)
@@ -156,8 +156,8 @@ class Gb28181Session : public RTPSession
         LOG(INFO)<<__FUNCTION__<<"Deleting destination"<<string(inet_ntoa(inaddr))<<":"<<port;       
     }
 
-    // private:
-    //     int m_rtpRRTime;
+    private:
+        int m_rtpRRTime;
     //     int m_rtpTcpFd;
     //     int m_listenFd;
 };
