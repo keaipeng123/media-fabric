@@ -19,6 +19,7 @@
 #include"SipRegister.h"
 #include"GetCatalog.h"
 #include"OpenStream.h"
+#include"GetRecordList.h"
 using namespace EC;
 
 class SetGlogLevel
@@ -91,14 +92,16 @@ int main()
 	SipRegister* regc=new SipRegister();
 	regc->registerServiceStart();
 
-	sleep(5);//等待注册完成后再发送目录查询请求，确保下级设备已经注册成功
-	GetCatalog* getCat=new GetCatalog();
+	//sleep(5);//等待注册完成后再发送目录查询请求，确保下级设备已经注册成功
+	//GetCatalog* getCat=new GetCatalog();
 
-	OpenStream* gbStream=new OpenStream();
-	gbStream->StreamServiceStart();
+	//OpenStream* gbStream=new OpenStream();
+	//gbStream->StreamServiceStart();
 
 	// sleep(5);
 	// OpenStream::StreamStop("11000000002000000001","11000000001310000059");
+
+	GetRecordList* getRecord=new GetRecordList();
 
 	while(true)
 	{
