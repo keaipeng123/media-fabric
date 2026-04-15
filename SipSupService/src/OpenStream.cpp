@@ -116,9 +116,12 @@ void OpenStream::StreamGetProc(void* param)
     DeviceInfo info;   
     info.devid="11000000001310000059";
     info.playformId="11000000002000000001";
-    info.streamName="Play";
+    info.streamName="PlayBack";
     info.startTime=0;
-    info.endTime=0;
+    info.endTime=10;
+    // info.streamName="Play";
+    // info.startTime=0;
+    // info.endTime=0;
     info.protocal=0;//0udp 1tcp
     //info.setupType="passive";
     #if 1

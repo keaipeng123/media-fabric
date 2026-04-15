@@ -155,7 +155,7 @@ void SipGbPlay::dealWithInvite(pjsip_rx_data *rdata)
         }
 		
 		sdpInfo.localRtpPort = GBOJ(gConfig)->popOneRandNum();
-        ps = new SipPsCode(dst_ip,sdp_port,sdpInfo.localRtpPort);
+        ps = new SipPsCode(dst_ip,sdp_port,sdpInfo.localRtpPort,sdpInfo.startTime,sdpInfo.endTime);
         //ps = new SipPsCode(dst_ip,sdp_port,sdpInfo.localRtpPort,poto,sdpInfo.setUp,sdpInfo.startTime,sdpInfo.endTime);
         {
             //需要在ps对象实例化后就插入到map中
@@ -218,15 +218,15 @@ int SipGbPlay::recvFrame(SipPsCode** ps)
         return -1;
 	
 	//在这里我们先对录像时间进行个转换，转成毫秒,因为数据的头部里的pts为毫秒级别
-	//int start = 0;
-	//int end = 0;
-	//bool backflag = false;  //定义个回放flag
-	//if((*ps)->m_sTime >= 0 && (*ps)->m_eTime > 0)
-	//{
-	//	start = (*ps)->m_sTime * 1000;
-	//	end = (*ps)->m_eTime * 1000;
-	//	backflag = true;
-	//}
+	int start = 0;
+	int end = 0;
+	bool backflag = false;  //定义个回放flag
+	if((*ps)->m_sTime >= 0 && (*ps)->m_eTime > 0)
+	{
+		start = (*ps)->m_sTime * 1000;
+		end = (*ps)->m_eTime * 1000;
+		backflag = true;
+	}
     int ret = 0;
     unsigned char* buf = new unsigned char[sizeof(StreamHeader)];
     while(!feof(fp))
@@ -247,10 +247,23 @@ int SipGbPlay::recvFrame(SipPsCode** ps)
             break;
         }
         StreamHeader* header = (StreamHeader*)buf;
+        //LOG(INFO)<<"header->pts:"<<header->pts;
+        unsigned char* data = new unsigned char[header->length];
+        fread(data,1,header->length,fp);//读帧数据
         if(header->type==2)
         {
-            unsigned char* data = new unsigned char[header->length];
-            fread(data,1,header->length,fp);//读帧数据
+            LOG(INFO)<<"header->pts:"<<header->pts<<",start:"<<start<<",end:"<<end;
+            if(backflag)
+			{
+				if(header->pts < start)
+				{
+					continue;  //协议头里的pts小于起始时间，那么我们就不推流
+				}
+				else if(header->pts > end)
+				{
+					break;   //当pts大于录像结束时间后我们断流
+				}
+			}
 
             if((*ps)->incomeVideoData(data,header->length,header->pts,header->keyFrame)<0)
             {

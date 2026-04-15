@@ -166,7 +166,7 @@ class SipPsCode
 {
     public:
     //SipPsCode(int poto,string setup,string dstip,int dstport,int rtpPort,int s,int e)
-    SipPsCode(string dstip,int dstport,int rtpPort)
+    SipPsCode(string dstip,int dstport,int rtpPort,int s,int e)
     {
         m_dstip=dstip;
         m_dstport=dstport;
@@ -174,8 +174,8 @@ class SipPsCode
         m_auStreamIndex=-1;
         stopFlag=false;
         m_rtpPort=rtpPort;
-        // m_sTime=s;
-        // m_eTime=e;
+        m_sTime=s;
+        m_eTime=e;
         // m_poto=poto;
         // m_setup=setup;
     }
@@ -206,8 +206,8 @@ class SipPsCode
     int incomeAudioData(unsigned char* audata,int len,int pts);
     int sendPackData(void* packet, size_t bytes);
     bool stopFlag;
-//     int m_sTime;
-//     int m_eTime;
+    int m_sTime;
+    int m_eTime;
 //     int m_poto;
 //     string m_setup;
 
