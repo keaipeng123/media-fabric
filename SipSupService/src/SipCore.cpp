@@ -8,6 +8,7 @@
 #include "ECThread.h"
 #include "SipDirectory.h"  
 #include "SipGbPlay.h"
+#include "SipRecordList.h"
 
 using namespace EC;
 
@@ -81,7 +82,7 @@ pj_bool_t onRxRequest(pjsip_rx_data *rdata)
             }
             else if(cmdValue==SIP_RECORDINFO)
             {
-                //param->base=new SipRecordList(root);
+                param->base=new SipRecordList(root);
             }
         }
     }

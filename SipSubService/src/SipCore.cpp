@@ -5,6 +5,7 @@
 #include"SipTaskBase.h"
 #include"SipDirectory.h"
 #include "SipGbPlay.h"
+#include "SipRecordList.h"
 
 static int pollingEvent(void* arg)
 {
@@ -46,10 +47,10 @@ pj_bool_t onRxRequest(pjsip_rx_data *rdata)
             {
                 param->base=new SipDirectory();
             }
-            // else if(cmdValue==SIP_RECORDINFO)
-            // {
-            //     param->base=new SipRecordList();
-            // }
+            else if(cmdValue==SIP_RECORDINFO)
+            {
+                param->base=new SipRecordList();
+            }
         }
     }
     //pjsip对ack和cancel事件做了孤立，dailog模块儿不会将这两个事件发送到应用层，这里接收不到，并且ack和cancel在生产中实际不会使用
