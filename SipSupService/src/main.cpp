@@ -99,9 +99,10 @@ int main()
 	OpenStream* gbStream=new OpenStream();
 	gbStream->StreamServiceStart();
 
-	// sleep(5);
-	// OpenStream::StreamStop("11000000002000000001","11000000001310000059");
+	//sleep(5);
+	//OpenStream::StreamStop("11000000002000000001","11000000001310000059");
 
+	//GetRecordList* getRecord=new GetRecordList();
 	//GetRecordList* getRecord=new GetRecordList();
 
 	while(true)
