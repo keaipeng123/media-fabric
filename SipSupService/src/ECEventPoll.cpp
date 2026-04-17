@@ -1,49 +1,85 @@
 #include"ECEventPoll.h"
 
 using namespace EC;
+
+namespace {
+bool HasFdInSet(int sockfd, const fd_set& readset, const fd_set& writeset, const fd_set& exceptset)
+{
+    return FD_ISSET(sockfd, &readset) || FD_ISSET(sockfd, &writeset) || FD_ISSET(sockfd, &exceptset);
+}
+}
+
 int SelectSet::initSet()
 {   
     FD_ZERO(&_rset);
     FD_ZERO(&_wset);
     FD_ZERO(&_eset);
-    _maxfd=0;
+    _maxfd=-1;
     return 0;
 }
 int SelectSet::clearSet()
 {
-    initSet();
+    return initSet();
 }
 int SelectSet::addFd(int sockfd,EventType type)
 {
-    if(sockfd==-1)
+    if(sockfd<0||sockfd>=FD_SETSIZE)
     {
         return -1;
     }
-    if(type==EventType::EC_POLLIN)
+    else if(type==EventType::EC_POLLIN)
     {
         FD_SET(sockfd,&_rset);
     }
-    if(type==EventType::EC_POLLOUT)
+    else if(type==EventType::EC_POLLOUT)
     {
         FD_SET(sockfd,&_wset);
     }
-    if(type==EventType::EC_POLLERR)
+    else if(type==EventType::EC_POLLERR)
     {
         FD_SET(sockfd,&_eset);
     }
-    _maxfd=sockfd;
+    else
+    {
+        return -1;
+    }
+
+    if(sockfd>_maxfd)
+    {
+        _maxfd=sockfd;
+    }
+    return 0;
 }
 int SelectSet::deleteFd(int sockfd)
 {
+    if(sockfd<0||sockfd>=FD_SETSIZE)
+    {
+        return -1;
+    }
+
     FD_CLR(sockfd,&_rset);
     FD_CLR(sockfd,&_wset);
     FD_CLR(sockfd,&_eset);
+
+    if(sockfd==_maxfd)
+    {
+        while(_maxfd>=0&&!HasFdInSet(_maxfd,_rset,_wset,_eset))
+        {
+            --_maxfd;
+        }
+    }
 
     return 0;
 }
 int SelectSet::doSetPoll(vector<PollEventType>& inEvents,vector<PollEventType>& outEvents,int* timeout)
 {
-    struct timeval* ptv=NULL;//超时时间
+    outEvents.clear();
+    if(_maxfd<0)
+    {
+        return 0;
+    }
+
+    struct timeval* ptv=NULL;
     if(timeout!=NULL&&*timeout>=0)
     {
         struct timeval tv;
@@ -62,10 +98,14 @@ int SelectSet::doSetPoll(vector<PollEventType>& inEvents,vector<PollEventType>& 
         return ret;
     }
 
-    outEvents.clear();
     vector<PollEventType>::iterator it=inEvents.begin();
     for(;it!=inEvents.end();it++)
     {
+        if(it->sockfd<0||it->sockfd>=FD_SETSIZE)
+        {
+            continue;
+        }
+
         it->outEvents=-1;
         if(FD_ISSET(it->sockfd,&readset))
         {
@@ -156,7 +196,7 @@ int EpollSet::doSetPoll(vector<PollEventType>& inEvents,vector<PollEventType>& o
     vector<PollEventType>::iterator it=inEvents.begin();
     for(;it!=inEvents.end();it++)
     {
-        it->outEvents=0;
+        it->outEvents=-1;
         for(int i=0;i<evCount;i++)
         {
             if(it->sockfd==events[i].data.fd)
@@ -176,7 +216,7 @@ int EpollSet::doSetPoll(vector<PollEventType>& inEvents,vector<PollEventType>& o
             }
         }
        
-        if(it->outEvents!=0)
+        if(it->outEvents!=-1)
         {
             outEvents.push_back(*it);
         }
@@ -195,11 +235,11 @@ EventPoll::~EventPoll()
 }
 int EventPoll::init(int method)
 {
-    if(method=1)
+    if(method==1)
     {
         _pollset=new SelectSet();
     }
-    else if(method=2)
+    else if(method==2)
     {
         _pollset=new EpollSet();
     }
@@ -222,6 +262,7 @@ int EventPoll::destory()
         _pollset=NULL;
     }
     _events.clear();
+    return 0;
 }
 int EventPoll::addEvent(const int& sockfd,EventType type)
 {
@@ -229,13 +270,17 @@ int EventPoll::addEvent(const int& sockfd,EventType type)
     {
         return -1;
     }
-    _pollset->addFd(sockfd,type);
+    if(_pollset->addFd(sockfd,type)!=0)
+    {
+        return -1;
+    }
 
     PollEventType ev;
     ev.inEvents=type;
-    ev.outEvents=0;
+    ev.outEvents=-1;
     ev.sockfd=sockfd;
     _events.push_back(ev);
+    return 0;
 }
 int EventPoll::removeEvent(const int& sockfd)
 {
