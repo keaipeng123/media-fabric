@@ -5,13 +5,13 @@ using namespace EC;
 namespace {
 bool HasFdInSet(int sockfd, const fd_set& readset, const fd_set& writeset, const fd_set& exceptset)
 {
-    return FD_ISSET(sockfd, &readset) || FD_ISSET(sockfd, &writeset) || FD_ISSET(sockfd, &exceptset);
+    return FD_ISSET(sockfd, &readset) || FD_ISSET(sockfd, &writeset) || FD_ISSET(sockfd, &exceptset);//检查 fd 是否在集合中、或者 select 返回后是否就绪
 }
 }
 
 int SelectSet::initSet()
 {   
-    FD_ZERO(&_rset);
+    FD_ZERO(&_rset);//清空集合
     FD_ZERO(&_wset);
     FD_ZERO(&_eset);
     _maxfd=-1;
@@ -23,13 +23,13 @@ int SelectSet::clearSet()
 }
 int SelectSet::addFd(int sockfd,EventType type)
 {
-    if(sockfd<0||sockfd>=FD_SETSIZE)
+    if(sockfd<0||sockfd>=FD_SETSIZE)//FD_SETSIZE 最多能表示多大的 fd 编号范围 故设计有缺陷 对小规模 fd 集合还可以，poll 不再依赖这种固定编号位图
     {
         return -1;
     }
     else if(type==EventType::EC_POLLIN)
     {
-        FD_SET(sockfd,&_rset);
+        FD_SET(sockfd,&_rset);//FD_SET 是 select 相关的一个宏，作用是“把某个文件描述符标记到 fd_set 集合里”
     }
     else if(type==EventType::EC_POLLOUT)
     {
@@ -57,7 +57,7 @@ int SelectSet::deleteFd(int sockfd)
         return -1;
     }
 
-    FD_CLR(sockfd,&_rset);
+    FD_CLR(sockfd,&_rset);//移除 fd
     FD_CLR(sockfd,&_wset);
     FD_CLR(sockfd,&_eset);
 
@@ -73,18 +73,18 @@ int SelectSet::deleteFd(int sockfd)
 }
 int SelectSet::doSetPoll(vector<PollEventType>& inEvents,vector<PollEventType>& outEvents,int* timeout)
 {
-    outEvents.clear();
-    if(_maxfd<0)
+    outEvents.clear();//先把上一次轮询结果清掉，准备写本次结果
+    if(_maxfd<0)//表示当前一个 fd 都没注册
     {
         return 0;
     }
 
-    struct timeval* ptv=NULL;
-    if(timeout!=NULL&&*timeout>=0)
+    struct timeval* ptv=NULL;//超时时间。select等待阻塞的时间
+    if(timeout!=NULL&&*timeout>=0)//timeout传入的是毫秒，select 需要 struct timeval 结构体表示秒和微秒，所以要转换一下
     {
         struct timeval tv;
-        tv.tv_sec=*timeout/1000;
-        tv.tv_usec=(*timeout%1000)*1000;
+        tv.tv_sec=*timeout/1000;//秒
+        tv.tv_usec=(*timeout%1000)*1000;//微秒
         ptv=&tv;
     }
     fd_set readset,writeset,exceptset;
@@ -92,7 +92,16 @@ int SelectSet::doSetPoll(vector<PollEventType>& inEvents,vector<PollEventType>& 
     memcpy(&writeset,&_wset,sizeof(fd_set));
     memcpy(&exceptset,&_eset,sizeof(fd_set));
 
-    int ret=select(_maxfd+1,&readset,&writeset,&exceptset,ptv);
+    //select 有一个很重要的特点：它会修改你传进去的 fd_set。
+    //调用前：
+    //readset 里表示“我关心哪些 fd 的读事件”
+    //writeset 里表示“我关心哪些 fd 的写事件”
+    //exceptset 里表示“我关心哪些 fd 的异常事件”
+    //调用后：
+    //这些集合会被内核改写成“本次真正就绪的那些 fd”
+    //所以这里不能直接把成员变量 _rset、_wset、_eset 传给 select，否则监听集合本身会被破坏。
+    //因此先复制一份临时集合，再把临时集合传给 select。
+    int ret=select(_maxfd+1,&readset,&writeset,&exceptset,ptv);//select 调用要求传入“最大 fd + 1”，不是传入 fd 的数量
     if (ret<=0)
     {
         return ret;
@@ -196,7 +205,7 @@ int EpollSet::doSetPoll(vector<PollEventType>& inEvents,vector<PollEventType>& o
     vector<PollEventType>::iterator it=inEvents.begin();
     for(;it!=inEvents.end();it++)
     {
-        it->outEvents=-1;
+        it->outEvents=0;
         for(int i=0;i<evCount;i++)
         {
             if(it->sockfd==events[i].data.fd)
@@ -216,7 +225,7 @@ int EpollSet::doSetPoll(vector<PollEventType>& inEvents,vector<PollEventType>& o
             }
         }
        
-        if(it->outEvents!=-1)
+        if(it->outEvents!=0)
         {
             outEvents.push_back(*it);
         }
@@ -277,7 +286,7 @@ int EventPoll::addEvent(const int& sockfd,EventType type)
 
     PollEventType ev;
     ev.inEvents=type;
-    ev.outEvents=-1;
+    ev.outEvents=0;
     ev.sockfd=sockfd;
     _events.push_back(ev);
     return 0;
