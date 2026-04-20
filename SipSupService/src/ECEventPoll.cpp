@@ -205,7 +205,7 @@ int EpollSet::doSetPoll(vector<PollEventType>& inEvents,vector<PollEventType>& o
     vector<PollEventType>::iterator it=inEvents.begin();
     for(;it!=inEvents.end();it++)
     {
-        it->outEvents=0;
+        it->outEvents=-1;
         for(int i=0;i<evCount;i++)
         {
             if(it->sockfd==events[i].data.fd)
@@ -225,7 +225,7 @@ int EpollSet::doSetPoll(vector<PollEventType>& inEvents,vector<PollEventType>& o
             }
         }
        
-        if(it->outEvents!=0)
+        if(it->outEvents!=-1)
         {
             outEvents.push_back(*it);
         }
@@ -286,7 +286,7 @@ int EventPoll::addEvent(const int& sockfd,EventType type)
 
     PollEventType ev;
     ev.inEvents=type;
-    ev.outEvents=0;
+    ev.outEvents=-1;
     ev.sockfd=sockfd;
     _events.push_back(ev);
     return 0;
