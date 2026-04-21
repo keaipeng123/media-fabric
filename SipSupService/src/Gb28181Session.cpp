@@ -4,8 +4,8 @@
 #include "h264_stream.hpp"
 #include "h265_stream.hpp"
 #include "mpeg4-hevc.h"
-// #include "ECSocket.h"
-// using namespace EC;
+#include "ECSocket.h"
+using namespace EC;
 
 typedef struct 
 {
@@ -579,8 +579,7 @@ void Gb28181Session::OnRTPPacketProcPs(int mark,int curSeq,int timestamp,unsigne
 
 }
 
-//int Gb28181Session::CreateRtpSession(string dstip,int dstport)
-int Gb28181Session::CreateRtpSession()
+int Gb28181Session::CreateRtpSession(string dstip,int dstport)
 {
 	LOG(INFO)<<"CreateRtpSession";
     RTPSessionParams sessParams; //rtp会话参数设置
@@ -590,8 +589,8 @@ int Gb28181Session::CreateRtpSession()
     sessParams.SetNeedThreadSafety(true);//是否需要线程安全
     sessParams.SetMinimumRTCPTransmissionInterval(RTPTime(5,0));//设置最小RTCP传输间隔，5s
 	int ret = -1;
-    // if(protocal == 0)
-    // {
+    if(protocal == 0)
+    {
         RTPUDPv4TransmissionParams transparams;
         transparams.SetRTPReceiveBuffer(1024*1024);//这里设置过小会导致业务层来不及处理接收到的rtp导致业务侧的丢包
         //transparams.SetPortbase(20000);
@@ -609,47 +608,47 @@ int Gb28181Session::CreateRtpSession()
             LOG(INFO)<<"udp create ok,bind:"<<m_rtpPort;
             //LOG(INFO)<<"udp create ok,bind:"<<rtp_loaclport;
         }
-    //}
-    // else
-    // {
-    //     sessParams.SetMaximumPacketSize(65535);
-    //     RTPTCPTransmissionParams transParams;
-    //     ret = Create(sessParams, &transParams, RTPTransmitter::TCPProto);
-    //     if(ret < 0)
-    //     {
-    //         LOG(ERROR) << "Rtp tcp error: " << RTPGetErrorString(ret);
-    //         return -1;
-    //     }
+    }
+    else
+    {
+        sessParams.SetMaximumPacketSize(65535);//设定数据包大小
+        RTPTCPTransmissionParams transParams;
+        ret = Create(sessParams, &transParams, RTPTransmitter::TCPProto);
+        if(ret < 0)
+        {
+            LOG(ERROR) << "Rtp tcp error: " << RTPGetErrorString(ret);
+            return -1;
+        }
 
-    //     //会话创建成功后，接下来需要创建tcp连接
-    //     int sessFd = RtpTcpInit(dstip,dstport,5);
-	// 	LOG(INFO)<<"sessFd:"<<sessFd;
-    //     if(sessFd < 0)
-    //     {
-    //         LOG(ERROR)<<"RtpTcpInit faild";
-    //         return -1;
-    //     }
-    //     else
-    //     {
-    //         AddDestination(RTPTCPAddress(sessFd));
-    //     }
-    // }
+        //会话创建成功后，接下来需要创建tcp连接
+        int sessFd = RtpTcpInit(dstip,dstport,5);
+		LOG(INFO)<<"sessFd:"<<sessFd;
+        if(sessFd < 0)
+        {
+            LOG(ERROR)<<"RtpTcpInit faild";
+            return -1;
+        }
+        else
+        {
+            AddDestination(RTPTCPAddress(sessFd));
+        }
+    }
     
 
     return ret;
 }
 
-// int Gb28181Session::RtpTcpInit(string dstip,int dstport,int time)
-// {
-//     int timeout = time*1000;
-//     if(setupType == "active")
-//     {
-//         m_rtpTcpFd = ECSocket::createConnByActive(dstip,dstport,rtp_loaclport,&timeout);
-//     }
-//     else if(setupType == "passive")
-//     {
-//         m_rtpTcpFd = ECSocket::createConnByPassive(&m_listenFd,rtp_loaclport,&timeout);
-//     }
+int Gb28181Session::RtpTcpInit(string dstip,int dstport,int time)
+{
+    int timeout = time*1000;
+    if(setupType == "active")
+    {
+        m_rtpTcpFd = ECSocket::createConnByActive(m_rtpPort,dstip,dstport,&timeout);
+    }
+    else if(setupType == "passive")
+    {
+        m_rtpTcpFd = ECSocket::createConnByPassive(m_rtpPort,&m_listenFd,&timeout);
+    }
 
-//     return m_rtpTcpFd;
-// }
+    return m_rtpTcpFd;
+}

@@ -114,8 +114,13 @@ int ECSocket::createConnByActive(int localPort,string dspip,int dstport,int* tim
         return -1;
     }
     //TIME_WAIT
-    setsockopt(sockfd,SOL_SOCKET,SO_REUSEADDR,(const char*)&sockfd,sizeof(sockfd));
-
+    int opt = 1;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+    {
+        LOG(ERROR) << "setsockopt SO_REUSEADDR error";
+        close(sockfd);
+        return -1;
+    }
     struct sockaddr_in client_addr;
     memset(&client_addr,0,sizeof(client_addr));
     client_addr.sin_family=AF_INET;
@@ -124,6 +129,7 @@ int ECSocket::createConnByActive(int localPort,string dspip,int dstport,int* tim
     if(bind(sockfd,(struct sockaddr*)&client_addr,sizeof(client_addr))==-1)
     {
         LOG(ERROR)<<"socket bind error";
+        close(sockfd);
         return -1;
     }
 

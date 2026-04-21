@@ -44,7 +44,7 @@ class Session
     string playformId;//中心平台id
     string streamName;//实时流还是回放流
     string setupType; //指定rtp流为tcp时，需要指定setup为active主动或者passive被动
-    int protocal;//tcp udp
+    int protocal=0;//tcp udp
     int startTime;
     int endTime;
     timeval m_curTime;//检测下级推流异常

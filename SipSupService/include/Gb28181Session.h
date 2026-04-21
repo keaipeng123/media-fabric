@@ -96,9 +96,9 @@ class Gb28181Session : public RTPSession,public Session
         Gb28181Session(const DeviceInfo& devInfo);
         ~Gb28181Session();
 
-        int CreateRtpSession();
-        //int CreateRtpSession(string dstip,int dstport);
-        // int RtpTcpInit(string dstip,int dstport,int time);
+        //int CreateRtpSession();
+        int CreateRtpSession(string dstip,int dstport);
+        int RtpTcpInit(string dstip,int dstport,int time);
 		int SendPacket(int media,char* data,int datalen,int codecId);//发送给前端
     protected:
         enum
@@ -215,8 +215,8 @@ class Gb28181Session : public RTPSession,public Session
     private:
         PackProcStat* m_proc;
 	    int m_count;
-    //     int m_rtpTcpFd;
-    //     int m_listenFd;
+        int m_rtpTcpFd;
+        int m_listenFd;
 };
 
 #endif
