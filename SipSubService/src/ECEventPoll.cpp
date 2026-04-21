@@ -138,7 +138,7 @@ int SelectSet::doSetPoll(vector<PollEventType>& inEvents,vector<PollEventType>& 
 
 int EpollSet::initSet()
 {
-    _epollFd=epoll_create(1024);
+    _epollFd=epoll_create(1024);//向内核申请创建一个 epoll 实例，并返回一个文件描述符
     return _epollFd;
 }
 int EpollSet::clearSet()
@@ -156,13 +156,17 @@ int EpollSet::addFd(int sockfd,EventType type)
     {
         return -1;
     }
+    // EPOLL_CTL_ADD 的本质不是“只把 fd 放进去”。
+    // 它还要同时告诉内核：你到底关心这个 fd 的哪些事件，比如读、写、异常。
+    // 这些信息就放在 epoll_event 里的 events 字段中。
+    // 另外 event.data 里还带了用户数据，你这里存的是 fd，本轮 epoll_wait 返回时要靠它识别是谁就绪了。
     struct epoll_event event;
     event.events=-1;
-    event.data.fd=sockfd;
+    event.data.fd=sockfd;//event.data.fd = sockfd，这样后面 epoll_wait 返回就绪事件时，可以从 events[i].data.fd 拿回对应的 fd
 
     if(type==EventType::EC_POLLIN)
     {
-        event.events=EPOLLIN;
+        event.events=EPOLLIN;//关心的事件
     }
     if(type==EventType::EC_POLLOUT)
     {
@@ -176,15 +180,18 @@ int EpollSet::addFd(int sockfd,EventType type)
     {
         return -1;
     }
-
-    return epoll_ctl(_epollFd,EPOLL_CTL_ADD,sockfd,&event);
+    //第一个参数是 epoll 实例本身，也就是 _epollFd。
+    //第二个参数是操作类型。
+    //第三个参数是你要操作的目标 fd，也就是 sockfd。
+    //第四个参数是附加信息，主要在新增或修改监听时使用。
+    return epoll_ctl(_epollFd,EPOLL_CTL_ADD,sockfd,&event);//把这个 sockfd 加入 epoll 监听集合
    
 
 }
 int EpollSet::deleteFd(int sockfd)
 {
-    struct epoll_event event;
-    return epoll_ctl(_epollFd,EPOLL_CTL_DEL,sockfd,&event);
+    //struct epoll_event event;
+    return epoll_ctl(_epollFd,EPOLL_CTL_DEL,sockfd,NULL);
 }
 int EpollSet::doSetPoll(vector<PollEventType>& inEvents,vector<PollEventType>& outEvents,int* timeout)
 {
@@ -195,7 +202,7 @@ int EpollSet::doSetPoll(vector<PollEventType>& inEvents,vector<PollEventType>& o
     }
     const int MAX_EVENTS=10;
     struct epoll_event events[MAX_EVENTS];
-    int evCount=epoll_wait(_epollFd,events,MAX_EVENTS,tv);
+    int evCount=epoll_wait(_epollFd,events,MAX_EVENTS,tv);//让当前线程在 epoll 实例上等待事件发生，并把已经就绪的事件结果写到 events 数组里
     if(evCount<=0)
     {
         return evCount;
