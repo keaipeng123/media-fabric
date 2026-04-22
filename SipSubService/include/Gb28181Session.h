@@ -49,9 +49,8 @@ class Gb28181Session : public RTPSession
         }
         return 0;
     } 
-    int CreateRtpSession(string dstip,int dstport,int rtpPort);
-    //int CreateRtpSession(int poto,string setup,string dstip,int dstport,int rtpPort);
-    //int RtpTcpinit(string setup,int localport,string dstip,int dstport,int time);
+    int CreateRtpSession(int poto,string setup,string dstip,int dstport,int rtpPort);
+    int RtpTcpInit(string setup,int localport,string dstip,int dstport,int time);
 
     protected:
 
@@ -158,15 +157,14 @@ class Gb28181Session : public RTPSession
 
     private:
         int m_rtpRRTime;
-    //     int m_rtpTcpFd;
-    //     int m_listenFd;
+        int m_rtpTcpFd;
+        int m_listenFd;
 };
 
 class SipPsCode
 {
     public:
-    //SipPsCode(int poto,string setup,string dstip,int dstport,int rtpPort,int s,int e)
-    SipPsCode(string dstip,int dstport,int rtpPort,int s,int e)
+    SipPsCode(int poto,string setup,string dstip,int dstport,int rtpPort,int s,int e)
     {
         m_dstip=dstip;
         m_dstport=dstport;
@@ -176,8 +174,8 @@ class SipPsCode
         m_rtpPort=rtpPort;
         m_sTime=s;
         m_eTime=e;
-        // m_poto=poto;
-        // m_setup=setup;
+        m_poto=poto;
+        m_setup=setup;
     }
 
     ~SipPsCode()
@@ -208,8 +206,8 @@ class SipPsCode
     bool stopFlag;
     int m_sTime;
     int m_eTime;
-//     int m_poto;
-//     string m_setup;
+    int m_poto;
+    string m_setup;
 
     private:
     string m_dstip;

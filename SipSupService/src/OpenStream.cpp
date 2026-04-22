@@ -123,7 +123,7 @@ void OpenStream::StreamGetProc(void* param)
     // info.startTime=0;
     // info.endTime=0;
     info.protocal=1;//0udp 1tcp
-    info.setupType="active";
+    info.setupType="passive";
     #if 1
     {
         //已经在推，返回

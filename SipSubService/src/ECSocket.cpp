@@ -2,9 +2,16 @@
 #include"ECEventPoll.h"
 using namespace EC;
 
+//被动模式下先创建监听 socket，再 bind + listen，等客户端连进来。
+//主动模式下先创建客户端 socket，再 bind + connect，去连接目标端。
+
 int ECSocket::createConnByPassive(int localport,int* lsockfd,int* timeout)
 {
     LOG(INFO)<<"start tcpserver...";
+    //向内核申请创建一个 TCP 套接字，返回一个文件描述符 sockfd
+    //AF_INET 表示地址族是 IPv4
+    //SOCK_STREAM 表示使用面向连接的字节流套接字
+    //0 表示协议号让系统自动选择默认值
     int sockfd=socket(AF_INET,SOCK_STREAM,0);
     if(-1==sockfd)
     {
@@ -13,19 +20,28 @@ int ECSocket::createConnByPassive(int localport,int* lsockfd,int* timeout)
     }
     //TIME_WAIT 四次挥手后，服务器端的连接会进入 TIME_WAIT 状态，持续一段时间（通常是 2 倍的最大报文生存时间，约为 4 分钟）。在此期间，如果再次尝试绑定相同的地址和端口，
     //可能会遇到 "Address already in use" 错误。通过设置 SO_REUSEADDR 选项，可以允许服务器在 TIME_WAIT 状态下重新绑定相同的地址和端口，从而避免这个问题。
-    setsockopt(sockfd,SOL_SOCKET,SO_REUSEADDR,(const char*)&sockfd,sizeof(sockfd));
-
-    struct sockaddr_in server_addr;
-    memset(&server_addr,0,sizeof(server_addr));
-    server_addr.sin_family=AF_INET;
-    server_addr.sin_addr.s_addr=htonl(INADDR_ANY);
-    server_addr.sin_port=htons(localport);
-    if(bind(sockfd,(struct sockaddr*)&server_addr,sizeof(server_addr))==-1)
+    int opt = 1;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
     {
-        LOG(ERROR)<<"socket bind error";
+        LOG(ERROR) << "setsockopt SO_REUSEADDR error";
+        close(sockfd);
         return -1;
     }
 
+    struct sockaddr_in server_addr;//定义一个 IPv4 地址结构体变量
+    memset(&server_addr,0,sizeof(server_addr));
+    server_addr.sin_family=AF_INET;//指定地址类型：IPv4
+    server_addr.sin_addr.s_addr=htonl(INADDR_ANY);//绑定本机所有网卡 IP（必须转网络字节序）
+    server_addr.sin_port=htons(localport);// 设置要监听的端口号（必须转网络字节序）
+    //把 sockfd 这个 socket 绑定到前面构造好的本地地址 server_addr 上
+    if(bind(sockfd,(struct sockaddr*)&server_addr,sizeof(server_addr))==-1)
+    {
+        LOG(ERROR)<<"socket bind error";
+        close(sockfd);
+        return -1;
+    }
+    //把一个已经 bind 好的流式 socket，转换成监听状态，准备接受客户端连接
+    //允许大约 20 个待处理连接排队
     if(listen(sockfd,20)==-1)
     {
         LOG(ERROR)<<"socket listen error";
@@ -37,6 +53,10 @@ int ECSocket::createConnByPassive(int localport,int* lsockfd,int* timeout)
     socklen_t addrLen=sizeof(clientAddr);
     if(timeout==NULL)
     {
+        //sockfd 负责监听
+        //connfd 负责和某个具体客户端通信
+        //clientAddr 用来拿到“是谁连进来了”
+        //addrLen 输入时，告诉内核 clientAddr 缓冲区有多大 输出时，告诉你实际返回的地址占了多少字节
         int connfd=accept(sockfd,(struct sockaddr*)&clientAddr,&addrLen);
         if(connfd!=-1)
         {
@@ -160,7 +180,7 @@ int ECSocket::createConnByActive(int localPort,string dspip,int dstport,int* tim
         return ret;
     }
     EventPoll eventPoll;
-    eventPoll.init(1);
+    eventPoll.init(2);
     eventPoll.addEvent(sockfd,EC_POLLOUT);
 
     ret=-1;

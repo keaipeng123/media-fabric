@@ -1,32 +1,31 @@
 #include"Gb28181Session.h"
-//#include"ECSocket.h"
-//using namespace EC;
+#include"ECSocket.h"
+using namespace EC;
 
 Gb28181Session::Gb28181Session()
 {
     m_rtpRRTime=0;
-    // m_rtpTcpFd=-1;
-    // m_listenFd=-1;
+    m_rtpTcpFd=-1;
+    m_listenFd=-1;
 }
 
 Gb28181Session::~Gb28181Session()
 {
-    // if(m_rtpTcpFd!=-1)
-    // {
-    //     DeleteDestination(RTPTCPAddress(m_rtpTcpFd));
-    //     close(m_rtpTcpFd);
-    //     m_rtpTcpFd=-1;
-    // }
-    // if(m_listenFd!=-1)
-    // {
-    //     close(m_listenFd);
-    //     m_listenFd=-1;
-    // }
+    if(m_rtpTcpFd!=-1)
+    {
+        DeleteDestination(RTPTCPAddress(m_rtpTcpFd));
+        close(m_rtpTcpFd);
+        m_rtpTcpFd=-1;
+    }
+    if(m_listenFd!=-1)
+    {
+        close(m_listenFd);
+        m_listenFd=-1;
+    }
     BYEDestroy(RTPTime(0,0),0,0);
 }
 
-//int Gb28181Session::CreateRtpSession(int poto,string setup,string dstip,int dstport,int rtpPort)
-int Gb28181Session::CreateRtpSession(string dstip,int dstport,int rtpPort)
+int Gb28181Session::CreateRtpSession(int poto,string setup,string dstip,int dstport,int rtpPort)
 {
     LOG(INFO)<<"CreateRtpSession:m_dstip:"<<dstip;
     uint32_t destip=inet_addr(dstip.c_str());
@@ -39,8 +38,8 @@ int Gb28181Session::CreateRtpSession(string dstip,int dstport,int rtpPort)
     sessionParams.SetMinimumRTCPTransmissionInterval(RTPTime(5,0));//设置最小的RTCP发送间隔为5s
 
     int ret=-1;
-    // if(poto==0)
-    // {
+    if(poto==0)
+    {
         //设置udp传输端口配置
         RTPUDPv4TransmissionParams transparams;
         transparams.SetPortbase(rtpPort);
@@ -64,30 +63,45 @@ int Gb28181Session::CreateRtpSession(string dstip,int dstport,int rtpPort)
 
             LOG(INFO)<<"udp create ok rtp port:"<<rtpPort;
         }
-    //}
-    // else
-    // {
-    //     sessionParams.SetMaximumPacketSize(65535);//将分组设置为最大值，减少tcp分段头部占比，降低网络带宽消耗
-    //     RTPTCPTransmissionParams transparams;
-    //     ret=Create(sessionParams,&transparams,RTPTransmitter::TCPProto);
-    //     if(ret<0)
-    //     {
-    //         LOG(ERROR)<<"rtp tcp error:"<<RTPGetErrorString(ret);
-    //         return ret;
-    //     }
-    //     LOG(INFO)<<"protocal为0,开启tcp服务"<<"CreateRtpSession";
-    //     int sessFd=RtpTcpinit(setup,rtpPort,dstip,dstport,5);
-    //     if(sessFd<0)
-    //     {
-    //         LOG(ERROR)<<"RtpTcpinit faild";
-    //     }
-    //     else
-    //     {
-    //         AddDestination(RTPTCPAddress(sessFd));
-    //     }
-    // }
+    }
+    else
+    {
+        sessionParams.SetMaximumPacketSize(65535);//将分组设置为最大值，减少tcp分段头部占比，降低网络带宽消耗
+        RTPTCPTransmissionParams transparams;
+        ret=Create(sessionParams,&transparams,RTPTransmitter::TCPProto);
+        if(ret<0)
+        {
+            LOG(ERROR)<<"rtp tcp error:"<<RTPGetErrorString(ret);
+            return ret;
+        }
+        LOG(INFO)<<"protocal为1,开启tcp服务"<<"CreateRtpSession";
+        int sessFd=RtpTcpInit(setup,rtpPort,dstip,dstport,5);
+        if(sessFd<0)
+        {
+            LOG(ERROR)<<"RtpTcpInit faild";
+        }
+        else
+        {
+            AddDestination(RTPTCPAddress(sessFd));
+        }
+    }
 
     return ret;
+}
+
+int Gb28181Session::RtpTcpInit(string setup,int localport,string dstip,int dstport,int time)
+{
+    int timeout = time*1000;
+    if(setup == "active")
+    {//上级是active，代表下级做服务端
+        m_rtpTcpFd = ECSocket::createConnByPassive(localport,&m_listenFd,&timeout);
+    }
+    else if(setup == "passive")
+    {
+        m_rtpTcpFd = ECSocket::createConnByActive(localport,dstip,dstport,&timeout);
+    }
+
+    return m_rtpTcpFd;
 }
 
 // int Gb28181Session::RtpTcpinit(string setup,int localport,string dstip,int dstport,int time)
@@ -169,8 +183,8 @@ int SipPsCode::initPsEncode()
 int SipPsCode::gbRtpInit()
 {
     m_gbRtpHandle=new Gb28181Session();
-   // return m_gbRtpHandle->CreateRtpSession(this->m_poto,this->m_setup,this->m_dstip,this->m_dstport,this->m_rtpPort);
-   return m_gbRtpHandle->CreateRtpSession(this->m_dstip, this->m_dstport,this->m_rtpPort);
+    return m_gbRtpHandle->CreateRtpSession(this->m_poto,this->m_setup,this->m_dstip,this->m_dstport,this->m_rtpPort);
+   //return m_gbRtpHandle->CreateRtpSession(this->m_dstip, this->m_dstport,this->m_rtpPort);
 }
 
 int SipPsCode::incomeVideoData(unsigned char* avdata,int len,int pts,int isIframe)

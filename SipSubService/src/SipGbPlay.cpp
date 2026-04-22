@@ -155,8 +155,7 @@ void SipGbPlay::dealWithInvite(pjsip_rx_data *rdata)
         }
 		
 		sdpInfo.localRtpPort = GBOJ(gConfig)->popOneRandNum();
-        ps = new SipPsCode(dst_ip,sdp_port,sdpInfo.localRtpPort,sdpInfo.startTime,sdpInfo.endTime);
-        //ps = new SipPsCode(dst_ip,sdp_port,sdpInfo.localRtpPort,poto,sdpInfo.setUp,sdpInfo.startTime,sdpInfo.endTime);
+        ps = new SipPsCode(poto,sdpInfo.setUp,dst_ip,sdp_port,sdpInfo.localRtpPort,sdpInfo.startTime,sdpInfo.endTime);
         {
             //需要在ps对象实例化后就插入到map中
             AutoMutexLock lck(&streamLock);

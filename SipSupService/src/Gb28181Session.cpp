@@ -318,8 +318,8 @@ Gb28181Session::Gb28181Session(const DeviceInfo& devInfo)
 {
     m_proc = new PackProcStat();
 	m_count = 0;
-    //m_rtpTcpFd = -1;
-    //m_listenFd = -1;
+    m_rtpTcpFd = -1;
+    m_listenFd = -1;
 }
 
 
@@ -327,17 +327,18 @@ Gb28181Session::~Gb28181Session()
 {
 	//发送BYE数据包并离开会话 不用等待
 	BYEDestroy(RTPTime(0, 0), 0, 0);
-    // if(m_rtpTcpFd != -1)
-    // {
-    //     close(m_rtpTcpFd);
-    //     m_rtpTcpFd = -1;
-    // }
+    if(m_rtpTcpFd != -1)
+    {
+        DeleteDestination(RTPTCPAddress(m_rtpTcpFd));
+        close(m_rtpTcpFd);
+        m_rtpTcpFd = -1;
+    }
 
-    // if(m_listenFd != -1)
-    // {
-    //     close(m_listenFd);
-    //     m_listenFd = -1;
-    // }
+    if(m_listenFd != -1)
+    {
+        close(m_listenFd);
+        m_listenFd = -1;
+    }
 	
  	GBOJ(gConfig)->pushOneRandNum(m_rtpPort);
 }
@@ -372,6 +373,7 @@ void Gb28181Session::OnPollThreadStep()
 
 void Gb28181Session::ProcessRTPPacket(RTPSourceData& srcdat,RTPPacket& pack)
 {
+    LOG(INFO)<<"ProcessRTPPacket";
     int payloadType = pack.GetPayloadType();//获取负载类型
     int payloadLen = pack.GetPayloadLength();//获取负载长度
     int mark = pack.HasMarker();//获取标志位
