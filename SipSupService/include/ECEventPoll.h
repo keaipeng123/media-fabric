@@ -32,7 +32,7 @@ namespace EC{
     {
         public:
         PollSet(){};
-        ~PollSet(){};
+        virtual ~PollSet(){};
         virtual int initSet()=0;
         virtual int clearSet()=0;
         virtual int addFd(int sockfd,EventType type)=0;

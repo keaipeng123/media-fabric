@@ -161,7 +161,7 @@ int EpollSet::addFd(int sockfd,EventType type)
     // 这些信息就放在 epoll_event 里的 events 字段中。
     // 另外 event.data 里还带了用户数据，你这里存的是 fd，本轮 epoll_wait 返回时要靠它识别是谁就绪了。
     struct epoll_event event;
-    event.events=-1;
+    event.events=0;
     event.data.fd=sockfd;//event.data.fd = sockfd，这样后面 epoll_wait 返回就绪事件时，可以从 events[i].data.fd 拿回对应的 fd
 
     if(type==EventType::EC_POLLIN)
@@ -176,7 +176,7 @@ int EpollSet::addFd(int sockfd,EventType type)
     {
         event.events=EPOLLERR;
     }
-    if(event.events==-1)
+    if(event.events==0)
     {
         return -1;
     }
@@ -217,17 +217,17 @@ int EpollSet::doSetPoll(vector<PollEventType>& inEvents,vector<PollEventType>& o
         {
             if(it->sockfd==events[i].data.fd)
             {
-                if(events[i].events==EPOLLIN)
+                if(events[i].events&(EPOLLERR|EPOLLHUP))
+                {
+                    it->outEvents=EC_POLLERR;
+                }
+                else if(events[i].events&EPOLLIN)
                 {
                     it->outEvents=EC_POLLIN;
                 }
-                else if(events[i].events==EPOLLOUT)
+                else if(events[i].events&EPOLLOUT)
                 {
                     it->outEvents=EC_POLLOUT;
-                }
-                else if(events[i].events==EPOLLERR)
-                {
-                    it->outEvents=EC_POLLERR;
                 }
             }
         }
@@ -237,7 +237,7 @@ int EpollSet::doSetPoll(vector<PollEventType>& inEvents,vector<PollEventType>& o
             outEvents.push_back(*it);
         }
     }
-    return 0;
+    return evCount;
 }
 
 EventPoll::EventPoll()

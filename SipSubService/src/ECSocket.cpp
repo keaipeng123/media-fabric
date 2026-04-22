@@ -1,6 +1,64 @@
 #include"ECSocket.h"
 #include"ECEventPoll.h"
+#include<errno.h>
 using namespace EC;
+
+namespace {
+int SetSocketFlags(int sockfd,int flags)
+{
+    return fcntl(sockfd,F_SETFL,flags);
+}
+
+int WaitForConnectResult(int sockfd,int* timeout)
+{
+    EventPoll eventPoll;
+    if(eventPoll.init(1)!=0)
+    {
+        return -1;
+    }
+    if(eventPoll.addEvent(sockfd,EC_POLLOUT)!=0||eventPoll.addEvent(sockfd,EC_POLLERR)!=0)
+    {
+        return -1;
+    }
+
+    vector<PollEventType> pollEvents;
+    while(true)
+    {
+        StatusType status=eventPoll.poll(pollEvents,timeout);
+        if(status==ST_OK)
+        {
+            for(size_t i=0;i<pollEvents.size();i++)
+            {
+                if(pollEvents[i].sockfd!=sockfd)
+                {
+                    continue;
+                }
+
+                int socketError=0;
+                socklen_t errorLen=sizeof(socketError);
+                if(getsockopt(sockfd,SOL_SOCKET,SO_ERROR,&socketError,&errorLen)<0)
+                {
+                    return -1;
+                }
+                if(socketError!=0)
+                {
+                    errno=socketError;
+                    return -1;
+                }
+                return 0;
+            }
+            continue;
+        }
+        if(status==ST_TIMEOUT)
+        {
+            errno=ETIMEDOUT;
+            return ST_TIMEOUT;
+        }
+        errno=EIO;
+        return -1;
+    }
+}
+}
 
 //被动模式下先创建监听 socket，再 bind + listen，等客户端连进来。
 //主动模式下先创建客户端 socket，再 bind + connect，去连接目标端。
@@ -86,7 +144,7 @@ int ECSocket::createConnByPassive(int localport,int* lsockfd,int* timeout)
         LOG(INFO)<<"pollEvents.SIZE()"<<pollEvents.size();
         if (status==ST_OK)
         {
-            for(int i=0;i<pollEvents.size();i++)
+            for(size_t i=0;i<pollEvents.size();i++)
             {
                 if(pollEvents[i].sockfd==sockfd)
                 {
@@ -114,9 +172,10 @@ int ECSocket::createConnByPassive(int localport,int* lsockfd,int* timeout)
             LOG(ERROR)<<"POLL ERROR";
             break;
         }
-        else
+        else if(status==ST_TIMEOUT)
         {
-            continue;
+            LOG(ERROR)<<"TIME OUT";
+            break;
         }
     }
     
@@ -172,48 +231,49 @@ int ECSocket::createConnByActive(int localPort,string dspip,int dstport,int* tim
         return sockfd;
     }
 
+    int oldFlags=fcntl(sockfd,F_GETFL,0);
+    if(oldFlags<0||SetSocketFlags(sockfd,oldFlags|O_NONBLOCK)<0)
+    {
+        LOG(ERROR)<<"set nonblock error";
+        close(sockfd);
+        return -1;
+    }
+
     ret=connect(sockfd,(struct sockaddr*)&server_addr,sizeof(server_addr));
-    if(ret<0)
+    if(ret==0)
+    {
+        SetSocketFlags(sockfd,oldFlags);
+        return sockfd;
+    }
+    if(ret<0&&errno!=EINPROGRESS)
     {
         LOG(ERROR)<<"connect error";
+        SetSocketFlags(sockfd,oldFlags);
         close(sockfd);
         return ret;
     }
-    EventPoll eventPoll;
-    eventPoll.init(2);
-    eventPoll.addEvent(sockfd,EC_POLLOUT);
 
-    ret=-1;
-    vector<PollEventType> pollEvents;
-    while(true)
+    ret=WaitForConnectResult(sockfd,timeout);
+    if(SetSocketFlags(sockfd,oldFlags)<0)
     {
-        ret=eventPoll.poll(pollEvents,timeout);
-        if (ret==ST_OK)
-        {
-            for(int i=0;i<pollEvents.size();i++)
-            {
-                if(pollEvents[i].sockfd==sockfd)
-                {
-                    return sockfd;
-                }
-                else
-                {
-                    continue;
-                }
-            }
-        }
-        else if(ret==ST_TIMEOUT)
-        {
-            LOG(ERROR)<<"TIME OUT";
-            break;
-        }
-        else if(ret==ST_SYSERROR)
-        {
-            LOG(ERROR)<<"POLL ERROR";
-            break;
-        }
+        LOG(ERROR)<<"restore socket flags error";
+        close(sockfd);
+        return -1;
     }
-    eventPoll.removeEvent(sockfd);
+
+    if(ret==0)
+    {
+        return sockfd;
+    }
+
+    if(ret==ST_TIMEOUT)
+    {
+        LOG(ERROR)<<"TIME OUT";
+    }
+    else
+    {
+        LOG(ERROR)<<"connect error";
+    }
     close(sockfd);
     return ret;
 
