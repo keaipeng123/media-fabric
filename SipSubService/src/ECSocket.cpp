@@ -122,11 +122,11 @@ StatusType ECSocket::createConnByPassive(int localport,int* lsockfd,int* connfd,
         //connfd 负责和某个具体客户端通信
         //clientAddr 用来拿到“是谁连进来了”
         //addrLen 输入时，告诉内核 clientAddr 缓冲区有多大 输出时，告诉你实际返回的地址占了多少字节
-        int connfd=accept(sockfd,(struct sockaddr*)&clientAddr,&addrLen);
-        if(connfd!=-1)
+        int acceptedFd=accept(sockfd,(struct sockaddr*)&clientAddr,&addrLen);
+        if(acceptedFd!=-1)
         {
             *lsockfd=sockfd;
-            *connfd=connfd;
+            *connfd=acceptedFd;
             return ST_OK;
         }
         else
@@ -156,12 +156,12 @@ StatusType ECSocket::createConnByPassive(int localport,int* lsockfd,int* connfd,
             {
                 if(pollEvents[i].sockfd==sockfd)
                 {
-                    int connfd=accept(sockfd,(struct sockaddr*)&clientAddr,&addrLen);
-                    if(connfd!=-1)
+                    int acceptedFd=accept(sockfd,(struct sockaddr*)&clientAddr,&addrLen);
+                    if(acceptedFd!=-1)
                     {
                         LOG(INFO)<<"EVENT TYPE:"<<pollEvents[i].outEvents;
                         *lsockfd=sockfd;
-                        *connfd=connfd;
+                        *connfd=acceptedFd;
                         return ST_OK;
                     }
                     else
