@@ -79,10 +79,10 @@ int SelectSet::doSetPoll(vector<PollEventType>& inEvents,vector<PollEventType>& 
         return 0;
     }
 
+    struct timeval tv;
     struct timeval* ptv=NULL;//超时时间。select等待阻塞的时间
     if(timeout!=NULL&&*timeout>=0)//timeout传入的是毫秒，select 需要 struct timeval 结构体表示秒和微秒，所以要转换一下
     {
-        struct timeval tv;
         tv.tv_sec=*timeout/1000;//秒
         tv.tv_usec=(*timeout%1000)*1000;//微秒
         ptv=&tv;
@@ -265,7 +265,12 @@ int EventPoll::init(int method)
     }
     if(_pollset)
     {
-        _pollset->initSet();
+        if(_pollset->initSet()<0)
+        {
+            delete _pollset;
+            _pollset=NULL;
+            return -1;
+        }
     }
     return 0;
 }
