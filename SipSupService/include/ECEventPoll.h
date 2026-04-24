@@ -32,7 +32,7 @@ namespace EC{
     {
         public:
         PollSet(){};
-        virtual ~PollSet(){};
+        virtual ~PollSet(){};//这里如果不是虚析构：常见后果是只调用基类析构，不调用派生类析构，派生类持有的资源就可能泄漏，甚至引发更隐蔽的问题
         virtual int initSet()=0;
         virtual int clearSet()=0;
         virtual int addFd(int sockfd,EventType type)=0;

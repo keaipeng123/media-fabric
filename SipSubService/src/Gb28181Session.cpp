@@ -92,13 +92,19 @@ int Gb28181Session::CreateRtpSession(int poto,string setup,string dstip,int dstp
 int Gb28181Session::RtpTcpInit(string setup,int localport,string dstip,int dstport,int time)
 {
     int timeout = time*1000;
+    StatusType status = ST_UNINIT;
     if(setup == "active")
     {//上级是active，代表下级做服务端
-        m_rtpTcpFd = ECSocket::createConnByPassive(localport,&m_listenFd,&timeout);
+        status = ECSocket::createConnByPassive(localport,&m_listenFd,&m_rtpTcpFd,&timeout);
     }
     else if(setup == "passive")
     {
-        m_rtpTcpFd = ECSocket::createConnByActive(localport,dstip,dstport,&timeout);
+        status = ECSocket::createConnByActive(localport,dstip,dstport,&m_rtpTcpFd,&timeout);
+    }
+
+    if(status != ST_OK)
+    {
+        return -1;
     }
 
     return m_rtpTcpFd;

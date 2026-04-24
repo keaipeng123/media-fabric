@@ -12,6 +12,7 @@
 #include<netdb.h>
 #include<netinet/tcp.h>
 #include<sys/stat.h>
+#include"ECEventPoll.h"
 #include"Common.h"
 
 namespace EC
@@ -19,8 +20,8 @@ namespace EC
     class ECSocket
     {
         public:
-        static int createConnByPassive(int localport,int* lsockfd,int* timeout);//被动（服务器）
-        static int createConnByActive(int localPort,string dspip,int dstport,int* timeout);//主动（客户端）
+        static StatusType createConnByPassive(int localport,int* lsockfd,int* connfd,int* timeout);//被动（服务器）
+        static StatusType createConnByActive(int localPort,string dspip,int dstport,int* connfd,int* timeout);//主动（客户端）
         private:
         ECSocket(){}
         ~ECSocket(){}

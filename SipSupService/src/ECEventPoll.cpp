@@ -71,6 +71,7 @@ int SelectSet::deleteFd(int sockfd)
 
     return 0;
 }
+//timeout 毫秒
 int SelectSet::doSetPoll(vector<PollEventType>& inEvents,vector<PollEventType>& outEvents,int* timeout)
 {
     outEvents.clear();//先把上一次轮询结果清掉，准备写本次结果

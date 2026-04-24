@@ -9,16 +9,16 @@ int SetSocketFlags(int sockfd,int flags)
     return fcntl(sockfd,F_SETFL,flags);
 }
 
-int WaitForConnectResult(int sockfd,int* timeout)
+StatusType WaitForConnectResult(int sockfd,int* timeout)
 {
     EventPoll eventPoll;
     if(eventPoll.init(1)!=0)
     {
-        return -1;
+        return ST_SYSERROR;
     }
     if(eventPoll.addEvent(sockfd,EC_POLLOUT)!=0||eventPoll.addEvent(sockfd,EC_POLLERR)!=0)
     {
-        return -1;
+        return ST_SYSERROR;
     }
 
     vector<PollEventType> pollEvents;
@@ -38,14 +38,14 @@ int WaitForConnectResult(int sockfd,int* timeout)
                 socklen_t errorLen=sizeof(socketError);
                 if(getsockopt(sockfd,SOL_SOCKET,SO_ERROR,&socketError,&errorLen)<0)
                 {
-                    return -1;
+                    return ST_SYSERROR;
                 }
                 if(socketError!=0)
                 {
                     errno=socketError;
-                    return -1;
+                    return ST_SYSERROR;
                 }
-                return 0;
+                return ST_OK;
             }
             continue;
         }
@@ -55,7 +55,7 @@ int WaitForConnectResult(int sockfd,int* timeout)
             return ST_TIMEOUT;
         }
         errno=EIO;
-        return -1;
+        return ST_SYSERROR;
     }
 }
 }
@@ -63,8 +63,15 @@ int WaitForConnectResult(int sockfd,int* timeout)
 //被动模式下先创建监听 socket，再 bind + listen，等客户端连进来。
 //主动模式下先创建客户端 socket，再 bind + connect，去连接目标端。
 
-int ECSocket::createConnByPassive(int localport,int* lsockfd,int* timeout)
+StatusType ECSocket::createConnByPassive(int localport,int* lsockfd,int* connfd,int* timeout)
 {
+    if(lsockfd==NULL||connfd==NULL)
+    {
+        return ST_UNINIT;
+    }
+    *lsockfd=-1;
+    *connfd=-1;
+
     LOG(INFO)<<"start tcpserver...";
     //向内核申请创建一个 TCP 套接字，返回一个文件描述符 sockfd
     //AF_INET 表示地址族是 IPv4
@@ -74,7 +81,7 @@ int ECSocket::createConnByPassive(int localport,int* lsockfd,int* timeout)
     if(-1==sockfd)
     {
         LOG(ERROR)<<"socket create error";
-        return -1;
+        return ST_SYSERROR;
     }
     //TIME_WAIT 四次挥手后，服务器端的连接会进入 TIME_WAIT 状态，持续一段时间（通常是 2 倍的最大报文生存时间，约为 4 分钟）。在此期间，如果再次尝试绑定相同的地址和端口，
     //可能会遇到 "Address already in use" 错误。通过设置 SO_REUSEADDR 选项，可以允许服务器在 TIME_WAIT 状态下重新绑定相同的地址和端口，从而避免这个问题。
@@ -83,7 +90,7 @@ int ECSocket::createConnByPassive(int localport,int* lsockfd,int* timeout)
     {
         LOG(ERROR) << "setsockopt SO_REUSEADDR error";
         close(sockfd);
-        return -1;
+        return ST_SYSERROR;
     }
 
     struct sockaddr_in server_addr;//定义一个 IPv4 地址结构体变量
@@ -96,7 +103,7 @@ int ECSocket::createConnByPassive(int localport,int* lsockfd,int* timeout)
     {
         LOG(ERROR)<<"socket bind error";
         close(sockfd);
-        return -1;
+        return ST_SYSERROR;
     }
     //把一个已经 bind 好的流式 socket，转换成监听状态，准备接受客户端连接
     //允许大约 20 个待处理连接排队
@@ -104,7 +111,7 @@ int ECSocket::createConnByPassive(int localport,int* lsockfd,int* timeout)
     {
         LOG(ERROR)<<"socket listen error";
         close(sockfd);
-        return -1;
+        return ST_SYSERROR;
     }
 
     sockaddr_in clientAddr;
@@ -119,12 +126,13 @@ int ECSocket::createConnByPassive(int localport,int* lsockfd,int* timeout)
         if(connfd!=-1)
         {
             *lsockfd=sockfd;
-            return connfd;
+            *connfd=connfd;
+            return ST_OK;
         }
         else
         {
             close(sockfd);
-            return -1;
+            return ST_SYSERROR;
         }
     }
 
@@ -153,12 +161,13 @@ int ECSocket::createConnByPassive(int localport,int* lsockfd,int* timeout)
                     {
                         LOG(INFO)<<"EVENT TYPE:"<<pollEvents[i].outEvents;
                         *lsockfd=sockfd;
-                        return connfd;
+                        *connfd=connfd;
+                        return ST_OK;
                     }
                     else
                     {
                         close(sockfd);
-                        return -1;
+                        return ST_SYSERROR;
                     }
                 }
                 else
@@ -183,14 +192,20 @@ int ECSocket::createConnByPassive(int localport,int* lsockfd,int* timeout)
     close(sockfd);
     return status;
 }
-int ECSocket::createConnByActive(int localPort,string dspip,int dstport,int* timeout)
+StatusType ECSocket::createConnByActive(int localPort,string dspip,int dstport,int* connfd,int* timeout)
 {
+    if(connfd==NULL)
+    {
+        return ST_UNINIT;
+    }
+    *connfd=-1;
+
     LOG(INFO)<<"tcpclient connect...";
     int sockfd=socket(AF_INET,SOCK_STREAM,0);
     if(-1==sockfd)
     {
         LOG(ERROR)<<"socket create error";
-        return -1;
+        return ST_SYSERROR;
     }
     //TIME_WAIT
     int opt = 1;
@@ -198,7 +213,7 @@ int ECSocket::createConnByActive(int localPort,string dspip,int dstport,int* tim
     {
         LOG(ERROR) << "setsockopt SO_REUSEADDR error";
         close(sockfd);
-        return -1;
+        return ST_SYSERROR;
     }
     struct sockaddr_in client_addr;
     memset(&client_addr,0,sizeof(client_addr));
@@ -209,7 +224,7 @@ int ECSocket::createConnByActive(int localPort,string dspip,int dstport,int* tim
     {
         LOG(ERROR)<<"socket bind error";
         close(sockfd);
-        return -1;
+        return ST_SYSERROR;
     }
 
     struct sockaddr_in server_addr;
@@ -226,9 +241,10 @@ int ECSocket::createConnByActive(int localPort,string dspip,int dstport,int* tim
         {
             LOG(ERROR)<<"connect error";
             close(sockfd);
-            return ret;
+            return ST_SYSERROR;
         }
-        return sockfd;
+        *connfd=sockfd;
+        return ST_OK;
     }
 
     int oldFlags=fcntl(sockfd,F_GETFL,0);
@@ -236,37 +252,39 @@ int ECSocket::createConnByActive(int localPort,string dspip,int dstport,int* tim
     {
         LOG(ERROR)<<"set nonblock error";
         close(sockfd);
-        return -1;
+        return ST_SYSERROR;
     }
 
     ret=connect(sockfd,(struct sockaddr*)&server_addr,sizeof(server_addr));
     if(ret==0)
     {
         SetSocketFlags(sockfd,oldFlags);
-        return sockfd;
+        *connfd=sockfd;
+        return ST_OK;
     }
     if(ret<0&&errno!=EINPROGRESS)
     {
         LOG(ERROR)<<"connect error";
         SetSocketFlags(sockfd,oldFlags);
         close(sockfd);
-        return ret;
+        return ST_SYSERROR;
     }
 
-    ret=WaitForConnectResult(sockfd,timeout);
+    StatusType status=WaitForConnectResult(sockfd,timeout);
     if(SetSocketFlags(sockfd,oldFlags)<0)
     {
         LOG(ERROR)<<"restore socket flags error";
         close(sockfd);
-        return -1;
+        return ST_SYSERROR;
     }
 
-    if(ret==0)
+    if(status==ST_OK)
     {
-        return sockfd;
+        *connfd=sockfd;
+        return ST_OK;
     }
 
-    if(ret==ST_TIMEOUT)
+    if(status==ST_TIMEOUT)
     {
         LOG(ERROR)<<"TIME OUT";
     }
@@ -275,6 +293,6 @@ int ECSocket::createConnByActive(int localPort,string dspip,int dstport,int* tim
         LOG(ERROR)<<"connect error";
     }
     close(sockfd);
-    return ret;
+    return status;
 
 }
