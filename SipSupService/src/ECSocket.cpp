@@ -9,6 +9,11 @@ int SetSocketFlags(int sockfd,int flags)
     return fcntl(sockfd,F_SETFL,flags);
 }
 
+bool IsRetryableConnectError(int err)
+{
+    return err==ECONNREFUSED || err==EHOSTUNREACH || err==ENETUNREACH;
+}
+
 int CreateBoundClientSocket(int localPort)
 {
     int sockfd=socket(AF_INET,SOCK_STREAM,0);
@@ -312,6 +317,10 @@ StatusType ECSocket::createConnByActive(int localPort,string dspip,int dstport,i
         //EINPROGRESS 它的意思不是“失败”，而是“非阻塞 connect 已经启动了，但现在还没完成，后面再等通知”
         int waitTimeout = remainTimeout;
         StatusType status=WaitForConnectResult(sockfd,&waitTimeout);//进入事件等待阶段
+        if(remainTimeout > 0 && waitTimeout >= 0)
+        {
+            remainTimeout = waitTimeout;
+        }
         if(SetSocketFlags(sockfd,oldFlags)<0)
         {
             LOG(ERROR)<<"restore socket flags error";
@@ -331,7 +340,16 @@ StatusType ECSocket::createConnByActive(int localPort,string dspip,int dstport,i
         }
         else
         {
-            LOG(ERROR)<<"connect error after wait errno="<<errno<<" msg="<<strerror(errno)<<" localport="<<localPort<<" remote="<<dspip<<":"<<dstport;
+            const int connectErr = errno;
+            if(IsRetryableConnectError(connectErr) && remainTimeout > 0)
+            {
+                const int waitMs = remainTimeout > retryIntervalMs ? retryIntervalMs : remainTimeout;
+                usleep(waitMs * 1000);
+                remainTimeout -= waitMs;
+                close(sockfd);
+                continue;
+            }
+            LOG(ERROR)<<"connect error after wait errno="<<connectErr<<" msg="<<strerror(connectErr)<<" localport="<<localPort<<" remote="<<dspip<<":"<<dstport;
         }
         close(sockfd);
         return status;
