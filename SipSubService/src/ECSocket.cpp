@@ -49,7 +49,7 @@ int CreateBoundClientSocket(int localPort)
 StatusType WaitForConnectResult(int sockfd,int* timeout)
 {
     EventPoll eventPoll;
-    if(eventPoll.init(1)!=0)
+    if(eventPoll.init(2)!=0)
     {
         return ST_SYSERROR;
     }
@@ -292,7 +292,7 @@ StatusType ECSocket::createConnByActive(int localPort,string dspip,int dstport,i
             *connfd=sockfd;
             return ST_OK;
         }
-        if(ret<0&&errno!=EINPROGRESS)
+        if(ret<0&&errno!=EINPROGRESS)//内核没有接受这次异步建连，而是当场给了一个失败结果。需要重试
         {
             int connectErr = errno;
             SetSocketFlags(sockfd,oldFlags);
