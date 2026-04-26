@@ -104,7 +104,7 @@ StatusType ECSocket::createConnByPassive(int localport,int* lsockfd,int* connfd,
     *lsockfd=-1;
     *connfd=-1;
 
-    LOG(INFO)<<"start tcpserver...";
+    LOG(INFO)<<"start tcpserver localport="<<localport;
     //向内核申请创建一个 TCP 套接字，返回一个文件描述符 sockfd
     //AF_INET 表示地址族是 IPv4
     //SOCK_STREAM 表示使用面向连接的字节流套接字
@@ -145,6 +145,7 @@ StatusType ECSocket::createConnByPassive(int localport,int* lsockfd,int* connfd,
         close(sockfd);
         return ST_SYSERROR;
     }
+    LOG(INFO)<<"tcpserver listening localport="<<localport;
 
     sockaddr_in clientAddr;
     socklen_t addrLen=sizeof(clientAddr);
@@ -240,7 +241,7 @@ StatusType ECSocket::createConnByActive(int localPort,string dspip,int dstport,i
     }
     *connfd=-1;
 
-    LOG(INFO)<<"tcpclient connect...";
+    LOG(INFO)<<"tcpclient connect localport="<<localPort<<" remote="<<dspip<<":"<<dstport;
     struct sockaddr_in server_addr;
     memset(&server_addr,0,sizeof(server_addr));
     server_addr.sin_family=AF_INET;
@@ -263,7 +264,7 @@ StatusType ECSocket::createConnByActive(int localPort,string dspip,int dstport,i
             ret=connect(sockfd,(struct sockaddr*)&server_addr,sizeof(server_addr));
             if(ret<0)
             {
-                LOG(ERROR)<<"connect error";
+                LOG(ERROR)<<"connect error errno="<<errno<<" msg="<<strerror(errno)<<" localport="<<localPort<<" remote="<<dspip<<":"<<dstport;
                 close(sockfd);
                 return ST_SYSERROR;
             }
@@ -302,7 +303,7 @@ StatusType ECSocket::createConnByActive(int localPort,string dspip,int dstport,i
             }
 
             errno=connectErr;
-            LOG(ERROR)<<"connect error";
+            LOG(ERROR)<<"connect error errno="<<connectErr<<" msg="<<strerror(connectErr)<<" localport="<<localPort<<" remote="<<dspip<<":"<<dstport;
             return ST_SYSERROR;
         }
 
@@ -327,7 +328,7 @@ StatusType ECSocket::createConnByActive(int localPort,string dspip,int dstport,i
         }
         else
         {
-            LOG(ERROR)<<"connect error";
+            LOG(ERROR)<<"connect error after wait errno="<<errno<<" msg="<<strerror(errno)<<" localport="<<localPort<<" remote="<<dspip<<":"<<dstport;
         }
         close(sockfd);
         return status;

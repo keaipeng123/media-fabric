@@ -644,6 +644,7 @@ int Gb28181Session::RtpTcpInit(string dstip,int dstport,int time)
 {
     int timeout = time*1000;
     StatusType status = ST_UNINIT;
+    LOG(INFO) << "RtpTcpInit setupType=" << setupType << " localport=" << m_rtpPort << " dstip=" << dstip << " dstport=" << dstport << " timeoutMs=" << timeout;
     if(setupType == "active")
     {
         status = ECSocket::createConnByActive(m_rtpPort,dstip,dstport,&m_rtpTcpFd,&timeout);
@@ -655,6 +656,7 @@ int Gb28181Session::RtpTcpInit(string dstip,int dstport,int time)
 
     if(status != ST_OK)
     {
+        LOG(ERROR) << "RtpTcpInit status=" << status << " setupType=" << setupType << " localport=" << m_rtpPort << " dstip=" << dstip << " dstport=" << dstport;
         return -1;
     }
 

@@ -93,6 +93,7 @@ int Gb28181Session::RtpTcpInit(string setup,int localport,string dstip,int dstpo
 {
     int timeout = time*1000;
     StatusType status = ST_UNINIT;
+    LOG(INFO)<<"RtpTcpInit setup="<<setup<<" localport="<<localport<<" dstip="<<dstip<<" dstport="<<dstport<<" timeoutMs="<<timeout;
     if(setup == "active")
     {//上级是active，代表下级做服务端
         status = ECSocket::createConnByPassive(localport,&m_listenFd,&m_rtpTcpFd,&timeout);
@@ -104,6 +105,7 @@ int Gb28181Session::RtpTcpInit(string setup,int localport,string dstip,int dstpo
 
     if(status != ST_OK)
     {
+        LOG(ERROR)<<"RtpTcpInit status="<<status<<" setup="<<setup<<" localport="<<localport<<" dstip="<<dstip<<" dstport="<<dstport;
         return -1;
     }
 
