@@ -49,7 +49,7 @@ int CreateBoundClientSocket(int localPort)
 StatusType WaitForConnectResult(int sockfd,int* timeout)
 {
     EventPoll eventPoll;
-    if(eventPoll.init(1)!=0)
+    if(eventPoll.init(2)!=0)
     {
         return ST_SYSERROR;
     }
