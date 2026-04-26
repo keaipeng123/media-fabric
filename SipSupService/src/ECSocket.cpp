@@ -9,6 +9,38 @@ int SetSocketFlags(int sockfd,int flags)
     return fcntl(sockfd,F_SETFL,flags);
 }
 
+int CreateBoundClientSocket(int localPort)
+{
+    int sockfd=socket(AF_INET,SOCK_STREAM,0);
+    if(-1==sockfd)
+    {
+        LOG(ERROR)<<"socket create error";
+        return -1;
+    }
+
+    int opt = 1;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+    {
+        LOG(ERROR) << "setsockopt SO_REUSEADDR error";
+        close(sockfd);
+        return -1;
+    }
+
+    struct sockaddr_in client_addr;
+    memset(&client_addr,0,sizeof(client_addr));
+    client_addr.sin_family=AF_INET;
+    client_addr.sin_addr.s_addr=htonl(INADDR_ANY);
+    client_addr.sin_port=htons(localPort);
+    if(bind(sockfd,(struct sockaddr*)&client_addr,sizeof(client_addr))==-1)
+    {
+        LOG(ERROR)<<"socket bind error";
+        close(sockfd);
+        return -1;
+    }
+
+    return sockfd;
+}
+
 StatusType WaitForConnectResult(int sockfd,int* timeout)
 {
     EventPoll eventPoll;
@@ -210,100 +242,98 @@ StatusType ECSocket::createConnByActive(int localPort,string dspip,int dstport,i
     *connfd=-1;
 
     LOG(INFO)<<"tcpclient connect...";
-    int sockfd=socket(AF_INET,SOCK_STREAM,0);
-    if(-1==sockfd)
-    {
-        LOG(ERROR)<<"socket create error";
-        return ST_SYSERROR;
-    }
-    //TIME_WAIT
-    int opt = 1;
-    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
-    {
-        LOG(ERROR) << "setsockopt SO_REUSEADDR error";
-        close(sockfd);
-        return ST_SYSERROR;
-    }
-    struct sockaddr_in client_addr;
-    memset(&client_addr,0,sizeof(client_addr));
-    client_addr.sin_family=AF_INET;
-    client_addr.sin_addr.s_addr=htonl(INADDR_ANY);
-    client_addr.sin_port=htons(localPort);
-    if(bind(sockfd,(struct sockaddr*)&client_addr,sizeof(client_addr))==-1)
-    {
-        LOG(ERROR)<<"socket bind error";
-        close(sockfd);
-        return ST_SYSERROR;
-    }
-
     struct sockaddr_in server_addr;
     memset(&server_addr,0,sizeof(server_addr));
     server_addr.sin_family=AF_INET;
     server_addr.sin_addr.s_addr=inet_addr(dspip.c_str());
     server_addr.sin_port=htons(dstport);
 
-    int ret=-1;
-    if(timeout==NULL)
+    int remainTimeout = timeout != NULL ? *timeout : -1;
+    const int retryIntervalMs = 100;
+    while(true)
     {
-        ret=connect(sockfd,(struct sockaddr*)&server_addr,sizeof(server_addr));
-        if(ret<0)
+        int sockfd=CreateBoundClientSocket(localPort);
+        if(sockfd<0)
         {
-            LOG(ERROR)<<"connect error";
+            return ST_SYSERROR;
+        }
+
+        int ret=-1;
+        if(timeout==NULL)
+        {
+            ret=connect(sockfd,(struct sockaddr*)&server_addr,sizeof(server_addr));
+            if(ret<0)
+            {
+                LOG(ERROR)<<"connect error";
+                close(sockfd);
+                return ST_SYSERROR;
+            }
+            *connfd=sockfd;
+            return ST_OK;
+        }
+
+        //把socket设置成非阻塞模式，这样 connect 调用就不会阻塞住当前线程，而是会立即返回。connect 的返回值会告诉我们连接是否成功建立，或者连接正在进行中，或者连接失败。
+        int oldFlags=fcntl(sockfd,F_GETFL,0);//先读取 sockfd 当前的文件状态标志
+        if(oldFlags<0||SetSocketFlags(sockfd,oldFlags|O_NONBLOCK)<0)//在原有标志基础上加上 O_NONBLOCK，把这个 socket 临时改成非阻塞模式
+        {
+            LOG(ERROR)<<"set nonblock error";
             close(sockfd);
             return ST_SYSERROR;
         }
-        *connfd=sockfd;
-        return ST_OK;
-    }
 
-    //把socket设置成非阻塞模式，这样 connect 调用就不会阻塞住当前线程，而是会立即返回。connect 的返回值会告诉我们连接是否成功建立，或者连接正在进行中，或者连接失败。
-    int oldFlags=fcntl(sockfd,F_GETFL,0);//先读取 sockfd 当前的文件状态标志
-    if(oldFlags<0||SetSocketFlags(sockfd,oldFlags|O_NONBLOCK)<0)//在原有标志基础上加上 O_NONBLOCK，把这个 socket 临时改成非阻塞模式
-    {
-        LOG(ERROR)<<"set nonblock error";
+        ret=connect(sockfd,(struct sockaddr*)&server_addr,sizeof(server_addr));
+        if(ret==0)//表示连接已经建立成功
+        {
+            SetSocketFlags(sockfd,oldFlags);
+            *connfd=sockfd;
+            return ST_OK;
+        }
+        if(ret<0&&errno!=EINPROGRESS)//立刻失败，而且不是“连接进行中”
+        {
+            int connectErr = errno;
+            SetSocketFlags(sockfd,oldFlags);
+            close(sockfd);
+
+            if((connectErr==ECONNREFUSED || connectErr==EHOSTUNREACH || connectErr==ENETUNREACH)
+                && remainTimeout > 0)
+            {
+                const int waitMs = remainTimeout > retryIntervalMs ? retryIntervalMs : remainTimeout;
+                usleep(waitMs * 1000);
+                remainTimeout -= waitMs;
+                continue;
+            }
+
+            errno=connectErr;
+            LOG(ERROR)<<"connect error";
+            return ST_SYSERROR;
+        }
+
+        //EINPROGRESS 它的意思不是“失败”，而是“非阻塞 connect 已经启动了，但现在还没完成，后面再等通知”
+        int waitTimeout = remainTimeout;
+        StatusType status=WaitForConnectResult(sockfd,&waitTimeout);//进入事件等待阶段
+        if(SetSocketFlags(sockfd,oldFlags)<0)
+        {
+            LOG(ERROR)<<"restore socket flags error";
+            close(sockfd);
+            return ST_SYSERROR;
+        }
+
+        if(status==ST_OK)
+        {
+            *connfd=sockfd;
+            return ST_OK;
+        }
+
+        if(status==ST_TIMEOUT)
+        {
+            LOG(ERROR)<<"TIME OUT";
+        }
+        else
+        {
+            LOG(ERROR)<<"connect error";
+        }
         close(sockfd);
-        return ST_SYSERROR;
+        return status;
     }
-
-    ret=connect(sockfd,(struct sockaddr*)&server_addr,sizeof(server_addr));
-    if(ret==0)//表示连接已经建立成功
-    {
-        SetSocketFlags(sockfd,oldFlags);
-        *connfd=sockfd;
-        return ST_OK;
-    }
-    if(ret<0&&errno!=EINPROGRESS)//立刻失败，而且不是“连接进行中”
-    {
-        LOG(ERROR)<<"connect error";
-        SetSocketFlags(sockfd,oldFlags);
-        close(sockfd);
-        return ST_SYSERROR;
-    }
-
-    //EINPROGRESS 它的意思不是“失败”，而是“非阻塞 connect 已经启动了，但现在还没完成，后面再等通知”
-    StatusType status=WaitForConnectResult(sockfd,timeout);//进入事件等待阶段
-    if(SetSocketFlags(sockfd,oldFlags)<0)
-    {
-        LOG(ERROR)<<"restore socket flags error";
-        close(sockfd);
-        return ST_SYSERROR;
-    }
-
-    if(status==ST_OK)
-    {
-        *connfd=sockfd;
-        return ST_OK;
-    }
-
-    if(status==ST_TIMEOUT)
-    {
-        LOG(ERROR)<<"TIME OUT";
-    }
-    else
-    {
-        LOG(ERROR)<<"connect error";
-    }
-    close(sockfd);
-    return status;
 
 }
