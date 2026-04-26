@@ -49,7 +49,7 @@ int CreateBoundClientSocket(int localPort)
 StatusType WaitForConnectResult(int sockfd,int* timeout)
 {
     EventPoll eventPoll;
-    if(eventPoll.init(2)!=0)
+    if(eventPoll.init(1)!=0)
     {
         return ST_SYSERROR;
     }
@@ -311,6 +311,7 @@ StatusType ECSocket::createConnByActive(int localPort,string dspip,int dstport,i
             LOG(ERROR)<<"connect error errno="<<connectErr<<" msg="<<strerror(connectErr)<<" localport="<<localPort<<" remote="<<dspip<<":"<<dstport;
             return ST_SYSERROR;
         }
+        LOG(INFO)<<"connect in progress, wait for result...";
 
         int waitTimeout = remainTimeout;
         StatusType status=WaitForConnectResult(sockfd,&waitTimeout);
@@ -338,6 +339,7 @@ StatusType ECSocket::createConnByActive(int localPort,string dspip,int dstport,i
         else
         {
             const int connectErr = errno;
+            LOG(ERROR)<<"connect error after wait errno="<<connectErr<<" msg="<<strerror(connectErr)<<" localport="<<localPort<<" remote="<<dspip<<":"<<dstport;
             if(IsRetryableConnectError(connectErr) && remainTimeout > 0)
             {
                 const int waitMs = remainTimeout > retryIntervalMs ? retryIntervalMs : remainTimeout;
