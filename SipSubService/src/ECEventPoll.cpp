@@ -7,6 +7,23 @@ bool HasFdInSet(int sockfd, const fd_set& readset, const fd_set& writeset, const
 {
     return FD_ISSET(sockfd, &readset) || FD_ISSET(sockfd, &writeset) || FD_ISSET(sockfd, &exceptset);//检查 fd 是否在集合中、或者 select 返回后是否就绪
 }
+
+uint32_t ToEpollEvents(EventType type)
+{
+    if(type==EventType::EC_POLLIN)
+    {
+        return EPOLLIN;
+    }
+    if(type==EventType::EC_POLLOUT)
+    {
+        return EPOLLOUT;
+    }
+    if(type==EventType::EC_POLLERR)
+    {
+        return EPOLLERR;
+    }
+    return 0;
+}
 }
 
 int SelectSet::initSet()
@@ -138,6 +155,7 @@ int SelectSet::doSetPoll(vector<PollEventType>& inEvents,vector<PollEventType>& 
 
 int EpollSet::initSet()
 {
+    _eventMasks.clear();
     _epollFd=epoll_create(1024);//向内核申请创建一个 epoll 实例，并返回一个文件描述符
     return _epollFd;
 }
@@ -148,6 +166,7 @@ int EpollSet::clearSet()
         close(_epollFd);
         _epollFd=-1;
     }
+    _eventMasks.clear();
     return 0;
 }
 int EpollSet::addFd(int sockfd,EventType type)
@@ -161,37 +180,39 @@ int EpollSet::addFd(int sockfd,EventType type)
     // 这些信息就放在 epoll_event 里的 events 字段中。
     // 另外 event.data 里还带了用户数据，你这里存的是 fd，本轮 epoll_wait 返回时要靠它识别是谁就绪了。
     struct epoll_event event;
-    event.events=0;
+    event.events=ToEpollEvents(type);
     event.data.fd=sockfd;//event.data.fd = sockfd，这样后面 epoll_wait 返回就绪事件时，可以从 events[i].data.fd 拿回对应的 fd
-
-    if(type==EventType::EC_POLLIN)
-    {
-        event.events=EPOLLIN;//关心的事件
-    }
-    if(type==EventType::EC_POLLOUT)
-    {
-        event.events=EPOLLOUT;
-    }
-    if(type==EventType::EC_POLLERR)
-    {
-        event.events=EPOLLERR;
-    }
     if(event.events==0)
     {
         return -1;
+    }
+
+    int op=EPOLL_CTL_ADD;
+    std::map<int,uint32_t>::iterator it=_eventMasks.find(sockfd);
+    if(it!=_eventMasks.end())
+    {
+        event.events|=it->second;
+        op=EPOLL_CTL_MOD;
     }
     //第一个参数是 epoll 实例本身，也就是 _epollFd。
     //第二个参数是操作类型。
     //第三个参数是你要操作的目标 fd，也就是 sockfd。
     //第四个参数是附加信息，主要在新增或修改监听时使用。
-    return epoll_ctl(_epollFd,EPOLL_CTL_ADD,sockfd,&event);//把这个 sockfd 加入 epoll 监听集合
+    int ret=epoll_ctl(_epollFd,op,sockfd,&event);//把这个 sockfd 加入 epoll 监听集合
+    if(ret==0)
+    {
+        _eventMasks[sockfd]=event.events;
+    }
+    return ret;
    
 
 }
 int EpollSet::deleteFd(int sockfd)
 {
     //struct epoll_event event;
-    return epoll_ctl(_epollFd,EPOLL_CTL_DEL,sockfd,NULL);
+    int ret=epoll_ctl(_epollFd,EPOLL_CTL_DEL,sockfd,NULL);
+    _eventMasks.erase(sockfd);
+    return ret;
 }
 int EpollSet::doSetPoll(vector<PollEventType>& inEvents,vector<PollEventType>& outEvents,int* timeout)
 {
@@ -294,6 +315,15 @@ int EventPoll::addEvent(const int& sockfd,EventType type)
     if(_pollset->addFd(sockfd,type)!=0)
     {
         return -1;
+    }
+
+    vector<PollEventType>::iterator it=_events.begin();
+    for(;it!=_events.end();++it)
+    {
+        if(it->sockfd==sockfd)
+        {
+            return 0;
+        }
     }
 
     PollEventType ev;

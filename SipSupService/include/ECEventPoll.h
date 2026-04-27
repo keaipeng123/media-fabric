@@ -3,6 +3,7 @@
 #include<sys/epoll.h>
 #include<sys/select.h>
 #include<sys/stat.h>
+#include<map>
 #include<vector>
 #include"Common.h"
 
@@ -72,6 +73,7 @@ namespace EC{
         virtual int doSetPoll(vector<PollEventType>& inEvents,vector<PollEventType>& outEvents,int* timeout);
         private:
         int _epollFd;
+        std::map<int,uint32_t> _eventMasks;
     };
 
     class EventPoll //给用户使用的
