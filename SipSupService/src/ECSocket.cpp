@@ -177,7 +177,7 @@ StatusType ECSocket::createConnByPassive(int localport,int* lsockfd,int* connfd,
 
     //如果设置有超时时间，则使用事件驱动的方式等待连接
     EventPoll eventPoll;
-    if(eventPoll.init(1)!=0)
+    if(eventPoll.init(2)!=0)
     {
         close(sockfd);
         return ST_SYSERROR;
