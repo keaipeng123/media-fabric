@@ -339,7 +339,7 @@ StatusType ECSocket::createConnByActive(int localPort,string dspip,int dstport,i
         else
         {
             const int connectErr = errno;
-            LOG(ERROR)<<"connect error after wait errno="<<connectErr<<" msg="<<strerror(connectErr)<<" localport="<<localPort<<" remote="<<dspip<<":"<<dstport;
+            //LOG(ERROR)<<"connect error after wait errno="<<connectErr<<" msg="<<strerror(connectErr)<<" localport="<<localPort<<" remote="<<dspip<<":"<<dstport;
             if(IsRetryableConnectError(connectErr) && remainTimeout > 0)
             {
                 const int waitMs = remainTimeout > retryIntervalMs ? retryIntervalMs : remainTimeout;
