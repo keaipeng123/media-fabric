@@ -20,6 +20,7 @@
 #include"GetCatalog.h"
 #include"OpenStream.h"
 #include"GetRecordList.h"
+#include"EventMsgHandle.h"
 using namespace EC;
 
 class SetGlogLevel
@@ -89,15 +90,28 @@ int main()
 	LOG(INFO)<<"create thread pid:"<<pid;
 	LOG(INFO)<<"main thread pid:"<<pthread_self();
 
+	EventMsgHandle* eventHandle=new EventMsgHandle(GBOJ(gConfig)->localIp(),GBOJ(gConfig)->localPort());
+	if(eventHandle!=NULL)
+	{
+		ret=eventHandle->init();
+		if(ret!=0)
+		{
+			LOG(ERROR)<<"eventHandle init error";
+			return ret;
+		}
+		delete eventHandle;
+		eventHandle = NULL;
+	}
+
 	SipRegister* regc=new SipRegister();
 	regc->registerServiceStart();
 
-	sleep(5);//等待注册完成后再发送目录查询请求，确保下级设备已经注册成功
-	GetCatalog* getCat=new GetCatalog();
+	//sleep(5);//等待注册完成后再发送目录查询请求，确保下级设备已经注册成功
+	//GetCatalog* getCat=new GetCatalog();
 
-	sleep(5);//等待目录查询完成后再发送订阅请求，确保已经获取到下级设备的目录信息
-	OpenStream* gbStream=new OpenStream();
-	gbStream->StreamServiceStart();
+	//sleep(5);//等待目录查询完成后再发送订阅请求，确保已经获取到下级设备的目录信息
+	//OpenStream* gbStream=new OpenStream();
+	//gbStream->StreamServiceStart();
 
 	//sleep(5);
 	//OpenStream::StreamStop("11000000002000000001","11000000001310000059");
