@@ -25,6 +25,6 @@ private:
     std::string m_servIp;
     int m_servPort;
 
-}
+};
 
 #endif
