@@ -14,6 +14,7 @@ void event_callback(struct bufferevent *bev, short events, void *ctx)
 }
 void onAccept(struct evconnlistener *listener, evutil_socket_t fd, struct sockaddr *address, int socklen, void *argc)
 {
+    LOG(INFO)<<"onAccept client ip:"<<inet_ntoa(((struct sockaddr_in*)address)->sin_addr)<<" port:"<<ntohs(((struct sockaddr_in*)address)->sin_port)<<" fd:"<<fd;
     evutil_make_socket_nonblocking(fd);
 
     int on=1;
