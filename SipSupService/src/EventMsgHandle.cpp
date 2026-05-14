@@ -23,6 +23,7 @@ void parseReadEvent(struct bufferevent *bev, void *ctx)
         {
             LOG(INFO)<<"recv Command_Session_Register";
             task = new GetPlamtInfo(bev);
+            break;
         }
         
         default:
