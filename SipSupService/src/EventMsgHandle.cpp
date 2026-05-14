@@ -12,7 +12,7 @@ void parseReadEvent(struct bufferevent *bev, void *ctx)
     LOG(INFO)<<"parseReadEvent";
     char* buf[1024]={0};//读缓冲区
     int len=bufferevent_read(bev, buf, 4);//从 bev 的输入缓冲区读数据到 buf 中，最多读 sizeof(buf) 字节
-    ThreadTask* task=NUll;
+    ThreadTask* task=NULL;
     if(len==4)
     {
         int command=*(int*)buf;//把 buf 前 4 字节当成一个整数，得到命令码
