@@ -5,6 +5,7 @@
 #include <queue>
 #include <unistd.h>
 #include <semaphore.h>
+#include"EventMsgHandle.h"
 using namespace EC;
 
 //虚基类，只提供一个传虚接口
@@ -12,9 +13,15 @@ using namespace EC;
 class ThreadTask
 {
     public:
-    ThreadTask(){}
+    ThreadTask(struct bufferevent* bev)
+    : m_bev(bev)
+    {
+
+    }
     virtual ~ThreadTask(){}
     virtual void run()=0;
+    protected:
+    struct bufferevent* m_bev;
 };
 
 class ThreadPool
