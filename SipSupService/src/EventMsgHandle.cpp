@@ -2,6 +2,7 @@
 #include "SipDef.h"
 #include "ThreadPool.h"
 #include "GetPlamtInfo.h"
+#include"GetCatalog.h"
 #include"GlobalCtl.h"
 
 //libevent 的读事件回调函数。当 TCP 客户端发来数据时，libevent 会自动调用这个函数
@@ -23,6 +24,12 @@ void parseReadEvent(struct bufferevent *bev, void *ctx)
         {
             LOG(INFO)<<"recv Command_Session_Register";
             task = new GetPlamtInfo(bev);
+            break;
+        }
+        case Command_Session_Catalog:
+        {
+            LOG(INFO)<<"recv Command_Session_Catalog";
+            task = new GetCatalog(bev);
             break;
         }
         

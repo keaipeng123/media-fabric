@@ -1,6 +1,11 @@
 #include"SipDirectory.h"
 #include"SipDef.h"
 #include"GlobalCtl.h"
+
+Json::Value SipDirectory::m_jsonIn;
+int SipDirectory::m_jsonInIndex=0;
+
+
 //手动调用基类默认构造
 SipDirectory::SipDirectory(tinyxml2::XMLElement* root)
 :SipTaskBase()
@@ -158,7 +163,27 @@ void SipDirectory::SaveDir(int& status_code)
                 strStatus=pChild->GetText();
             }
 
+            GlobalCtl::get_global_mutex();
+            m_jsonIn["catalog"][m_jsonInIndex]["DeviceID"]=strDeviceID;
+            m_jsonIn["catalog"][m_jsonInIndex]["Name"]=strName;
+            m_jsonIn["catalog"][m_jsonInIndex]["Parental"]=strParental;
+            m_jsonIn["catalog"][m_jsonInIndex]["ParentID"]=strParentID;
+            m_jsonInIndex++;
+            GlobalCtl::free_global_mutex();
+
+
+
             pItem=pItem->NextSiblingElement();
         }
+    }
+    int sumNum=atoi(strSumNum.c_str());
+    if(sumNum== m_jsonIn["catalog"].size())
+    {
+        GlobalCtl::get_global_mutex();
+        GlobalCtl::getCatalogPayload=JsonParse(m_jsonIn).toString();
+        GlobalCtl::free_global_mutex();
+        m_jsonIn.clear();
+        m_jsonInIndex=0;
+        GBOJ(gThpool)->postInfo();//解除阻塞
     }
 }

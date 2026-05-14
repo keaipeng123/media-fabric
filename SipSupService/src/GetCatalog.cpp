@@ -3,13 +3,32 @@
 #include"SipMessage.h"
 #include"XmlParser.h"
 
-GetCatalog::GetCatalog()
+GetCatalog::GetCatalog(struct bufferevent* bev)
+:ThreadTask(bev)
 {
-    DirectoryGetPro(NULL);
+    //DirectoryGetPro(NULL);
 }
 GetCatalog::~GetCatalog()
 {
 
+}
+
+void GetCatalog::run()
+{
+    DirectoryGetPro(NULL);
+    GBOJ(gThpool)->waitInfo();//阻塞等待数据
+    GlobalCtl::get_global_mutex();
+    int bodyLen=GlobalCtl::getCatalogPayload.length();
+    int len=sizeof(int)+bodyLen;
+    char* buf=new char[len];
+    memset(buf,0,len);
+    memcpy(buf,&bodyLen,sizeof(int));
+    memcpy(buf+sizeof(int),GlobalCtl::getCatalogPayload.c_str(),bodyLen);
+    bufferevent_write(m_bev,buf,len);
+    GlobalCtl::free_global_mutex();
+    delete[] buf;
+
+    return;
 }
 
 void GetCatalog::DirectoryGetPro(void* param)

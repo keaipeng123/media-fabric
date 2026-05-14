@@ -11,5 +11,7 @@ class SipDirectory: public SipTaskBase
 
     private:
     tinyxml2::XMLElement* m_pRootElement;
+    static Json::Value m_jsonIn;
+    static int m_jsonInIndex;
 };
 #endif

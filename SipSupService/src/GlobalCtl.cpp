@@ -5,6 +5,7 @@ GlobalCtl::ListSession GlobalCtl::glistSession;
 pthread_mutex_t GlobalCtl::gStreamLock=PTHREAD_MUTEX_INITIALIZER;
 bool GlobalCtl::gStopPool=false;
 bool GlobalCtl::gRcvIpc=false;
+string GlobalCtl::getCatalogPayload;
 GlobalCtl* GlobalCtl::m_pInstance=NULL;
 
 GlobalCtl* GlobalCtl::instance()

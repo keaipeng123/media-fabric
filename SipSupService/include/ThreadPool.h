@@ -33,7 +33,10 @@ class ThreadPool
     int createThreadPool(int threadCount);
     //阻塞当前线程
     int waitTask();
-    int postTask(ThreadTask* task);
+    int postTask();
+
+    int waitInfo();
+    int postInfo(ThreadTask* task);
 
     static void* mainThread(void* argc);//线程入口函数
     //静态成员变量在头文件中需要声明，在cpp中需要定义
@@ -41,5 +44,6 @@ class ThreadPool
     static pthread_mutex_t m_queueLock; 
     private:
     sem_t m_signalSem;//信号量
+    sem_t m_signalSem_info;
 };
 #endif

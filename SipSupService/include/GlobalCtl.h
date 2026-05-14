@@ -62,6 +62,8 @@ class GlobalCtl
     ThreadPool* gThpool =NULL;
     SipCore* gSipServer=NULL;
 
+    static string getCatalogPayload;
+
     typedef struct _SubDomainInfo{
         _SubDomainInfo()
         {

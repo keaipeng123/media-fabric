@@ -8,11 +8,13 @@ ThreadPool::ThreadPool()
 {
     pthread_mutex_init(&m_queueLock,NULL);
     sem_init(&m_signalSem,0,0);
+    sem_init(&m_signalSem_info,0,0);
 }
 ThreadPool::~ThreadPool()
 {
     pthread_mutex_destroy(&m_queueLock);
     sem_destroy(&m_signalSem);
+    sem_destroy(&m_signalSem_info);
 }
 int ThreadPool::createThreadPool(int threadCount)
 {
@@ -53,6 +55,8 @@ void* ThreadPool::mainThread(void* argc)
             pthread_mutex_unlock(&m_queueLock);
             if(task)
             {
+                pj_thread_desc desc;
+                pjcall_thread_register(desc);
                 task->run();
                 delete task;
             }
@@ -81,4 +85,20 @@ int ThreadPool::postTask(ThreadTask* task)
         sem_post(&m_signalSem);
         
     }
+}
+
+
+int ThreadPool::waitInfo()
+{
+    int ret=0;
+    ret=sem_wait(&m_signalSem_info);
+    if(ret!=0)
+    {
+        LOG(ERROR)<<"the api exec error";
+    }
+    return ret;
+}
+int ThreadPool::postInfo(ThreadTask* task)
+{
+    return  sem_post(&m_signalSem_info);
 }
