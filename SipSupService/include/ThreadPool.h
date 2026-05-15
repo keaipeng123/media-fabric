@@ -33,7 +33,7 @@ class ThreadPool
     int createThreadPool(int threadCount);
     //阻塞当前线程
     int waitTask();
-    int postTask();
+    int postTask(ThreadTask* task);
 
     int waitInfo();
     int postInfo();
