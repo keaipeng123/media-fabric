@@ -163,6 +163,18 @@ void SipDirectory::SaveDir(int& status_code)
                 strStatus=pChild->GetText();
             }
 
+            pChild=pItem->FirstChildElement("Name");
+            if(pChild&&pChild->GetText())
+            {
+                strName=pChild->GetText();
+            }
+
+            pChild=pItem->FirstChildElement("ParentID");
+            if(pChild&&pChild->GetText())
+            {
+                strParentID=pChild->GetText();
+            }
+
             GlobalCtl::get_global_mutex();
             m_jsonIn["catalog"][m_jsonInIndex]["DeviceID"]=strDeviceID;
             m_jsonIn["catalog"][m_jsonInIndex]["Name"]=strName;
