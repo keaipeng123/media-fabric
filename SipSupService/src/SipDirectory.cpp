@@ -193,6 +193,7 @@ void SipDirectory::SaveDir(int& status_code)
     {
         GlobalCtl::get_global_mutex();
         GlobalCtl::getCatalogPayload=JsonParse(m_jsonIn).toString();
+        LOG(INFO) << "Catalog JSON: " << GlobalCtl::getCatalogPayload;
         GlobalCtl::free_global_mutex();
         m_jsonIn.clear();
         m_jsonInIndex=0;
