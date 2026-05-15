@@ -98,7 +98,7 @@ int ThreadPool::waitInfo()
     }
     return ret;
 }
-int ThreadPool::postInfo(ThreadTask* task)
+int ThreadPool::postInfo()
 {
     return  sem_post(&m_signalSem_info);
 }
