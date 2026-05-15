@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
+#include <sstream>
+#include <semaphore.h>
+#include <unistd.h>
 
 using namespace std;
 
