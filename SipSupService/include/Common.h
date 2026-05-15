@@ -35,4 +35,40 @@ class AutoMutexLock
     pthread_mutex_t* lock;
 };
 
+class JsonParse
+{
+    public:
+    JsonParse(string s):m_str(s){}
+    JsonParse(Json::Value j):m_json(j){}
+    bool toJson(Json::Value& j)
+    {
+        bool bret =false;
+        Json::CharReaderBuilder builder;
+        Json::CharReaderBuilder::strictMode(&builder.settings_);
+        //LOG(INFO) << "CharReaderBuilder defaults:\n" << builder.settings_.toStyledString();
+        builder["collectComments"]=true;
+        //LOG(INFO) << "CharReaderBuilder strictMode:\n" << builder.settings_.toStyledString();
+
+        const std::unique_ptr<Json::CharReader> reader(builder.newCharReader());//智能指针
+        JSONCPP_STRING errs;
+        bret=reader->parse(m_str.data(),m_str.data()+m_str.size(),&j,&errs);
+        if(!bret||!errs.empty())
+        {
+            LOG(ERROR)<<"json parse error:"<<errs.c_str();
+        }
+        return bret;
+    }
+
+    string toString()
+    {
+        Json::StreamWriterBuilder builder;
+        const char* indent="";
+        builder["indentation"]=indent;
+        return Json::writeString(builder,m_json);
+    }
+    private:
+    string m_str;
+    Json::Value m_json;
+};
+
 #endif
