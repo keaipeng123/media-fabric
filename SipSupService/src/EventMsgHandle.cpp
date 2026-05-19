@@ -4,6 +4,7 @@
 #include "GetPlamtInfo.h"
 #include"GetCatalog.h"
 #include"GlobalCtl.h"
+#include "OpenStream.h"
 
 //libevent 的读事件回调函数。当 TCP 客户端发来数据时，libevent 会自动调用这个函数
 //struct bufferevent *bev：指向"缓冲事件"对象的指针，封装了一个 socket 的读写缓冲区。
@@ -30,6 +31,12 @@ void parseReadEvent(struct bufferevent *bev, void *ctx)
         {
             LOG(INFO)<<"recv Command_Session_Catalog";
             task = new GetCatalog(bev);
+            break;
+        }
+        case Command_Session_RealPlay:
+        {
+            LOG(INFO)<<"recv Command_Session_RealPlay";
+            task = new OpenStream(bev,&command);
             break;
         }
         

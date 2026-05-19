@@ -13,15 +13,19 @@ using namespace EC;
 class ThreadTask
 {
     public:
-    ThreadTask(struct bufferevent* bev)
+    ThreadTask(struct bufferevent* bev,void* arg=NULL)
     : m_bev(bev)
     {
-
+        if(arg!=NULL)
+        {
+            streamType=*(int*)arg;
+        }
     }
     virtual ~ThreadTask(){}
     virtual void run()=0;
     protected:
     struct bufferevent* m_bev;
+    int streamType;
 };
 
 class ThreadPool

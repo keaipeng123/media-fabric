@@ -37,6 +37,7 @@ class Session
         endTime=info.endTime;
         gettimeofday(&m_curTime,NULL);
         m_rtpPort=0;
+        bev=info.bev;
     }
     virtual ~Session(){}
     public:
@@ -48,6 +49,8 @@ class Session
     int startTime;
     int endTime;
     timeval m_curTime;//检测下级推流异常
+
+    struct bufferevent* bev;
 
     int m_rtpPort;
 };

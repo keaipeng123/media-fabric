@@ -3,15 +3,16 @@
 #include"TaskTimer.h"
 #include"Common.h"
 
-class OpenStream
+class OpenStream:public ThreadTask
 {
     public:
-    OpenStream();
+    OpenStream(struct bufferevent* bev,void* arg);
     ~OpenStream();
+    virtual void run();
 
-    void StreamServiceStart();
+    //void StreamServiceStart();
     static void StreamGetProc(void* param);
-    static void CheckSession(void* param);//检查rtp推流异常断开
+    //static void CheckSession(void* param);//检查rtp推流异常断开
     static void StreamStop(string platformId ,string devId);
 
     private:

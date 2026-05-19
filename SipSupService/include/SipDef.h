@@ -49,6 +49,7 @@ struct DeviceInfo
     int protocal;//tcp udp
     int startTime;
     int endTime;
+    struct bufferevent* bev;
     //int fd;
 };
 
@@ -67,6 +68,7 @@ enum CommandCode
 {
     Command_Session_Register=1,
     Command_Session_Catalog=2,
+    Command_Session_RealPlay=3,
 };
 
 #endif

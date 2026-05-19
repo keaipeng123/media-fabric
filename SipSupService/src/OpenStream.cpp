@@ -7,27 +7,29 @@
 //rtp负载类型定义
 static string rtpmap_ps="96 PS/90000";
 
-OpenStream::OpenStream()
+OpenStream::OpenStream(struct bufferevent* bev,void* arg)
+:ThreadTask(bev,arg)
 {
-    m_pStreamTimer=new TaskTimer(10);
-    m_pCheckSessionTimer=new TaskTimer(5);
+    //m_pStreamTimer=new TaskTimer(10);
+    //m_pCheckSessionTimer=new TaskTimer(5);
 }
 
 OpenStream::~OpenStream()
 {
-    if(m_pStreamTimer)
-    {
-        delete m_pStreamTimer;
-        m_pStreamTimer=NULL;
-    }
-    if(m_pCheckSessionTimer)
-    {
-        delete m_pCheckSessionTimer;
-        m_pCheckSessionTimer=NULL;
-    }
+    // if(m_pStreamTimer)
+    // {
+    //     delete m_pStreamTimer;
+    //     m_pStreamTimer=NULL;
+    // }
+    // if(m_pCheckSessionTimer)
+    // {
+    //     delete m_pCheckSessionTimer;
+    //     m_pCheckSessionTimer=NULL;
+    // }
 
 }
 
+#if 0
 void OpenStream::StreamServiceStart()
 {
     if(m_pStreamTimer && m_pCheckSessionTimer)
@@ -66,6 +68,12 @@ void OpenStream::CheckSession(void* param)
         }
     }
     return;
+}
+#endif
+
+void OpenStream::run()
+{
+    StreamGetProc(this);
 }
 
 void OpenStream::StreamStop(string platformId ,string devId)
@@ -116,13 +124,20 @@ void OpenStream::StreamGetProc(void* param)
     DeviceInfo info;   
     info.devid="11000000001310000059";
     info.playformId="11000000002000000001";
-    info.streamName="PlayBack";
-    info.startTime=0;
-    info.endTime=10;
-    // info.streamName="Play";
-    // info.startTime=0;
-    // info.endTime=0;
-    info.protocal=1;//0udp 1tcp
+    if(streamType==3)
+    {
+        info.streamName="Play";
+        info.startTime=0;
+        info.endTime=0;
+    }
+    else if(streamType==5)
+    {
+        info.streamName="PlayBack";
+        info.startTime=0;
+        info.endTime=10;
+    }
+    info.bev=m_bev;
+    info.protocal=0;//0udp 1tcp
     info.setupType="active";
     #if 1
     {

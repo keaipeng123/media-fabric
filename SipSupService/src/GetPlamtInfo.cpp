@@ -22,7 +22,7 @@ void GetPlamtInfo::run()
             index++;
         }
     }
-    Json::FastWriter fast_writer;
+    Json::FastWriter fast_writer;//把 Json::Value 对象转成紧凑的 JSON 字符串（无换行无缩进）
     string payLoadIn = fast_writer.write(jsonIn);
     int bodyLen=payLoadIn.length();
     int len=sizeof(int)+bodyLen;
