@@ -304,6 +304,14 @@ int Gb28181Session::SendPacket(int media,char* data,int datalen,int codecId)
 			
 
         }
+
+        memcpy(streamBuf + sizeof(struct StreamHeader), data, datalen);
+        if(bev!=NULL)
+        {
+            //发送数据给前端
+            bufferevent_write(bev, streamBuf, len);
+            LOG(INFO)<<"send data total len:"<<len<<", payload len:"<<datalen;
+        }
     }
     
     return 0;
