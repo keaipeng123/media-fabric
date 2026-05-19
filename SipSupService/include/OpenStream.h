@@ -1,6 +1,7 @@
 #ifndef _OPENSTREAM_H
 #define _OPENSTREAM_H
 #include"TaskTimer.h"
+#include"ThreadPool.h"
 #include"Common.h"
 
 class OpenStream:public ThreadTask
