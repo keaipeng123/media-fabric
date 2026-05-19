@@ -12,41 +12,55 @@
 void parseReadEvent(struct bufferevent *bev, void *ctx)
 {
     LOG(INFO)<<"parseReadEvent";
-    char* buf[1024]={0};//读缓冲区
-    int len=bufferevent_read(bev, buf, 4);//从 bev 的输入缓冲区读数据到 buf 中，最多读 sizeof(buf) 字节
-    ThreadTask* task=NULL;
-    if(len==4)
+    // TCP命令格式: [4字节 cmd] [4字节 payload长度] [payload字节]
+    char header[8]={0};
+    int len=bufferevent_read(bev, header, 8);
+    if(len!=8)
+        return;
+
+    int command=*(int*)header;
+    int payloadLen=*(int*)(header+4);
+    LOG(INFO)<<"recv command:"<<command<<", payloadLen:"<<payloadLen;
+
+    char payload[4096]={0};
+    if(payloadLen>0)
     {
-        int command=*(int*)buf;//把 buf 前 4 字节当成一个整数，得到命令码
-        LOG(INFO)<<"recv command:"<<command;
-        switch (command)
+        int readLen=bufferevent_read(bev, payload, payloadLen);
+        if(readLen!=payloadLen)
         {
-        case Command_Session_Register:
-        {
-            LOG(INFO)<<"recv Command_Session_Register";
-            task = new GetPlamtInfo(bev);
-            break;
-        }
-        case Command_Session_Catalog:
-        {
-            LOG(INFO)<<"recv Command_Session_Catalog";
-            task = new GetCatalog(bev);
-            break;
-        }
-        case Command_Session_RealPlay:
-        {
-            LOG(INFO)<<"recv Command_Session_RealPlay";
-            task = new OpenStream(bev,&command);
-            break;
-        }
-        
-        default:
+            LOG(ERROR)<<"payload read incomplete, expected:"<<payloadLen<<", got:"<<readLen;
             return;
         }
-        if(task!=NULL)
-        {
-            GBOJ(gThpool)->postTask(task);//把任务投递到线程池，让线程池的工作线程去执行
-        }
+    }
+
+    ThreadTask* task=NULL;
+    switch (command)
+    {
+    case Command_Session_Register:
+    {
+        LOG(INFO)<<"recv Command_Session_Register";
+        task = new GetPlamtInfo(bev);
+        break;
+    }
+    case Command_Session_Catalog:
+    {
+        LOG(INFO)<<"recv Command_Session_Catalog";
+        task = new GetCatalog(bev);
+        break;
+    }
+    case Command_Session_RealPlay:
+    {
+        LOG(INFO)<<"recv Command_Session_RealPlay";
+        task = new OpenStream(bev,&command);
+        break;
+    }
+
+    default:
+        return;
+    }
+    if(task!=NULL)
+    {
+        GBOJ(gThpool)->postTask(task);//把任务投递到线程池，让线程池的工作线程去执行
     }
 }
 //libevent 的事件回调函数，当连接上发生"异常事件"（比如断开、出错）时被调用
