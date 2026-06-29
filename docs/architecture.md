@@ -4,9 +4,11 @@
 
 ## 项目定位
 
-当前项目是一个 GB/T 28181 学习工程，已经具备上下级信令交互和基础媒体收发能力。阶段 0 的目标不是马上新增播放协议，而是先把当前代码整理成后续 `gb28181-server` 单服务架构的底座。
+当前项目是一个 GB/T 28181 学习工程，已经具备上下级信令交互和基础媒体收发能力。阶段 0 的目标不是马上新增播放协议，而是先把当前代码整理成后续 `gb28181-server` 单进程架构的底座。
 
-## 当前角色
+最终工程标准是：`gb28181-server` 一个二进制、一个进程，同时内置上级平台能力和下级平台/设备模拟能力。当前 `SipSupService` 与 `SipSubService` 只是历史代码目录，不代表最终需要拆成两个服务或提供运行模式选择。
+
+## 当前历史目录
 
 ```mermaid
 flowchart LR
@@ -17,7 +19,7 @@ flowchart LR
   Sub -->|"stream.file / catalog.json"| LocalFiles["本地测试数据"]
 ```
 
-## SipSupService
+## SipSupService 历史目录
 
 职责：
 
@@ -39,7 +41,7 @@ flowchart LR
 - RTP/PS 接收与解封装：[SipSupService/src/Gb28181Session.cpp](../SipSupService/src/Gb28181Session.cpp)
 - 本地 TCP 命令入口：[SipSupService/src/EventMsgHandle.cpp](../SipSupService/src/EventMsgHandle.cpp)
 
-## SipSubService
+## SipSubService 历史目录
 
 职责：
 
@@ -97,10 +99,10 @@ SipSubService/conf/stream.file
 
 ## 工程化问题清单
 
-- 根目录还没有统一构建入口。
+- 根目录已经有统一构建入口，默认目标为 `gb28181-server`；历史服务目标只作为显式开启的迁移对照目标。
 - `SipSupService` 与 `SipSubService` 存在大量重复基础类，如 `ConfReader`、`ECSocket`、`ECThread`、`ThreadPool`、`TaskTimer`、`XmlParser`。
 - 配置文件、日志目录、目录 JSON 读取存在硬编码绝对路径。
-- 上下级角色都使用全局控制对象，后续单进程 `both` 模式需要隔离角色上下文。
+- 上下级历史代码都使用全局控制对象，后续单进程实现需要收敛为一个 `GB28181Node`，再按注册、心跳、目录、开流、媒体收发等能力隔离状态。
 - `Gb28181Session` 同时承载收流和发流语义，后续建议拆为接收会话和发送会话。
 - 当前 `OpenStream` 中设备 ID、平台 ID、流类型存在硬编码，后续需要由命令或配置驱动。
 
@@ -110,13 +112,24 @@ SipSubService/conf/stream.file
 gb28181-server
   common/
     config, socket, thread, timer, xml, sip message
-  sip/
-    sip core, register, heartbeat, catalog, invite
+  core/
+    GB28181Node, NodeConfig, SipStack, PeerRegistry, SessionManager
+  capabilities/
+    register client/server, heartbeat client/server, catalog client/server, invite client/server
   media/
     rtp receive, rtp send, ps mux, ps demux, h264/h265 parser
-  roles/
-    SupServiceRole
-    SubServiceRole
 ```
 
-阶段 0 后续里程碑会先保留两个历史目标，再逐步抽公共库，最后新增单一二进制入口。
+启动模型：
+
+```text
+main()
+  -> load gb28181-server.conf
+  -> init GB28181Node
+  -> register capability modules
+  -> start GB28181Node
+  -> wait signal
+  -> stop GB28181Node
+```
+
+阶段 0 后续里程碑会逐步抽公共库、封装节点与能力模块，最后以 `gb28181-server` 作为唯一正式入口。同一进程内必须具备完整 GB28181 节点能力，不按上级/下级拆分服务入口。

@@ -1,0 +1,33 @@
+#ifndef _ECSOCKET_H
+#define _ECSOCKET_H
+
+#include<unistd.h>
+#include<sys/types.h>
+#include<sys/ioctl.h>
+#include<fcntl.h>
+#include<netinet/in.h>
+#include<sys/un.h>
+#include<arpa/inet.h>
+#include<sys/time.h>
+#include<netdb.h>
+#include<netinet/tcp.h>
+#include<sys/stat.h>
+#include<string>
+#include"ECEventPoll.h"
+
+namespace EC
+{
+    using std::string;
+
+    class ECSocket
+    {
+        public:
+        static StatusType createConnByPassive(int localport,int* lsockfd,int* connfd,int* timeout);//被动（服务器）
+        static StatusType createConnByActive(int localPort,string dspip,int dstport,int* connfd,int* timeout);//主动（客户端）
+        private:
+        ECSocket(){}
+        ~ECSocket(){}
+    };
+}
+
+#endif
