@@ -192,7 +192,7 @@ sdp->name = pj_str((char*)info.streamName.c_str());
 
 ## 对当前代码的直接理解
 
-以 [SipSupService/src/OpenStream.cpp](../../SipSupService/src/OpenStream.cpp) 这段代码为例：
+以 [SipSupService/src/OpenStream.cpp](../../../SipSupService/src/OpenStream.cpp) 这段代码为例：
 
 ```cpp
 pjmedia_sdp_media* m = (pjmedia_sdp_media*)pj_pool_zalloc(...);

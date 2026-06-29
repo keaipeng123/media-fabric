@@ -2,10 +2,10 @@
 
 > 对应工程代码：
 >
-> - [SipSubService/include/SipHeartBeat.h](../../SipSubService/include/SipHeartBeat.h)
-> - [SipSubService/src/SipHeartBeat.cpp](../../SipSubService/src/SipHeartBeat.cpp)
-> - [SipSubService/include/SipMessage.h](../../SipSubService/include/SipMessage.h)
-> - [SipSubService/src/SipMessage.cpp](../../SipSubService/src/SipMessage.cpp)
+> - [SipSubService/include/SipHeartBeat.h](../../../SipSubService/include/SipHeartBeat.h)
+> - [SipSubService/src/SipHeartBeat.cpp](../../../SipSubService/src/SipHeartBeat.cpp)
+> - [SipSubService/include/SipMessage.h](../../../SipSubService/include/SipMessage.h)
+> - [SipSubService/src/SipMessage.cpp](../../../SipSubService/src/SipMessage.cpp)
 >
 > 关联阅读：REGISTER 的上下级对照见 [GB28181注册_REGISTER_SipRegister.md](GB28181%E6%B3%A8%E5%86%8C_REGISTER_SipRegister.md)
 
@@ -20,7 +20,7 @@
 1. **定时向所有已注册的上级平台发送心跳**（SIP `MESSAGE`，body 是 GB28181 的 `<Notify><CmdType>keepalive</CmdType>...` XML）。
 2. **根据响应结果更新本地状态**：只要事务最终状态码不是 200，就把对应上级节点的 `registered=false`（认为掉线/不可用）。
 
-对应代码在 [SipSubService/src/SipHeartBeat.cpp](../../SipSubService/src/SipHeartBeat.cpp)。
+对应代码在 [SipSubService/src/SipHeartBeat.cpp](../../../SipSubService/src/SipHeartBeat.cpp)。
 
 ---
 

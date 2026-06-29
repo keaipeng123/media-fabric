@@ -2,8 +2,8 @@
 
 对应源码：
 
-- [SipSubService/include/TaskTimer.h](SipSubService/include/TaskTimer.h)
-- [SipSubService/src/TaskTimer.cpp](SipSubService/src/TaskTimer.cpp)
+- [SipSubService/include/TaskTimer.h](../../../SipSubService/include/TaskTimer.h)
+- [SipSubService/src/TaskTimer.cpp](../../../SipSubService/src/TaskTimer.cpp)
 
 目标：读懂这个 `TaskTimer` 做了什么、怎么用、以及有哪些工程化风险点（尤其是线程生命周期与停止机制）。
 
@@ -25,7 +25,7 @@
 
 ### 2.1 回调函数指针
 
-在 [SipSubService/include/TaskTimer.h](SipSubService/include/TaskTimer.h) 里定义了：
+在 [SipSubService/include/TaskTimer.h](../../../SipSubService/include/TaskTimer.h) 里定义了：
 
 - `typedef void (*timerCallBack)(void* param);`
 
@@ -55,7 +55,7 @@
 
 ### 3.1 构造函数做了什么
 
-在 [SipSubService/src/TaskTimer.cpp](SipSubService/src/TaskTimer.cpp) 中：
+在 [SipSubService/src/TaskTimer.cpp](../../../SipSubService/src/TaskTimer.cpp) 中：
 
 - `m_timerFun = NULL;`
 - `m_funParam = NULL;`
