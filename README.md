@@ -9,6 +9,8 @@
 
 ## 当前能力
 
+历史服务中已有能力：
+
 - GB/T 28181 REGISTER 注册与 Digest 鉴权。
 - MESSAGE keepalive 心跳。
 - Catalog 目录查询与响应。
@@ -19,12 +21,27 @@
 - H.264 裸流读取、PS 封装、RTP 发送。
 - RTP/PS 接收、组包、PS 解封装、H.264 裸流提取。
 
+统一入口 `gb28181-server` 当前已具备的阶段性能力：
+
+- 创建单一 `GB28181Node` 并同时装配注册客户端、注册服务端、心跳、目录、录像查询、INVITE、媒体收发能力模块。
+- 通过 `SipTransport` 抽象承载 SIP 收发，默认内存传输用于自测，Linux 可通过 `GB28181_ENABLE_PJSIP` 打开实验性 PJSIP adapter。
+- 通过 `RtpSessionAdapter` 抽象承载真实 RTP 会话，默认自测使用适配器入口验证 RTP/PS/ES/帧输出和 adapter 发送链路，Linux 可通过 `GB28181_ENABLE_JRTPLIB` 打开实验性 JRTPLIB RTP adapter。
+- 通过 `StreamFileFrameSource` 读取历史 `stream.file` 测试流，`MediaSendCapability` 启动时会校验配置媒体源并记录首个视频帧状态。
+- 能生成 REGISTER、MESSAGE keepalive、Catalog、RecordInfo、INVITE 出站请求意图。
+- 能处理 REGISTER、Keepalive、Catalog、RecordInfo、INVITE、ACK、BYE 入站请求，并生成基础 SIP 响应或业务响应消息；REGISTER 已具备随机 401 Digest challenge、MD5 response 校验、nonce 缓存和 replay 拒绝边界。
+- MESSAGE 已具备 MANSCDP XML 解析边界，可提取 root、CmdType、SN、DeviceID、Result、StartTime、EndTime、SumNum、DeviceList/RecordList Item，并校验 Keepalive/Catalog/RecordInfo 的 DeviceID 与列表一致性。
+- Catalog/RecordInfo 响应明细已落入节点级业务状态，可查询当前目录项、录像项计数和按 peer 保存的最近一次明细快照，并可导出/恢复文件快照；`BusinessQueryService` 已提供协议无关的 JSON 查询边界，后续可直接接 HTTP/CLI 管理入口。
+- INVITE 已具备轻量 SDP 解析、Call-ID/CSeq/Contact 基础关联、媒体会话记录和 SDP 200 响应生成边界；ACK 会确认媒体会话。发送侧可将 Annex-B 帧封装为 PS payload，并通过 `RtpSessionAdapter::sendPayloadPacket` 切分发送 payload type 96 的 RTP payload packet；接收侧可按 session 更新接收统计和 `stream-receiving` 状态，按 timestamp/marker 重组 RTP payload，解析完整 PS pack/PES，识别视频 PES 中的 Annex-B H.264/H.265 NAL，并通过 `MediaFrameSink` 输出完整 Annex-B 帧到文件。bad SDP 会返回 400，错误 dialog 的 BYE 会返回 481，合法 BYE 会释放本地 RTP 端口。
+- 已通过节点级任务注册 REGISTER refresh 和 keepalive 周期保活。
+- `--self-test` 可验证 10 条 SIP 路由、REGISTER Digest 接受/拒绝、REGISTER nonce replay 拒绝、MESSAGE XML 接受/拒绝、Catalog/RecordInfo 列表响应解析、业务状态快照查询、文件持久化恢复和 JSON 查询、INVITE SDP 接受/拒绝、ACK 确认、历史测试流首帧读取和 PS 回环解析、RTP packetize、RTP 包解析、RTP payload marker 重组、RTP adapter 收包入口、RTP adapter 发送入口、PS/PES 基础解析、H.264/H.265 NAL 识别、Annex-B 帧文件输出和媒体接收状态、peer 注册/心跳状态、RTP 端口分配/释放、出站 SIP 消息计数和周期任务注册。
+
 ## 文档入口
 
 - [项目式学习计划](docs/流媒体开发项目式学习计划.md)
 - [阶段 0 执行计划](docs/阶段0-整理现有项目基础执行计划.md)
 - [架构现状](docs/architecture.md)
 - [里程碑 3 公共模块盘点](docs/milestone3-common-inventory.md)
+- [里程碑 4 节点与能力模块](docs/milestone4-node-capabilities.md)
 - [信令流程](docs/signaling-flow.md)
 - [媒体流程](docs/media-flow.md)
 - [抓包与排查](docs/wireshark.md)
@@ -51,6 +68,22 @@
 cmake -S . -B build
 cmake --build build
 ```
+
+启用 Linux PJSIP adapter：
+
+```bash
+cmake -S . -B build-linux-pjsip -DGB28181_ENABLE_PJSIP=ON
+cmake --build build-linux-pjsip
+```
+
+启用 Linux JRTPLIB adapter：
+
+```bash
+cmake -S . -B build-linux-rtp -DGB28181_ENABLE_JRTPLIB=ON
+cmake --build build-linux-rtp
+```
+
+说明：当前编辑环境不是 Linux；PJSIP/JRTPLIB 的真实链接、启动和抓包验证需要放到 Linux 目标环境执行。当前仓库已有 `3rd/lib/libjthread.a`，但缺少 `3rd/lib/libjrtp.a`，因此 `GB28181_ENABLE_JRTPLIB=ON` 需要先补齐 JRTPLIB 静态库。
 
 运行统一入口：
 
@@ -90,6 +123,15 @@ cmake -S . -B build-legacy -DGB28181_BUILD_LEGACY_SERVICES=ON
 
 - `SipSubService/conf/stream.file`
 - `SipSubService/conf/catalog.json`
+
+统一入口新增 `[media]` 段：
+
+```ini
+[media]
+stream_file = SipSubService/conf/stream.file
+rtp_payload_bytes = 1300
+rtp_timestamp_increment = 3600
+```
 
 ## 计划中的统一入口
 
