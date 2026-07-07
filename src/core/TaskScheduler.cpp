@@ -12,9 +12,9 @@ namespace gb28181 {
 class TaskScheduler::ScheduledTask
 {
 public:
-    ScheduledTask(const std::string& taskName, int intervalSeconds, const std::function<void()>& task)
+    ScheduledTask(const std::string& taskName, int intervalMilliseconds, const std::function<void()>& task)
         : m_taskName(taskName),
-          m_intervalSeconds(intervalSeconds),
+          m_intervalMilliseconds(intervalMilliseconds),
           m_task(task),
           m_stopped(false)
     {
@@ -27,7 +27,7 @@ public:
 
     bool start()
     {
-        if (m_intervalSeconds <= 0 || !m_task)
+        if (m_intervalMilliseconds <= 0 || !m_task)
         {
             return false;
         }
@@ -55,7 +55,7 @@ private:
         std::unique_lock<std::mutex> lock(m_mutex);
         while (!m_stopped.load())
         {
-            if (m_wakeup.wait_for(lock, std::chrono::seconds(m_intervalSeconds), [this]() { return m_stopped.load(); }))
+            if (m_wakeup.wait_for(lock, std::chrono::milliseconds(m_intervalMilliseconds), [this]() { return m_stopped.load(); }))
             {
                 break;
             }
@@ -67,7 +67,7 @@ private:
     }
 
     std::string m_taskName;
-    int m_intervalSeconds;
+    int m_intervalMilliseconds;
     std::function<void()> m_task;
     std::atomic<bool> m_stopped;
     std::mutex m_mutex;
@@ -86,13 +86,18 @@ TaskScheduler::~TaskScheduler()
 
 bool TaskScheduler::scheduleEvery(const std::string& taskName, int intervalSeconds, const std::function<void()>& task)
 {
-    std::unique_ptr<ScheduledTask> scheduledTask(new ScheduledTask(taskName, intervalSeconds, task));
+    return scheduleEveryMs(taskName, intervalSeconds * 1000, task);
+}
+
+bool TaskScheduler::scheduleEveryMs(const std::string& taskName, int intervalMilliseconds, const std::function<void()>& task)
+{
+    std::unique_ptr<ScheduledTask> scheduledTask(new ScheduledTask(taskName, intervalMilliseconds, task));
     if (!scheduledTask->start())
     {
         return false;
     }
 
-    std::cout << "scheduled task: " << taskName << " interval=" << intervalSeconds << "s" << std::endl;
+    std::cout << "scheduled task: " << taskName << " interval_ms=" << intervalMilliseconds << std::endl;
     m_tasks.push_back(std::move(scheduledTask));
     return true;
 }

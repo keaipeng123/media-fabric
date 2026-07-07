@@ -13,6 +13,7 @@ struct DigestAuthFields
     std::string uri;
     std::string response;
     std::string algorithm;
+    std::string opaque;
     std::string qop;
     std::string nc;
     std::string cnonce;

@@ -59,6 +59,16 @@ bool StreamFileFrameSource::open(const std::string& path, std::string* error)
     return true;
 }
 
+bool StreamFileFrameSource::reopen(std::string* error)
+{
+    if (m_path.empty())
+    {
+        setError(error, "stream file path is empty");
+        return false;
+    }
+    return open(m_path, error);
+}
+
 bool StreamFileFrameSource::readNextVideoFrame(StreamFileFrame* frame, std::string* error)
 {
     if (frame == NULL)

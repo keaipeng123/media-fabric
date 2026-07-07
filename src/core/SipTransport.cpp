@@ -53,9 +53,21 @@ bool InMemorySipTransport::send(const SipMessageContext& message)
     {
         std::cout << " @" << message.remoteIp << ":" << message.remotePort;
     }
+    if (!message.callId.empty())
+    {
+        std::cout << " call-id=" << message.callId;
+    }
+    if (!message.cseq.empty())
+    {
+        std::cout << " cseq=" << message.cseq;
+    }
     if (!message.authRealm.empty())
     {
         std::cout << " auth-realm=" << message.authRealm;
+    }
+    if (!message.digestAuth.response.empty())
+    {
+        std::cout << " authorization-user=" << message.digestAuth.username;
     }
     if (!message.body.empty())
     {

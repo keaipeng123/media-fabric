@@ -35,7 +35,6 @@ const int kRegisterExpires = 3600;
 const int kRegisterRefreshIntervalSeconds = 300;
 const int kRegisterChallengeExpiresSeconds = 300;
 const int kKeepaliveIntervalSeconds = 60;
-const int kMediaSendIntervalSeconds = 30;
 
 const SipEndpointConfig* findEndpointByName(const NodeRuntime& runtime, const std::string& name)
 {
@@ -229,6 +228,17 @@ SipMessageContext makeRequest(const PeerInfo& peer,
     return message;
 }
 
+std::string sipUri(const std::string& sipId, const std::string& ip, int port)
+{
+    std::ostringstream output;
+    output << "sip:" << sipId << "@" << ip;
+    if (port > 0)
+    {
+        output << ":" << port;
+    }
+    return output.str();
+}
+
 SipMessageContext makeResponse(const SipRequestContext& request,
                                const std::string& capability,
                                int statusCode,
@@ -333,6 +343,14 @@ std::string makeResponseBody(const std::string& root,
              << "<DeviceID>" << deviceId << "</DeviceID>\r\n"
              << "<Name>gb28181-node</Name>\r\n"
              << "<Manufacturer>GB28181-Server</Manufacturer>\r\n"
+             << "<Model>GB28181Node</Model>\r\n"
+             << "<Owner>GB28181</Owner>\r\n"
+             << "<CivilCode>000000</CivilCode>\r\n"
+             << "<Parental>0</Parental>\r\n"
+             << "<ParentID>" << deviceId << "</ParentID>\r\n"
+             << "<SafetyWay>0</SafetyWay>\r\n"
+             << "<RegisterWay>1</RegisterWay>\r\n"
+             << "<Secrecy>0</Secrecy>\r\n"
              << "<Status>ON</Status>\r\n"
              << "</Item>\r\n"
              << "</DeviceList>\r\n";
@@ -393,6 +411,62 @@ bool sendRegister(NodeRuntime& runtime, const std::string& capability, const Pee
     return sent;
 }
 
+bool challengeSupportsAuthQop(const std::string& qop)
+{
+    return qop.find("auth") != std::string::npos;
+}
+
+DigestAuthFields makeRegisterDigest(const SipRequestContext& response,
+                                    const PeerInfo& peer,
+                                    const SipEndpointConfig& local,
+                                    const SipEndpointConfig& target)
+{
+    DigestAuthFields digest;
+    digest.username = target.username.empty() ? local.sipId : target.username;
+    digest.realm = response.digestAuth.realm.empty() ? target.realm : response.digestAuth.realm;
+    digest.nonce = response.digestAuth.nonce;
+    digest.uri = sipUri(peer.sipId, peer.ip, peer.port);
+    digest.algorithm = response.digestAuth.algorithm.empty() ? "MD5" : response.digestAuth.algorithm;
+    digest.opaque = response.digestAuth.opaque;
+    if (challengeSupportsAuthQop(response.digestAuth.qop))
+    {
+        digest.qop = "auth";
+        digest.nc = "00000001";
+        digest.cnonce = makeRandomNonce(local.sipId + ":" + peer.sipId + ":register");
+    }
+    digest.response = computeDigestResponse("REGISTER",
+                                            digest.username,
+                                            digest.realm,
+                                            target.password,
+                                            digest.nonce,
+                                            digest.uri,
+                                            digest.qop,
+                                            digest.nc,
+                                            digest.cnonce);
+    return digest;
+}
+
+bool sendRegisterWithDigest(NodeRuntime& runtime,
+                            const std::string& capability,
+                            const PeerInfo& peer,
+                            const SipEndpointConfig& local,
+                            const SipEndpointConfig& target,
+                            const SipRequestContext& response)
+{
+    if (target.password.empty() || response.digestAuth.nonce.empty())
+    {
+        createSendSession(runtime, capability, peer, "register-auth", false);
+        return false;
+    }
+
+    SipMessageContext message = makeRequest(peer, local, "REGISTER", "request");
+    message.expires = kRegisterExpires;
+    message.digestAuth = makeRegisterDigest(response, peer, local, target);
+    const bool sent = runtime.sipStack->send(message);
+    createSendSession(runtime, capability, peer, "register-auth", sent);
+    return sent;
+}
+
 void sendRegisterToUpstreams(NodeRuntime& runtime, const std::string& capability)
 {
     const std::vector<PeerInfo>& peers = runtime.peerRegistry->peers();
@@ -403,6 +477,61 @@ void sendRegisterToUpstreams(NodeRuntime& runtime, const std::string& capability
             sendRegister(runtime, capability, *it);
         }
     }
+}
+
+const PeerInfo* upstreamPeerForRegisterResponse(NodeRuntime& runtime, const SipRequestContext& response)
+{
+    const PeerInfo* peer = runtime.peerRegistry->findBySipId(response.toId);
+    if (peer != NULL && peer->relation == PEER_UPSTREAM)
+    {
+        return peer;
+    }
+
+    peer = runtime.peerRegistry->findBySipId(response.fromId);
+    if (peer != NULL && peer->relation == PEER_UPSTREAM)
+    {
+        return peer;
+    }
+    return NULL;
+}
+
+const PeerInfo* downstreamPeerForInviteResponse(NodeRuntime& runtime, const SipRequestContext& response)
+{
+    const PeerInfo* peer = runtime.peerRegistry->findBySipId(response.toId);
+    if (peer != NULL && peer->relation == PEER_DOWNSTREAM)
+    {
+        return peer;
+    }
+
+    peer = runtime.peerRegistry->findBySipId(response.fromId);
+    if (peer != NULL && peer->relation == PEER_DOWNSTREAM)
+    {
+        return peer;
+    }
+    return NULL;
+}
+
+bool sendAckForInviteResponse(NodeRuntime& runtime,
+                              const std::string& capability,
+                              const PeerInfo& peer,
+                              const SipRequestContext& response)
+{
+    const SipEndpointConfig* local = localEndpointForPeer(runtime, peer);
+    if (local == NULL)
+    {
+        createSendSession(runtime, capability, peer, "ack", false);
+        return false;
+    }
+
+    SipMessageContext ack = makeRequest(peer, *local, "ACK", "request");
+    ack.callId = response.callId;
+    ack.cseq = response.cseq;
+    ack.contact = response.contact;
+    ack.fromTag = response.fromTag;
+    ack.toTag = response.toTag;
+    const bool sent = runtime.sipStack->send(ack);
+    createSendSession(runtime, capability, peer, "ack", sent);
+    return sent;
 }
 
 bool sendKeepalive(NodeRuntime& runtime, const std::string& capability, const PeerInfo& peer)
@@ -471,6 +600,11 @@ bool RegisterClientCapability::onStart(NodeRuntime& runtime)
         sendRegister(runtime, name(), *it);
     }
 
+    if (!registerSipHandler(runtime, "REGISTER", "response"))
+    {
+        return false;
+    }
+
     const std::string capabilityName = name();
     runtime.taskScheduler->scheduleEvery(name() + ":register-refresh",
                                          kRegisterRefreshIntervalSeconds,
@@ -478,6 +612,54 @@ bool RegisterClientCapability::onStart(NodeRuntime& runtime)
                                              sendRegisterToUpstreams(runtime, capabilityName);
                                          });
     return true;
+}
+
+bool RegisterClientCapability::handleSipRequest(const SipRequestContext& request, NodeRuntime& runtime)
+{
+    if (request.method != "REGISTER" || request.event != "response")
+    {
+        return false;
+    }
+
+    const PeerInfo* peer = upstreamPeerForRegisterResponse(runtime, request);
+    if (peer == NULL)
+    {
+        SessionInfo session;
+        session.id = name() + ":response:unknown-peer";
+        session.capability = name();
+        session.peerId = request.fromId.empty() ? request.toId : request.fromId;
+        session.state = "register-response-unknown-peer";
+        runtime.sessionManager->createSession(session);
+        return false;
+    }
+
+    SessionInfo session;
+    session.id = name() + ":response:" + peer->sipId;
+    session.capability = name();
+    session.peerId = peer->sipId;
+    std::ostringstream state;
+    state << "register-response:" << request.statusCode;
+    session.state = state.str();
+    runtime.sessionManager->createSession(session);
+
+    if (request.statusCode == 401)
+    {
+        const SipEndpointConfig* local = localEndpointForPeer(runtime, *peer);
+        const SipEndpointConfig* target = findEndpointBySipId(runtime, peer->sipId);
+        if (local == NULL || target == NULL)
+        {
+            createSendSession(runtime, name(), *peer, "register-auth", false);
+            return false;
+        }
+        return sendRegisterWithDigest(runtime, name(), *peer, *local, *target, request);
+    }
+
+    if (request.statusCode >= 200 && request.statusCode < 300)
+    {
+        return runtime.peerRegistry->markRegistered(peer->sipId, kRegisterExpires);
+    }
+
+    return request.statusCode > 0 && request.statusCode < 400;
 }
 
 RegisterServerCapability::DigestChallenge::DigestChallenge()
@@ -996,12 +1178,26 @@ bool InviteClientCapability::onStart(NodeRuntime& runtime)
 
 bool InviteClientCapability::handleSipRequest(const SipRequestContext& request, NodeRuntime& runtime)
 {
+    const PeerInfo* peer = downstreamPeerForInviteResponse(runtime, request);
+
     SessionInfo session;
-    session.id = name() + ":response:" + request.fromId;
+    session.id = name() + ":response:" + (peer == NULL ? request.fromId : peer->sipId);
     session.capability = name();
-    session.peerId = request.fromId;
-    session.state = "invite-response";
+    session.peerId = peer == NULL ? request.fromId : peer->sipId;
+    std::ostringstream state;
+    state << "invite-response:" << request.statusCode;
+    session.state = state.str();
     runtime.sessionManager->createSession(session);
+
+    if (request.statusCode >= 200 && request.statusCode < 300)
+    {
+        if (peer == NULL)
+        {
+            return false;
+        }
+        return sendAckForInviteResponse(runtime, name(), *peer, request);
+    }
+
     return true;
 }
 
@@ -1193,17 +1389,19 @@ bool MediaSendCapability::onStart(NodeRuntime& runtime)
           << ",bytes=" << frame.data.size()
           << ",key=" << (frame.keyFrame ? 1 : 0)
           << ",payload_bytes=" << media.rtpPayloadBytes
-          << ",timestamp_increment=" << media.rtpTimestampIncrement;
+          << ",timestamp_increment=" << media.rtpTimestampIncrement
+          << ",send_interval_ms=" << media.streamSendIntervalMs
+          << ",loop=" << (media.streamLoop ? 1 : 0);
     session.state = state.str();
     runtime.sessionManager->createSession(session);
 
     const std::string capabilityName = name();
-    runtime.taskScheduler->scheduleEvery(name() + ":media-send",
-                                         kMediaSendIntervalSeconds,
-                                         [this, &runtime, capabilityName]() {
-                                             (void)capabilityName;
-                                             this->sendNextFrame(runtime);
-                                         });
+    runtime.taskScheduler->scheduleEveryMs(name() + ":media-send",
+                                           media.streamSendIntervalMs,
+                                           [this, &runtime, capabilityName]() {
+                                               (void)capabilityName;
+                                               this->sendNextFrame(runtime);
+                                           });
     sendNextFrame(runtime);
     return true;
 }
@@ -1221,6 +1419,35 @@ bool MediaSendCapability::sendNextFrame(NodeRuntime& runtime)
         std::string readError;
         if (!m_source.readNextVideoFrame(&m_pendingFrame, &readError))
         {
+            if (media.streamLoop && m_source.reopen(&readError) && m_source.readNextVideoFrame(&m_pendingFrame, &readError))
+            {
+                SessionInfo loopSession;
+                loopSession.id = name() + ":source:loop";
+                loopSession.capability = name();
+                std::ostringstream loopState;
+                loopState << "media-source-loop:path=" << media.streamFile
+                          << ",pts=" << m_pendingFrame.pts
+                          << ",bytes=" << m_pendingFrame.data.size();
+                loopSession.state = loopState.str();
+                runtime.sessionManager->createSession(loopSession);
+                m_hasPendingFrame = true;
+            }
+            else
+            {
+                SessionInfo session;
+                session.id = name() + ":source:eof";
+                session.capability = name();
+                session.state = "media-source-eof:" + readError;
+                runtime.sessionManager->createSession(session);
+                return false;
+            }
+        }
+        else
+        {
+            m_hasPendingFrame = true;
+        }
+        if (!m_hasPendingFrame)
+        {
             SessionInfo session;
             session.id = name() + ":source:eof";
             session.capability = name();
@@ -1228,7 +1455,6 @@ bool MediaSendCapability::sendNextFrame(NodeRuntime& runtime)
             runtime.sessionManager->createSession(session);
             return false;
         }
-        m_hasPendingFrame = true;
     }
 
     size_t sentSessions = 0;

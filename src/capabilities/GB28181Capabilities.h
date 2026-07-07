@@ -19,6 +19,7 @@ public:
 
 protected:
     bool onStart(NodeRuntime& runtime);
+    bool handleSipRequest(const SipRequestContext& request, NodeRuntime& runtime);
 };
 
 class RegisterServerCapability : public LifecycleCapability

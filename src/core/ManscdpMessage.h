@@ -14,6 +14,7 @@ struct ManscdpItem
     std::string model;
     std::string owner;
     std::string civilCode;
+    std::string parental;
     std::string address;
     std::string parentId;
     std::string safetyWay;

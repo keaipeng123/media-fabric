@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.16)
 
 project(GB28181Server VERSION 0.1.0 LANGUAGES C CXX)
 
+include(CTest)
+
 find_package(Threads REQUIRED)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -11,6 +13,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(GB28181_BUILD_LEGACY_SERVICES "Build historical SipSupService and SipSubService targets" OFF)
 option(GB28181_ENABLE_PJSIP "Enable experimental PJSIP transport adapter for gb28181-server" OFF)
 option(GB28181_ENABLE_JRTPLIB "Enable experimental JRTPLIB RTP adapter for gb28181-server" OFF)
+set(GB28181_SELF_TEST_CONFIG "conf/gb28181-server.conf" CACHE STRING "Config file used by gb28181-server-self-test")
+if(IS_ABSOLUTE "${GB28181_SELF_TEST_CONFIG}")
+    set(GB28181_SELF_TEST_CONFIG_PATH "${GB28181_SELF_TEST_CONFIG}")
+else()
+    set(GB28181_SELF_TEST_CONFIG_PATH "${CMAKE_SOURCE_DIR}/${GB28181_SELF_TEST_CONFIG}")
+endif()
 
 add_library(gb28181_common STATIC
     src/common/src/ConfReader.cpp
@@ -151,6 +159,17 @@ target_compile_options(gb28181-server PRIVATE
 target_link_libraries(gb28181-server PRIVATE
     gb28181_common
 )
+
+if(BUILD_TESTING AND NOT CMAKE_CROSSCOMPILING)
+    add_test(
+        NAME gb28181-server-self-test
+        COMMAND $<TARGET_FILE:gb28181-server> -c ${GB28181_SELF_TEST_CONFIG_PATH} --self-test
+    )
+    set_tests_properties(gb28181-server-self-test PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        PASS_REGULAR_EXPRESSION "REGISTER_AUTH_RETRY=ok.*INVITE_ACK=ok.*sessions=24.*routes=11.*sent_messages=24"
+    )
+endif()
 
 if(GB28181_BUILD_LEGACY_SERVICES)
     add_subdirectory(SipSupService/cmake SipSupService_legacy)

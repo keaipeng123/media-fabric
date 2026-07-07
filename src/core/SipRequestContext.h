@@ -17,14 +17,19 @@ struct SipRequestContext
     std::string callId;
     std::string cseq;
     std::string contact;
+    std::string fromTag;
+    std::string toTag;
     std::string body;
     ManscdpMessage manscdp;
     DigestAuthFields digestAuth;
+    int statusCode;
+    std::string reason;
     int expires;
     bool authenticated;
 
     SipRequestContext()
-        : expires(0),
+        : statusCode(0),
+          expires(0),
           authenticated(false)
     {
     }

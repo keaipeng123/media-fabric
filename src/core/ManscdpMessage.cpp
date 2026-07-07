@@ -139,6 +139,7 @@ void parseItemsInBlock(const std::string& block, std::vector<ManscdpItem>* items
         item.model = elementText(itemBody, "Model");
         item.owner = elementText(itemBody, "Owner");
         item.civilCode = elementText(itemBody, "CivilCode");
+        item.parental = elementText(itemBody, "Parental");
         item.address = elementText(itemBody, "Address");
         item.parentId = elementText(itemBody, "ParentID");
         item.safetyWay = elementText(itemBody, "SafetyWay");

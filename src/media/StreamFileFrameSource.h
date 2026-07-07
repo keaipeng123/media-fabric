@@ -24,6 +24,7 @@ public:
     explicit StreamFileFrameSource(const std::string& path);
 
     bool open(const std::string& path, std::string* error);
+    bool reopen(std::string* error);
     bool readNextVideoFrame(StreamFileFrame* frame, std::string* error);
     const std::string& path() const;
 

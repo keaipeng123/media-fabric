@@ -110,7 +110,10 @@ private:
 
 void printUsage(const char* programName)
 {
-    std::cout << "Usage: " << programName << " [-c config_path] [--self-test]" << std::endl;
+    std::cout << "Usage: " << programName << " [-c config_path] [--self-test]" << std::endl
+              << "       " << programName
+              << " [-c config_path] --business-query summary|catalog|record --business-state-file path [--peer-id sip_id]"
+              << std::endl;
 }
 
 std::string selfTestRegisterUri()
@@ -200,6 +203,14 @@ std::string makeSelfTestResponseXml(const std::string& cmdType, const std::strin
                 "</DeviceID>\r\n"
                 "<Name>SelfTestCamera</Name>\r\n"
                 "<Manufacturer>GB28181-Server</Manufacturer>\r\n"
+                "<Model>SelfTestModel</Model>\r\n"
+                "<Owner>SelfTestOwner</Owner>\r\n"
+                "<CivilCode>110000</CivilCode>\r\n"
+                "<Parental>1</Parental>\r\n"
+                "<ParentID>10000000002000000001</ParentID>\r\n"
+                "<SafetyWay>0</SafetyWay>\r\n"
+                "<RegisterWay>1</RegisterWay>\r\n"
+                "<Secrecy>0</Secrecy>\r\n"
                 "<Status>ON</Status>\r\n"
                 "</Item>\r\n"
                 "</DeviceList>\r\n";
@@ -238,12 +249,69 @@ std::string makeSelfTestBadResponseXml(const std::string& cmdType, const std::st
            "</Response>\r\n";
 }
 
+bool queryBusinessJson(const gb28181::GB28181Node& node,
+                       const std::string& query,
+                       const std::string& peerId,
+                       std::string* json,
+                       std::string* error)
+{
+    if (json == NULL)
+    {
+        if (error)
+        {
+            *error = "empty business query output";
+        }
+        return false;
+    }
+
+    if (query == "summary")
+    {
+        *json = node.businessSummaryJson();
+        return true;
+    }
+    if (query == "catalog")
+    {
+        if (peerId.empty())
+        {
+            if (error)
+            {
+                *error = "catalog business query requires --peer-id";
+            }
+            return false;
+        }
+        *json = node.catalogJson(peerId);
+        return true;
+    }
+    if (query == "record")
+    {
+        if (peerId.empty())
+        {
+            if (error)
+            {
+                *error = "record business query requires --peer-id";
+            }
+            return false;
+        }
+        *json = node.recordJson(peerId);
+        return true;
+    }
+
+    if (error)
+    {
+        *error = "unknown business query: " + query;
+    }
+    return false;
+}
+
 } // namespace
 
 int main(int argc, char* argv[])
 {
     std::string configPath = kDefaultConfigPath;
     bool selfTest = false;
+    std::string businessQuery;
+    std::string businessStateFile;
+    std::string businessQueryPeerId;
 
     for (int i = 1; i < argc; ++i)
     {
@@ -269,6 +337,39 @@ int main(int argc, char* argv[])
             selfTest = true;
             continue;
         }
+        if (arg == "--business-query")
+        {
+            if (i + 1 >= argc)
+            {
+                std::cerr << "missing value for " << arg << std::endl;
+                printUsage(argv[0]);
+                return 1;
+            }
+            businessQuery = argv[++i];
+            continue;
+        }
+        if (arg == "--business-state-file")
+        {
+            if (i + 1 >= argc)
+            {
+                std::cerr << "missing value for " << arg << std::endl;
+                printUsage(argv[0]);
+                return 1;
+            }
+            businessStateFile = argv[++i];
+            continue;
+        }
+        if (arg == "--peer-id")
+        {
+            if (i + 1 >= argc)
+            {
+                std::cerr << "missing value for " << arg << std::endl;
+                printUsage(argv[0]);
+                return 1;
+            }
+            businessQueryPeerId = argv[++i];
+            continue;
+        }
 
         std::cerr << "unknown argument: " << arg << std::endl;
         printUsage(argv[0]);
@@ -283,6 +384,37 @@ int main(int argc, char* argv[])
     }
 
     gb28181::GB28181Node node(config);
+    if (!businessQuery.empty())
+    {
+        if (selfTest)
+        {
+            std::cerr << "--business-query cannot be combined with --self-test" << std::endl;
+            return 1;
+        }
+        if (businessStateFile.empty())
+        {
+            std::cerr << "--business-query requires --business-state-file" << std::endl;
+            return 1;
+        }
+
+        std::string businessError;
+        if (!node.loadBusinessStateSnapshot(businessStateFile, &businessError))
+        {
+            std::cerr << businessError << std::endl;
+            return 1;
+        }
+
+        std::string json;
+        if (!queryBusinessJson(node, businessQuery, businessQueryPeerId, &json, &businessError))
+        {
+            std::cerr << businessError << std::endl;
+            return 1;
+        }
+
+        std::cout << json << std::endl;
+        return 0;
+    }
+
     if (selfTest)
     {
         std::remove(kSelfTestFramePath);
@@ -335,6 +467,18 @@ int main(int argc, char* argv[])
         regChallenge.fromId = kSelfTestClientId;
         regChallenge.toId = kSelfTestServerId;
         regChallenge.expires = 60;
+
+        gb28181::SipRequestContext registerClientChallenge;
+        registerClientChallenge.method = "REGISTER";
+        registerClientChallenge.event = "response";
+        registerClientChallenge.fromId = kSelfTestClientId;
+        registerClientChallenge.toId = kSelfTestServerId;
+        registerClientChallenge.statusCode = 401;
+        registerClientChallenge.reason = "Unauthorized";
+        registerClientChallenge.digestAuth.realm = kSelfTestRealm;
+        registerClientChallenge.digestAuth.nonce = "register-client-nonce";
+        registerClientChallenge.digestAuth.opaque = "register-client-opaque";
+        registerClientChallenge.digestAuth.algorithm = "MD5";
 
         gb28181::SipRequestContext invite;
         invite.method = "INVITE";
@@ -410,6 +554,19 @@ int main(int argc, char* argv[])
         gb28181::SipRequestContext wrongDialogBye = bye;
         wrongDialogBye.callId = "missing-dialog";
 
+        gb28181::SipRequestContext inviteResponse;
+        inviteResponse.method = "INVITE";
+        inviteResponse.event = "response";
+        inviteResponse.fromId = kSelfTestServerId;
+        inviteResponse.toId = kSelfTestClientId;
+        inviteResponse.callId = "selftest-invite-client-dialog";
+        inviteResponse.cseq = "1";
+        inviteResponse.contact = "<sip:11000000002000000001@127.0.1:7101>";
+        inviteResponse.fromTag = "selftest-local-tag";
+        inviteResponse.toTag = "selftest-remote-tag";
+        inviteResponse.statusCode = 200;
+        inviteResponse.reason = "OK";
+
         const bool regChallengeOk = node.dispatchSipRequest(regChallenge);
         gb28181::SipMessageContext challengeMessage;
         const bool challengeCaptured = node.lastSentSipMessage(&challengeMessage);
@@ -418,6 +575,24 @@ int main(int argc, char* argv[])
                                       challengeMessage.response &&
                                       challengeMessage.statusCode == 401 &&
                                       !challengeNonce.empty();
+        const bool registerAuthRetryDispatched = node.dispatchSipRequest(registerClientChallenge);
+        gb28181::SipMessageContext registerAuthMessage;
+        const bool registerAuthMessageCaptured = node.lastSentSipMessage(&registerAuthMessage);
+        const bool registerAuthRetryOk =
+            registerAuthRetryDispatched &&
+            registerAuthMessageCaptured &&
+            !registerAuthMessage.response &&
+            registerAuthMessage.method == "REGISTER" &&
+            registerAuthMessage.digestAuth.username == kSelfTestUsername &&
+            registerAuthMessage.digestAuth.realm == kSelfTestRealm &&
+            registerAuthMessage.digestAuth.nonce == registerClientChallenge.digestAuth.nonce &&
+            registerAuthMessage.digestAuth.uri == selfTestRegisterUri() &&
+            registerAuthMessage.digestAuth.opaque == registerClientChallenge.digestAuth.opaque &&
+            gb28181::verifyDigestResponse("REGISTER",
+                                          registerAuthMessage.digestAuth,
+                                          kSelfTestUsername,
+                                          kSelfTestRealm,
+                                          kSelfTestPassword);
 
         gb28181::SipRequestContext reg;
         reg.method = "REGISTER";
@@ -487,6 +662,21 @@ int main(int argc, char* argv[])
         const bool catalogResponseOk = node.dispatchSipRequest(catalogResponse);
         const bool badRecordResponseRejected = !node.dispatchSipRequest(badRecordResponse);
         const bool recordResponseOk = node.dispatchSipRequest(recordResponse);
+        const bool inviteResponseOk = node.dispatchSipRequest(inviteResponse);
+        gb28181::SipMessageContext inviteAckMessage;
+        const bool inviteAckCaptured = node.lastSentSipMessage(&inviteAckMessage);
+        const bool inviteAckOk =
+            inviteResponseOk &&
+            inviteAckCaptured &&
+            !inviteAckMessage.response &&
+            inviteAckMessage.method == "ACK" &&
+            inviteAckMessage.fromId == kSelfTestServerId &&
+            inviteAckMessage.toId == kSelfTestClientId &&
+            inviteAckMessage.callId == inviteResponse.callId &&
+            inviteAckMessage.cseq == inviteResponse.cseq &&
+            inviteAckMessage.contact == inviteResponse.contact &&
+            inviteAckMessage.fromTag == inviteResponse.fromTag &&
+            inviteAckMessage.toTag == inviteResponse.toTag;
         const bool badInviteRejected = !node.dispatchSipRequest(badInvite);
         const bool earlyAckRejected = !node.dispatchSipRequest(ack);
         const bool inviteOk = node.dispatchSipRequest(invite);
@@ -658,7 +848,17 @@ int main(int argc, char* argv[])
         const std::vector<gb28181::ManscdpItem> recordSnapshot = node.recordItems(kSelfTestClientId);
         const bool catalogSnapshotOk = catalogSnapshot.size() == 1 &&
                                        catalogSnapshot.front().deviceId == kSelfTestClientId &&
-                                       catalogSnapshot.front().name == "SelfTestCamera";
+                                       catalogSnapshot.front().name == "SelfTestCamera" &&
+                                       catalogSnapshot.front().manufacturer == "GB28181-Server" &&
+                                       catalogSnapshot.front().model == "SelfTestModel" &&
+                                       catalogSnapshot.front().owner == "SelfTestOwner" &&
+                                       catalogSnapshot.front().civilCode == "110000" &&
+                                       catalogSnapshot.front().parental == "1" &&
+                                       catalogSnapshot.front().parentId == "10000000002000000001" &&
+                                       catalogSnapshot.front().safetyWay == "0" &&
+                                       catalogSnapshot.front().registerWay == "1" &&
+                                       catalogSnapshot.front().secrecy == "0" &&
+                                       catalogSnapshot.front().status == "ON";
         const bool recordSnapshotOk = recordSnapshot.size() == 1 &&
                                       recordSnapshot.front().deviceId == kSelfTestClientId &&
                                       recordSnapshot.front().filePath == "/tmp/self-test.ps";
@@ -678,13 +878,45 @@ int main(int argc, char* argv[])
         const std::string businessSummaryJson = node.businessSummaryJson();
         const std::string catalogJson = node.catalogJson(kSelfTestClientId);
         const std::string recordJson = node.recordJson(kSelfTestClientId);
+        std::string businessCliSummaryJson;
+        std::string businessCliCatalogJson;
+        std::string businessCliRecordJson;
+        std::string businessCliError;
+        const bool businessCliSummaryOk = queryBusinessJson(node,
+                                                            "summary",
+                                                            "",
+                                                            &businessCliSummaryJson,
+                                                            &businessCliError);
+        const bool businessCliCatalogOk = queryBusinessJson(node,
+                                                            "catalog",
+                                                            kSelfTestClientId,
+                                                            &businessCliCatalogJson,
+                                                            &businessCliError);
+        const bool businessCliRecordOk = queryBusinessJson(node,
+                                                           "record",
+                                                           kSelfTestClientId,
+                                                           &businessCliRecordJson,
+                                                           &businessCliError);
+        const bool businessCliMissingPeerRejected = !queryBusinessJson(node,
+                                                                       "catalog",
+                                                                       "",
+                                                                       &businessCliCatalogJson,
+                                                                       &businessCliError);
         const bool businessQueryJsonOk =
             businessSummaryJson.find("\"catalog_items\":1") != std::string::npos &&
             businessSummaryJson.find("\"record_items\":1") != std::string::npos &&
             catalogJson.find("\"type\":\"catalog\"") != std::string::npos &&
             catalogJson.find("\"name\":\"SelfTestCamera\"") != std::string::npos &&
+            catalogJson.find("\"parental\":\"1\"") != std::string::npos &&
             recordJson.find("\"type\":\"record\"") != std::string::npos &&
-            recordJson.find("\"file_path\":\"/tmp/self-test.ps\"") != std::string::npos;
+            recordJson.find("\"file_path\":\"/tmp/self-test.ps\"") != std::string::npos &&
+            businessCliSummaryOk &&
+            businessCliCatalogOk &&
+            businessCliRecordOk &&
+            businessCliMissingPeerRejected &&
+            businessCliSummaryJson == businessSummaryJson &&
+            businessCliCatalogJson == catalogJson &&
+            businessCliRecordJson == recordJson;
         const bool businessStatePersistenceOk =
             businessStateRestoreOk &&
             businessStateLoadOk &&
@@ -693,14 +925,17 @@ int main(int argc, char* argv[])
             loadedCatalog.size() == 1 &&
             loadedRecords.size() == 1 &&
             restoredCatalog.front().name == "SelfTestCamera" &&
+            restoredCatalog.front().parental == "1" &&
             restoredRecords.front().filePath == "/tmp/self-test.ps" &&
             loadedCatalog.front().deviceId == kSelfTestClientId &&
+            loadedCatalog.front().parental == "1" &&
             loadedRecords.front().filePath == "/tmp/self-test.ps";
         const bool rtpPortsReleased = availableRtpPorts == initialRtpPorts;
         std::cout << "self-test dispatch REGISTER_CHALLENGE=" << (regChallengeOk ? "ok" : "failed")
                   << " MEDIA_SOURCE=" << (mediaSourceOk ? "ok" : "failed")
                   << " MEDIA_SOURCE_PS=" << (mediaSourcePsOk ? "ok" : "failed")
                   << " CHALLENGE_NONCE=" << (challengeNonceOk ? "ok" : "failed")
+                  << " REGISTER_AUTH_RETRY=" << (registerAuthRetryOk ? "ok" : "failed")
                   << " BAD_REGISTER=" << (badRegRejected ? "rejected" : "accepted")
                   << " REGISTER=" << (regOk ? "ok" : "failed")
                   << " REPLAY_REGISTER=" << (replayRegRejected ? "rejected" : "accepted")
@@ -715,6 +950,8 @@ int main(int argc, char* argv[])
                   << " CATALOG_RESPONSE=" << (catalogResponseOk ? "ok" : "failed")
                   << " BAD_RECORD_RESPONSE=" << (badRecordResponseRejected ? "rejected" : "accepted")
                   << " RECORD_RESPONSE=" << (recordResponseOk ? "ok" : "failed")
+                  << " INVITE_RESPONSE=" << (inviteResponseOk ? "ok" : "failed")
+                  << " INVITE_ACK=" << (inviteAckOk ? "ok" : "failed")
                   << " BAD_INVITE=" << (badInviteRejected ? "rejected" : "accepted")
                   << " EARLY_ACK=" << (earlyAckRejected ? "rejected" : "accepted")
                   << " INVITE=" << (inviteOk ? "ok" : "failed")
@@ -746,11 +983,12 @@ int main(int argc, char* argv[])
                   << " business_state_restore=" << (businessStateRestoreOk ? "ok" : "failed")
                   << " business_state_file=" << (businessStateLoadOk ? "ok" : "failed")
                   << " business_query_json=" << (businessQueryJsonOk ? "ok" : "failed")
+                  << " business_query_cli=" << (businessQueryJsonOk ? "ok" : "failed")
                   << " media_sessions=" << mediaSessions
                   << " available_rtp_ports=" << availableRtpPorts
                   << std::endl;
 
-        if (!mediaSourceOk || !mediaSourcePsOk || !regChallengeOk || !challengeNonceOk || !badRegRejected || !regOk || !replayRegRejected || !qopChallengeOk || !qopChallengeNonceOk || !qopRegOk || !qopReplayRejected || !badKeepaliveRejected || !keepaliveOk || !catalogOk || !recordOk || !badCatalogResponseRejected || !catalogResponseOk || !badRecordResponseRejected || !recordResponseOk || catalogItems != 1 || recordItems != 1 || !catalogSnapshotOk || !recordSnapshotOk || !businessStatePersistenceOk || !businessQueryJsonOk || !badInviteRejected || !earlyAckRejected || !inviteOk || !badAckCseqRejected || !ackOk || !badRtpSsrcRejected || !rtpPacketizeOk || !rtpOk || !mediaReceivingOk || !rtpAdapterOk || !adapterSendOk || !frameFileOk || !wrongDialogByeRejected || !byeOk || !md5Ok || sentMessages == 0 || scheduledTasks < 3 || mediaSessions != 0 || !rtpPortsReleased)
+        if (!mediaSourceOk || !mediaSourcePsOk || !regChallengeOk || !challengeNonceOk || !registerAuthRetryOk || !badRegRejected || !regOk || !replayRegRejected || !qopChallengeOk || !qopChallengeNonceOk || !qopRegOk || !qopReplayRejected || !badKeepaliveRejected || !keepaliveOk || !catalogOk || !recordOk || !badCatalogResponseRejected || !catalogResponseOk || !badRecordResponseRejected || !recordResponseOk || !inviteResponseOk || !inviteAckOk || catalogItems != 1 || recordItems != 1 || !catalogSnapshotOk || !recordSnapshotOk || !businessStatePersistenceOk || !businessQueryJsonOk || !badInviteRejected || !earlyAckRejected || !inviteOk || !badAckCseqRejected || !ackOk || !badRtpSsrcRejected || !rtpPacketizeOk || !rtpOk || !mediaReceivingOk || !rtpAdapterOk || !adapterSendOk || !frameFileOk || !wrongDialogByeRejected || !byeOk || !md5Ok || sentMessages == 0 || scheduledTasks < 3 || mediaSessions != 0 || !rtpPortsReleased)
         {
             node.stop();
             return 1;

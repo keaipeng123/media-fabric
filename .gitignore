@@ -4,6 +4,14 @@ SipSubService/.vscode/
 SipSupService/.vscode/
 
 # Build artifacts (in-source builds)
+build/
+build-jrtplib/
+build-linux-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+
 SipSubService/cmake/CMakeFiles/
 SipSubService/cmake/CMakeCache.txt
 SipSubService/cmake/Makefile
@@ -20,6 +28,7 @@ SipSupService/cmake/SipSupService
 
 # Logs / captures
 log/
+artifacts/
 *.pcap
 
 # Common

@@ -24,16 +24,26 @@
 统一入口 `gb28181-server` 当前已具备的阶段性能力：
 
 - 创建单一 `GB28181Node` 并同时装配注册客户端、注册服务端、心跳、目录、录像查询、INVITE、媒体收发能力模块。
-- 通过 `SipTransport` 抽象承载 SIP 收发，默认内存传输用于自测，Linux 可通过 `GB28181_ENABLE_PJSIP` 打开实验性 PJSIP adapter。
+- 通过 `SipTransport` 抽象承载 SIP 收发，默认内存传输用于自测，Linux 可通过 `GB28181_ENABLE_PJSIP` 打开实验性 PJSIP adapter；PJSIP adapter 已覆盖入站 SIP request 和 SIP response 到统一路由的转换。
 - 通过 `RtpSessionAdapter` 抽象承载真实 RTP 会话，默认自测使用适配器入口验证 RTP/PS/ES/帧输出和 adapter 发送链路，Linux 可通过 `GB28181_ENABLE_JRTPLIB` 打开实验性 JRTPLIB RTP adapter。
-- 通过 `StreamFileFrameSource` 读取历史 `stream.file` 测试流，`MediaSendCapability` 启动时会校验配置媒体源并记录首个视频帧状态。
-- 能生成 REGISTER、MESSAGE keepalive、Catalog、RecordInfo、INVITE 出站请求意图。
+- 通过 `StreamFileFrameSource` 读取历史 `stream.file` 测试流，`MediaSendCapability` 启动时会校验配置媒体源，并按 `[media] stream_send_interval_ms` 周期循环驱动 `sendAnnexBFrame`。
+- 能生成 REGISTER、REGISTER Digest 认证重试、MESSAGE keepalive、Catalog、RecordInfo、INVITE 和 INVITE 2xx 后 ACK 出站请求意图。
 - 能处理 REGISTER、Keepalive、Catalog、RecordInfo、INVITE、ACK、BYE 入站请求，并生成基础 SIP 响应或业务响应消息；REGISTER 已具备随机 401 Digest challenge、MD5 response 校验、nonce 缓存和 replay 拒绝边界。
-- MESSAGE 已具备 MANSCDP XML 解析边界，可提取 root、CmdType、SN、DeviceID、Result、StartTime、EndTime、SumNum、DeviceList/RecordList Item，并校验 Keepalive/Catalog/RecordInfo 的 DeviceID 与列表一致性。
-- Catalog/RecordInfo 响应明细已落入节点级业务状态，可查询当前目录项、录像项计数和按 peer 保存的最近一次明细快照，并可导出/恢复文件快照；`BusinessQueryService` 已提供协议无关的 JSON 查询边界，后续可直接接 HTTP/CLI 管理入口。
-- INVITE 已具备轻量 SDP 解析、Call-ID/CSeq/Contact 基础关联、媒体会话记录和 SDP 200 响应生成边界；ACK 会确认媒体会话。发送侧可将 Annex-B 帧封装为 PS payload，并通过 `RtpSessionAdapter::sendPayloadPacket` 切分发送 payload type 96 的 RTP payload packet；接收侧可按 session 更新接收统计和 `stream-receiving` 状态，按 timestamp/marker 重组 RTP payload，解析完整 PS pack/PES，识别视频 PES 中的 Annex-B H.264/H.265 NAL，并通过 `MediaFrameSink` 输出完整 Annex-B 帧到文件。bad SDP 会返回 400，错误 dialog 的 BYE 会返回 481，合法 BYE 会释放本地 RTP 端口。
+- MESSAGE 已具备 MANSCDP XML 解析边界，可提取 root、CmdType、SN、DeviceID、Result、StartTime、EndTime、SumNum、DeviceList/RecordList Item；Catalog Item 当前覆盖 DeviceID、Name、Manufacturer、Model、Owner、CivilCode、Parental、ParentID、SafetyWay、RegisterWay、Secrecy、Status 等常用字段，Record Item 当前覆盖 FilePath、StartTime、EndTime 等常用字段，并校验 Keepalive/Catalog/RecordInfo 的 DeviceID 与列表一致性。
+- Catalog/RecordInfo 响应明细已落入节点级业务状态，可查询当前目录项、录像项计数和按 peer 保存的最近一次明细快照，并可导出/恢复文件快照；`BusinessQueryService` 已提供协议无关的 JSON 查询边界，并已接入统一入口的 CLI 管理查询。
+- INVITE 已具备轻量 SDP 解析、Call-ID/CSeq/Contact 基础关联、媒体会话记录、SDP 200 响应生成边界，以及收到 INVITE 2xx response 后生成 ACK 出站意图；ACK 会继承 response 的 Call-ID、CSeq、From/To tag，并可优先使用 Contact target。ACK request 会确认媒体会话。发送侧可将 Annex-B 帧封装为 PS payload，并通过 `RtpSessionAdapter::sendPayloadPacket` 切分发送 payload type 96 的 RTP payload packet；接收侧可按 session 更新接收统计和 `stream-receiving` 状态，按 timestamp/marker 重组 RTP payload，解析完整 PS pack/PES，识别视频 PES 中的 Annex-B H.264/H.265 NAL，并通过 `MediaFrameSink` 输出完整 Annex-B 帧到文件。bad SDP 会返回 400，错误 dialog 的 BYE 会返回 481，合法 BYE 会释放本地 RTP 端口。
 - 已通过节点级任务注册 REGISTER refresh 和 keepalive 周期保活。
-- `--self-test` 可验证 10 条 SIP 路由、REGISTER Digest 接受/拒绝、REGISTER nonce replay 拒绝、MESSAGE XML 接受/拒绝、Catalog/RecordInfo 列表响应解析、业务状态快照查询、文件持久化恢复和 JSON 查询、INVITE SDP 接受/拒绝、ACK 确认、历史测试流首帧读取和 PS 回环解析、RTP packetize、RTP 包解析、RTP payload marker 重组、RTP adapter 收包入口、RTP adapter 发送入口、PS/PES 基础解析、H.264/H.265 NAL 识别、Annex-B 帧文件输出和媒体接收状态、peer 注册/心跳状态、RTP 端口分配/释放、出站 SIP 消息计数和周期任务注册。
+- `--self-test` 可验证 11 条 SIP 路由、REGISTER Digest 认证重试、REGISTER Digest 接受/拒绝、REGISTER nonce replay 拒绝、MESSAGE XML 接受/拒绝、Catalog/RecordInfo 列表响应解析、业务状态快照查询、文件持久化恢复和 JSON 查询、INVITE SIP response 分发、INVITE 2xx 后 ACK 出站、INVITE SDP 接受/拒绝、ACK 确认、历史测试流首帧读取和 PS 回环解析、RTP packetize、RTP 包解析、RTP payload marker 重组、RTP adapter 收包入口、RTP adapter 发送入口、PS/PES 基础解析、H.264/H.265 NAL 识别、Annex-B 帧文件输出和媒体接收状态、peer 注册/心跳状态、RTP 端口分配/释放、出站 SIP 消息计数和周期任务注册。
+
+当前媒体发送配置位于 `conf/gb28181-server.conf` 的 `[media]`：
+
+```ini
+stream_file = SipSubService/conf/stream.file
+rtp_payload_bytes = 1300
+rtp_timestamp_increment = 3600
+stream_send_interval_ms = 1000
+stream_loop = true
+```
 
 ## 文档入口
 
@@ -42,8 +52,10 @@
 - [架构现状](docs/architecture.md)
 - [里程碑 3 公共模块盘点](docs/milestone3-common-inventory.md)
 - [里程碑 4 节点与能力模块](docs/milestone4-node-capabilities.md)
+- [里程碑 4 完成审计清单](docs/milestone4-completion-audit.md)
 - [信令流程](docs/signaling-flow.md)
 - [媒体流程](docs/media-flow.md)
+- [第三方库补齐说明](docs/third-party-libs.md)
 - [抓包与排查](docs/wireshark.md)
 - [历史笔记索引](docs/notes/README.md)
 
@@ -67,28 +79,84 @@
 ```bash
 cmake -S . -B build
 cmake --build build
+ctest --test-dir build --output-on-failure -R gb28181-server-self-test
 ```
+
+默认 CTest 使用 `conf/gb28181-server.conf`；如需指定其它配置，可在 CMake 阶段传入 `-DGB28181_SELF_TEST_CONFIG=path/to/conf`。
+
+里程碑 4 默认构建与自测：
+
+```bash
+scripts/verify-milestone4-linux.sh preflight
+scripts/verify-milestone4-linux.sh default
+```
+
+脚本模式可通过 `GB28181_CONFIG=path/to/conf` 指定自测配置；`preflight` 默认只报告 ready/not-ready，设置 `GB28181_PREFLIGHT_STRICT=1` 后缺关键依赖会返回失败。Linux smoke 启动默认运行 5 秒，可通过 `GB28181_SMOKE_SECONDS=10` 调整。
 
 启用 Linux PJSIP adapter：
 
 ```bash
-cmake -S . -B build-linux-pjsip -DGB28181_ENABLE_PJSIP=ON
-cmake --build build-linux-pjsip
+scripts/verify-milestone4-linux.sh pjsip-build
+scripts/verify-milestone4-linux.sh pjsip-smoke
 ```
 
 启用 Linux JRTPLIB adapter：
 
 ```bash
-cmake -S . -B build-linux-rtp -DGB28181_ENABLE_JRTPLIB=ON
-cmake --build build-linux-rtp
+scripts/verify-milestone4-linux.sh jrtplib-build
+scripts/verify-milestone4-linux.sh jrtplib-smoke
 ```
 
+同时启用 Linux PJSIP + JRTPLIB adapter，验证最终真实网络组合：
+
+```bash
+scripts/verify-milestone4-linux.sh full-build
+scripts/verify-milestone4-linux.sh full-smoke
+scripts/verify-milestone4-linux.sh full-capture
+```
+
+`full-capture` 会把 SIP/RTP pcap 和同时间戳的抓包报告输出到 `artifacts/milestone4/`；tcpdump 异常、pcap 缺失/为空或 pcap 包数为 0 会返回失败。可通过 `GB28181_CAPTURE_SECONDS`、`GB28181_CAPTURE_IFACE`、`GB28181_CAPTURE_DIR` 调整抓包时间、网卡和输出目录。
+
+Linux 环境补齐第三方库后，也可以直接运行里程碑 4 完成门禁：
+
+```bash
+scripts/verify-milestone4-linux.sh completion-gate
+```
+
+复查已有抓包报告和 pcap 基础证据：
+
+```bash
+scripts/verify-milestone4-linux.sh capture-audit artifacts/milestone4
+```
+
+查看里程碑 4 抓包过滤器和验收检查点：
+
+```bash
+scripts/verify-milestone4-linux.sh capture-help
+```
+
+里程碑 4 是否可以标记完成，以 [里程碑 4 完成审计清单](docs/milestone4-completion-audit.md) 为准。
+
 说明：当前编辑环境不是 Linux；PJSIP/JRTPLIB 的真实链接、启动和抓包验证需要放到 Linux 目标环境执行。当前仓库已有 `3rd/lib/libjthread.a`，但缺少 `3rd/lib/libjrtp.a`，因此 `GB28181_ENABLE_JRTPLIB=ON` 需要先补齐 JRTPLIB 静态库。
+
+在 Linux 目标环境已有 `jrtplib-3.11.2` 源码时，可以用脚本补齐：
+
+```bash
+scripts/prepare-jrtplib-linux.sh /path/to/jrtplib-3.11.2
+```
 
 运行统一入口：
 
 ```bash
 ./build/gb28181-server -c conf/gb28181-server.conf
+```
+
+查询已保存的业务状态快照：
+
+```bash
+./build/gb28181-server -c conf/gb28181-server.conf --business-query summary --business-state-file state.snapshot
+./build/gb28181-server -c conf/gb28181-server.conf --business-query catalog --business-state-file state.snapshot --peer-id 11000000002000000001
+./build/gb28181-server -c conf/gb28181-server.conf --business-query record --business-state-file state.snapshot --peer-id 11000000002000000001
 ```
 
 历史服务目录仍可作为迁移对照目标配置，但不作为默认交付目标。第三方静态库以 Linux 目标为主，例如 `x86_64-unknown-linux-gnu`，因此历史目标建议在 Linux 环境验证。

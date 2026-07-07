@@ -29,6 +29,8 @@ struct MediaConfig
     std::string streamFile;
     size_t rtpPayloadBytes;
     uint32_t rtpTimestampIncrement;
+    int streamSendIntervalMs;
+    bool streamLoop;
 
     MediaConfig();
 };

@@ -59,6 +59,30 @@ uint32_t toUint32(const std::string& value, uint32_t fallback)
     return input ? result : fallback;
 }
 
+bool toBool(const std::string& value, bool fallback)
+{
+    if (value.empty())
+    {
+        return fallback;
+    }
+
+    std::string normalized;
+    for (std::string::const_iterator it = value.begin(); it != value.end(); ++it)
+    {
+        normalized.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(*it))));
+    }
+
+    if (normalized == "1" || normalized == "true" || normalized == "yes" || normalized == "on")
+    {
+        return true;
+    }
+    if (normalized == "0" || normalized == "false" || normalized == "no" || normalized == "off")
+    {
+        return false;
+    }
+    return fallback;
+}
+
 typedef std::map<std::string, std::map<std::string, std::string> > IniData;
 
 std::string getValue(const IniData& data, const std::string& section, const std::string& key)
@@ -100,6 +124,12 @@ MediaConfig readMediaConfig(const IniData& data)
     media.rtpPayloadBytes = toSize(getValue(data, "media", "rtp_payload_bytes"), media.rtpPayloadBytes);
     media.rtpTimestampIncrement = toUint32(getValue(data, "media", "rtp_timestamp_increment"),
                                            media.rtpTimestampIncrement);
+    media.streamSendIntervalMs = toInt(getValue(data, "media", "stream_send_interval_ms"));
+    if (media.streamSendIntervalMs <= 0)
+    {
+        media.streamSendIntervalMs = MediaConfig().streamSendIntervalMs;
+    }
+    media.streamLoop = toBool(getValue(data, "media", "stream_loop"), media.streamLoop);
     return media;
 }
 
@@ -120,7 +150,9 @@ bool SipEndpointConfig::valid() const
 MediaConfig::MediaConfig()
     : streamFile(),
       rtpPayloadBytes(1300),
-      rtpTimestampIncrement(3600)
+      rtpTimestampIncrement(3600),
+      streamSendIntervalMs(1000),
+      streamLoop(true)
 {
 }
 

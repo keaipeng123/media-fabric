@@ -15,6 +15,7 @@ public:
     ~TaskScheduler();
 
     bool scheduleEvery(const std::string& taskName, int intervalSeconds, const std::function<void()>& task);
+    bool scheduleEveryMs(const std::string& taskName, int intervalMilliseconds, const std::function<void()>& task);
     void stopAll();
     size_t taskCount() const;
 

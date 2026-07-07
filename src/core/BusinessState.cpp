@@ -8,7 +8,8 @@ namespace gb28181 {
 namespace {
 
 const char* kSnapshotHeader = "GB28181_BUSINESS_STATE_V1";
-const size_t kSnapshotFieldCount = 19;
+const size_t kSnapshotFieldCountV1 = 19;
+const size_t kSnapshotFieldCountWithParental = 20;
 
 void setError(std::string* error, const std::string& message)
 {
@@ -128,6 +129,7 @@ void appendItemLine(std::ostringstream& output,
     appendField(output, item.filePath);
     appendField(output, item.startTime);
     appendField(output, item.endTime);
+    appendField(output, item.parental);
     output << '\n';
 }
 
@@ -166,7 +168,9 @@ bool decodeItem(const std::vector<std::string>& fields,
            decodeField(fields, 15, &item->latitude, error) &&
            decodeField(fields, 16, &item->filePath, error) &&
            decodeField(fields, 17, &item->startTime, error) &&
-           decodeField(fields, 18, &item->endTime, error);
+           decodeField(fields, 18, &item->endTime, error) &&
+           (fields.size() == kSnapshotFieldCountV1 ||
+            decodeField(fields, 19, &item->parental, error));
 }
 
 } // namespace
@@ -285,7 +289,7 @@ bool BusinessState::restore(const std::string& data, std::string* error)
         }
 
         const std::vector<std::string> fields = splitFields(line);
-        if (fields.size() != kSnapshotFieldCount)
+        if (fields.size() != kSnapshotFieldCountV1 && fields.size() != kSnapshotFieldCountWithParental)
         {
             std::ostringstream message;
             message << "invalid business state snapshot field count at line " << lineNumber;

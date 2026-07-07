@@ -3,6 +3,7 @@
 #include "ManscdpMessage.h"
 #include "SipDef.h"
 
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <sstream>
@@ -42,6 +43,32 @@ std::string sipContact(const std::string& sipId, const std::string& ip, int port
     std::ostringstream output;
     output << "<" << sipUri(sipId, ip, port) << ">";
     return output.str();
+}
+
+std::string sipUriFromContact(const std::string& contact)
+{
+    const std::string marker = "sip:";
+    std::string::size_type begin = contact.find(marker);
+    if (begin == std::string::npos)
+    {
+        return "";
+    }
+
+    std::string::size_type end = contact.find('>', begin);
+    if (end == std::string::npos)
+    {
+        end = contact.find(';', begin);
+    }
+    if (end == std::string::npos)
+    {
+        end = contact.find_first_of(" \t\r\n", begin);
+    }
+    return contact.substr(begin, end == std::string::npos ? std::string::npos : end - begin);
+}
+
+void setPoolString(pj_pool_t* pool, pj_str_t* target, const std::string& value)
+{
+    pj_strdup2(pool, target, value.c_str());
 }
 
 void initMethod(const std::string& methodName, pjsip_method* method)
@@ -119,6 +146,16 @@ std::string headerValue(pjsip_msg* msg, pjsip_hdr_e headerType)
     return std::string(buf, buf + size);
 }
 
+std::string dialogTag(pjsip_msg* msg, pjsip_hdr_e headerType)
+{
+    pjsip_fromto_hdr* header = static_cast<pjsip_fromto_hdr*>(pjsip_msg_find_hdr(msg, headerType, NULL));
+    if (header == NULL)
+    {
+        return "";
+    }
+    return pjStrToString(header->tag);
+}
+
 void fillDialogHeaders(pjsip_msg* msg, SipRequestContext* request)
 {
     pjsip_cid_hdr* callId = static_cast<pjsip_cid_hdr*>(pjsip_msg_find_hdr(msg, PJSIP_H_CALL_ID, NULL));
@@ -134,6 +171,18 @@ void fillDialogHeaders(pjsip_msg* msg, SipRequestContext* request)
     }
 
     request->contact = headerValue(msg, PJSIP_H_CONTACT);
+    request->fromTag = dialogTag(msg, PJSIP_H_FROM);
+    request->toTag = dialogTag(msg, PJSIP_H_TO);
+}
+
+std::string cseqMethod(pjsip_msg* msg)
+{
+    pjsip_cseq_hdr* cseq = static_cast<pjsip_cseq_hdr*>(pjsip_msg_find_hdr(msg, PJSIP_H_CSEQ, NULL));
+    if (cseq == NULL)
+    {
+        return "";
+    }
+    return pjStrToString(cseq->method.name);
 }
 
 void fillDigestAuth(pjsip_msg* msg, SipRequestContext* request)
@@ -151,10 +200,27 @@ void fillDigestAuth(pjsip_msg* msg, SipRequestContext* request)
     request->digestAuth.uri = pjStrToString(auth->credential.digest.uri);
     request->digestAuth.response = pjStrToString(auth->credential.digest.response);
     request->digestAuth.algorithm = pjStrToString(auth->credential.digest.algorithm);
+    request->digestAuth.opaque = pjStrToString(auth->credential.digest.opaque);
     request->digestAuth.qop = pjStrToString(auth->credential.digest.qop);
     request->digestAuth.nc = pjStrToString(auth->credential.digest.nc);
     request->digestAuth.cnonce = pjStrToString(auth->credential.digest.cnonce);
     request->authenticated = !request->digestAuth.response.empty();
+}
+
+void fillDigestChallenge(pjsip_msg* msg, SipRequestContext* response)
+{
+    pjsip_www_authenticate_hdr* auth = static_cast<pjsip_www_authenticate_hdr*>(
+        pjsip_msg_find_hdr(msg, PJSIP_H_WWW_AUTHENTICATE, NULL));
+    if (auth == NULL)
+    {
+        return;
+    }
+
+    response->digestAuth.realm = pjStrToString(auth->challenge.digest.realm);
+    response->digestAuth.nonce = pjStrToString(auth->challenge.digest.nonce);
+    response->digestAuth.opaque = pjStrToString(auth->challenge.digest.opaque);
+    response->digestAuth.algorithm = pjStrToString(auth->challenge.digest.algorithm);
+    response->digestAuth.qop = pjStrToString(auth->challenge.digest.qop);
 }
 
 SipRequestContext toRequestContext(pjsip_rx_data* rdata)
@@ -202,6 +268,36 @@ SipRequestContext toRequestContext(pjsip_rx_data* rdata)
     return request;
 }
 
+SipRequestContext toResponseContext(pjsip_rx_data* rdata)
+{
+    SipRequestContext response;
+    pjsip_msg* msg = rdata->msg_info.msg;
+    if (msg == NULL)
+    {
+        return response;
+    }
+
+    response.method = cseqMethod(msg);
+    response.event = "response";
+    response.fromId = parseHeaderId(msg, PJSIP_H_FROM);
+    response.toId = parseHeaderId(msg, PJSIP_H_TO);
+    response.statusCode = msg->line.status.code;
+    response.reason = pjStrToString(msg->line.status.reason);
+    fillDialogHeaders(msg, &response);
+    fillDigestChallenge(msg, &response);
+
+    if (msg->body != NULL && msg->body->data != NULL && msg->body->len > 0)
+    {
+        response.body.assign((const char*)msg->body->data, (const char*)msg->body->data + msg->body->len);
+    }
+    if (response.method == "MESSAGE" && parseManscdpMessage(response.body, &response.manscdp))
+    {
+        response.event = response.manscdp.event();
+    }
+
+    return response;
+}
+
 pj_bool_t onRxRequest(pjsip_rx_data* rdata)
 {
     if (g_adapter == NULL)
@@ -209,6 +305,15 @@ pj_bool_t onRxRequest(pjsip_rx_data* rdata)
         return PJ_FALSE;
     }
     return g_adapter->handleRxRequest(rdata) ? PJ_TRUE : PJ_FALSE;
+}
+
+pj_bool_t onRxResponse(pjsip_rx_data* rdata)
+{
+    if (g_adapter == NULL)
+    {
+        return PJ_FALSE;
+    }
+    return g_adapter->handleRxResponse(rdata) ? PJ_TRUE : PJ_FALSE;
 }
 
 char g_recvModuleName[] = "mod-gb28181-node";
@@ -224,7 +329,7 @@ pjsip_module g_recvModule =
     NULL,
     NULL,
     onRxRequest,
-    NULL,
+    onRxResponse,
     NULL,
     NULL,
     NULL,
@@ -354,7 +459,8 @@ bool PjsipStackAdapter::send(const SipMessageContext& message)
     pjsip_method method;
     initMethod(message.method, &method);
 
-    const std::string targetValue = sipUri(message.toId, message.remoteIp, message.remotePort);
+    const std::string contactTarget = sipUriFromContact(message.contact);
+    const std::string targetValue = contactTarget.empty() ? sipUri(message.toId, message.remoteIp, message.remotePort) : contactTarget;
     const std::string fromValue = sipUri(message.fromId, message.localIp, message.localPort);
     const std::string toValue = sipUri(message.toId, message.remoteIp, message.remotePort);
     const std::string contactValue = sipContact(message.fromId, message.localIp, message.localPort);
@@ -385,6 +491,57 @@ bool PjsipStackAdapter::send(const SipMessageContext& message)
     {
         pjsip_expires_hdr* expires = pjsip_expires_hdr_create(tdata->pool, message.expires);
         pjsip_msg_add_hdr(tdata->msg, reinterpret_cast<pjsip_hdr*>(expires));
+    }
+
+    if (!message.callId.empty() && tdata->msg != NULL)
+    {
+        pjsip_cid_hdr* callId = static_cast<pjsip_cid_hdr*>(pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CALL_ID, NULL));
+        if (callId != NULL)
+        {
+            setPoolString(tdata->pool, &callId->id, message.callId);
+        }
+    }
+
+    if ((!message.fromTag.empty() || !message.toTag.empty()) && tdata->msg != NULL)
+    {
+        pjsip_fromto_hdr* fromHeader = static_cast<pjsip_fromto_hdr*>(pjsip_msg_find_hdr(tdata->msg, PJSIP_H_FROM, NULL));
+        if (fromHeader != NULL && !message.fromTag.empty())
+        {
+            setPoolString(tdata->pool, &fromHeader->tag, message.fromTag);
+        }
+
+        pjsip_fromto_hdr* toHeader = static_cast<pjsip_fromto_hdr*>(pjsip_msg_find_hdr(tdata->msg, PJSIP_H_TO, NULL));
+        if (toHeader != NULL && !message.toTag.empty())
+        {
+            setPoolString(tdata->pool, &toHeader->tag, message.toTag);
+        }
+    }
+
+    if (!message.cseq.empty() && tdata->msg != NULL)
+    {
+        pjsip_cseq_hdr* cseq = static_cast<pjsip_cseq_hdr*>(pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL));
+        if (cseq != NULL)
+        {
+            cseq->cseq = static_cast<pj_int32_t>(std::atoi(message.cseq.c_str()));
+        }
+    }
+
+    if (!message.digestAuth.response.empty() && tdata->msg != NULL)
+    {
+        pjsip_authorization_hdr* auth = pjsip_authorization_hdr_create(tdata->pool);
+        auth->scheme = pj_str(const_cast<char*>("Digest"));
+        auth->credential.digest.username = toPjString(message.digestAuth.username);
+        auth->credential.digest.realm = toPjString(message.digestAuth.realm);
+        auth->credential.digest.nonce = toPjString(message.digestAuth.nonce);
+        auth->credential.digest.uri = toPjString(message.digestAuth.uri);
+        auth->credential.digest.response = toPjString(message.digestAuth.response);
+        const std::string algorithm = message.digestAuth.algorithm.empty() ? "MD5" : message.digestAuth.algorithm;
+        auth->credential.digest.algorithm = toPjString(algorithm);
+        auth->credential.digest.opaque = toPjString(message.digestAuth.opaque);
+        auth->credential.digest.qop = toPjString(message.digestAuth.qop);
+        auth->credential.digest.nc = toPjString(message.digestAuth.nc);
+        auth->credential.digest.cnonce = toPjString(message.digestAuth.cnonce);
+        pjsip_msg_add_hdr(tdata->msg, reinterpret_cast<pjsip_hdr*>(auth));
     }
 
     if (!message.contentType.empty() && tdata->msg != NULL && tdata->msg->body != NULL)
@@ -567,6 +724,16 @@ bool PjsipStackAdapter::handleRxRequest(pjsip_rx_data* rdata)
     }
 
     return handled;
+}
+
+bool PjsipStackAdapter::handleRxResponse(pjsip_rx_data* rdata)
+{
+    if (rdata == NULL || rdata->msg_info.msg == NULL || !m_handler)
+    {
+        return false;
+    }
+
+    return m_handler(toResponseContext(rdata));
 }
 
 } // namespace gb28181

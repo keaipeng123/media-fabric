@@ -86,6 +86,8 @@ void appendItem(std::ostringstream& output, const ManscdpItem& item)
     appendJsonString(output, item.owner);
     output << ",\"civil_code\":";
     appendJsonString(output, item.civilCode);
+    output << ",\"parental\":";
+    appendJsonString(output, item.parental);
     output << ",\"address\":";
     appendJsonString(output, item.address);
     output << ",\"parent_id\":";

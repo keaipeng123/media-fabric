@@ -26,6 +26,7 @@ public:
     bool running() const;
     size_t sentMessageCount() const;
     bool handleRxRequest(pjsip_rx_data* rdata);
+    bool handleRxResponse(pjsip_rx_data* rdata);
 
 private:
     bool initPjlib();
