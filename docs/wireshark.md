@@ -18,10 +18,10 @@
 
 | 角色 | SIP 端口 | RTP 端口范围 |
 | --- | --- | --- |
-| 统一入口 sup endpoint | `5061` | `20000-30000` |
-| 统一入口 sub endpoint | `7101` | `30000-40000` |
+| 本地 node 监听端口 | `7101` | `30000-40000` |
+| upstream 远端平台 | `5061` | 由远端平台决定 |
 
-注意：当前示例配置使用 `127.0.1`，Linux 环境下需要确认该地址是否符合本机网络配置。若抓本地回环流量，Wireshark 通常选择 `lo`。
+注意：当前示例配置使用 `127.0.0.1`。若抓本地回环流量，Wireshark 通常选择 `lo`。`peer.upstream.*.remote_port` 只表示远端平台端口，不会额外启动本地 SIP listener。
 
 ## Wireshark 过滤器
 
@@ -34,7 +34,7 @@ sip
 按端口过滤 SIP：
 
 ```text
-udp.port == 5061 || tcp.port == 5061 || udp.port == 7101 || tcp.port == 7101
+udp.port == 7101 || tcp.port == 7101 || udp.port == 5061 || tcp.port == 5061
 ```
 
 GB28181 常见消息：
@@ -69,10 +69,10 @@ udp portrange 20000-40000
 期望流程：
 
 ```text
-Sub -> Sup REGISTER
-Sup -> Sub 401 Unauthorized
-Sub -> Sup REGISTER with Authorization
-Sup -> Sub 200 OK
+Node -> Upstream REGISTER
+Upstream -> Node 401 Unauthorized
+Node -> Upstream REGISTER with Authorization
+Upstream -> Node 200 OK
 ```
 
 检查项：

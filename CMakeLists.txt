@@ -167,7 +167,7 @@ if(BUILD_TESTING AND NOT CMAKE_CROSSCOMPILING)
     )
     set_tests_properties(gb28181-server-self-test PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        PASS_REGULAR_EXPRESSION "REGISTER_AUTH_RETRY=ok.*INVITE_ACK=ok.*sessions=24.*routes=11.*sent_messages=24"
+        PASS_REGULAR_EXPRESSION "REGISTER_AUTH_RETRY=ok.*INVITE_ACK=ok.*sessions=24.*endpoints=1.*upstream_peers=1.*downstream_peers=1.*routes=11.*sent_messages=24"
     )
 endif()
 

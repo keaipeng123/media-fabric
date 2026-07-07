@@ -102,6 +102,11 @@ std::string getValue(const IniData& data, const std::string& section, const std:
     return valueIt->second;
 }
 
+bool startsWith(const std::string& value, const std::string& prefix)
+{
+    return value.compare(0, prefix.size(), prefix) == 0;
+}
+
 SipEndpointConfig readEndpoint(const IniData& data, const std::string& section)
 {
     SipEndpointConfig endpoint;
@@ -115,6 +120,23 @@ SipEndpointConfig readEndpoint(const IniData& data, const std::string& section)
     endpoint.rtpPortBegin = toInt(getValue(data, section, "rtp_port_begin"));
     endpoint.rtpPortEnd = toInt(getValue(data, section, "rtp_port_end"));
     return endpoint;
+}
+
+PeerConfig readPeer(const IniData& data, const std::string& section, const std::string& relation)
+{
+    PeerConfig peer;
+    peer.name = section;
+    peer.relation = relation;
+    peer.sipId = getValue(data, section, "sip_id");
+    peer.remoteIp = getValue(data, section, "remote_ip");
+    peer.remotePort = toInt(getValue(data, section, "remote_port"));
+    peer.registerTo = toBool(getValue(data, section, "register_to"), relation == "upstream");
+    peer.allowRegister = toBool(getValue(data, section, "allow_register"), relation == "downstream");
+    peer.expires = toInt(getValue(data, section, "expires"));
+    peer.realm = getValue(data, section, "sip_realm");
+    peer.username = getValue(data, section, "sip_usr");
+    peer.password = getValue(data, section, "sip_pwd");
+    return peer;
 }
 
 MediaConfig readMediaConfig(const IniData& data)
@@ -145,6 +167,19 @@ SipEndpointConfig::SipEndpointConfig()
 bool SipEndpointConfig::valid() const
 {
     return !sipId.empty() && !sipIp.empty() && sipPort > 0;
+}
+
+PeerConfig::PeerConfig()
+    : remotePort(0),
+      registerTo(false),
+      allowRegister(false),
+      expires(0)
+{
+}
+
+bool PeerConfig::valid() const
+{
+    return !sipId.empty() && (relation == "upstream" || relation == "downstream");
 }
 
 MediaConfig::MediaConfig()
@@ -201,24 +236,89 @@ bool NodeConfig::load(const std::string& configPath)
         data[currentSection][key] = value;
     }
 
-    std::vector<SipEndpointConfig> endpoints;
-    const char* knownSections[] = {"node", "sup", "sub"};
-    for (size_t i = 0; i < sizeof(knownSections) / sizeof(knownSections[0]); ++i)
+    SipEndpointConfig node = readEndpoint(data, "node");
+    if (!node.valid())
     {
-        SipEndpointConfig endpoint = readEndpoint(data, knownSections[i]);
-        if (endpoint.valid())
+        SipEndpointConfig legacySub = readEndpoint(data, "sub");
+        SipEndpointConfig legacySup = readEndpoint(data, "sup");
+        if (legacySub.valid())
         {
-            endpoints.push_back(endpoint);
+            node = legacySub;
+            node.name = "node";
+        }
+        else if (legacySup.valid())
+        {
+            node = legacySup;
+            node.name = "node";
         }
     }
 
-    if (endpoints.empty())
+    if (!node.valid())
     {
         return false;
     }
 
+    std::vector<SipEndpointConfig> endpoints;
+    endpoints.push_back(node);
+
+    std::vector<PeerConfig> peers;
+    for (IniData::const_iterator it = data.begin(); it != data.end(); ++it)
+    {
+        if (startsWith(it->first, "peer.upstream."))
+        {
+            PeerConfig peer = readPeer(data, it->first, "upstream");
+            if (peer.valid())
+            {
+                peers.push_back(peer);
+            }
+        }
+        else if (startsWith(it->first, "peer.downstream."))
+        {
+            PeerConfig peer = readPeer(data, it->first, "downstream");
+            if (peer.valid())
+            {
+                peers.push_back(peer);
+            }
+        }
+    }
+
+    if (peers.empty())
+    {
+        SipEndpointConfig legacySup = readEndpoint(data, "sup");
+        if (legacySup.valid())
+        {
+            PeerConfig peer;
+            peer.name = "peer.upstream.legacy";
+            peer.relation = "upstream";
+            peer.sipId = legacySup.sipId;
+            peer.remoteIp = legacySup.sipIp;
+            peer.remotePort = legacySup.sipPort;
+            peer.registerTo = true;
+            peer.expires = 300;
+            peer.realm = legacySup.realm;
+            peer.username = legacySup.username;
+            peer.password = legacySup.password;
+            peers.push_back(peer);
+        }
+
+        SipEndpointConfig legacySub = readEndpoint(data, "sub");
+        if (legacySub.valid())
+        {
+            PeerConfig peer;
+            peer.name = "peer.downstream.legacy";
+            peer.relation = "downstream";
+            peer.sipId = legacySub.sipId;
+            peer.remoteIp = legacySub.sipIp;
+            peer.remotePort = legacySub.sipPort;
+            peer.allowRegister = true;
+            peers.push_back(peer);
+        }
+    }
+
     m_configPath = configPath;
+    m_node = node;
     m_sipEndpoints = endpoints;
+    m_peers = peers;
     m_media = readMediaConfig(data);
     return true;
 }
@@ -228,9 +328,19 @@ const std::string& NodeConfig::configPath() const
     return m_configPath;
 }
 
+const SipEndpointConfig& NodeConfig::node() const
+{
+    return m_node;
+}
+
 const std::vector<SipEndpointConfig>& NodeConfig::sipEndpoints() const
 {
     return m_sipEndpoints;
+}
+
+const std::vector<PeerConfig>& NodeConfig::peers() const
+{
+    return m_peers;
 }
 
 const MediaConfig& NodeConfig::media() const

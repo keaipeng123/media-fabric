@@ -24,6 +24,24 @@ struct SipEndpointConfig
     bool valid() const;
 };
 
+struct PeerConfig
+{
+    std::string name;
+    std::string relation;
+    std::string sipId;
+    std::string remoteIp;
+    int remotePort;
+    bool registerTo;
+    bool allowRegister;
+    int expires;
+    std::string realm;
+    std::string username;
+    std::string password;
+
+    PeerConfig();
+    bool valid() const;
+};
+
 struct MediaConfig
 {
     std::string streamFile;
@@ -42,12 +60,16 @@ public:
 
     bool load(const std::string& configPath);
     const std::string& configPath() const;
+    const SipEndpointConfig& node() const;
     const std::vector<SipEndpointConfig>& sipEndpoints() const;
+    const std::vector<PeerConfig>& peers() const;
     const MediaConfig& media() const;
 
 private:
     std::string m_configPath;
+    SipEndpointConfig m_node;
     std::vector<SipEndpointConfig> m_sipEndpoints;
+    std::vector<PeerConfig> m_peers;
     MediaConfig m_media;
 };
 

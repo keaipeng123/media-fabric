@@ -79,23 +79,34 @@ SipSubService/conf/stream.file
   -> H.264/H.265 裸流处理
 ```
 
-## 当前配置
+## 当前统一配置
+
+统一入口配置：[conf/gb28181-server.conf](../conf/gb28181-server.conf)
+
+- 本地 node：`11000000002000000001@127.0.0.1:7101`
+- 本地 RTP 端口范围：`30000-40000`
+- upstream 远端平台：`10000000002000000001@127.0.0.1:5061`
+- downstream 允许接入设备：`12000000002000000001`
+
+`gb28181-server` 运行时只启动 `[node]` 里的一个本地 SIP listener。`peer.upstream.*.remote_port` 表示远端平台端口，不是本地监听端口；downstream 的实际地址可通过 REGISTER/Contact/Via 动态学习。
+
+## 历史对照配置
 
 上级配置：[SipSupService/conf/SipSupService.conf](../SipSupService/conf/SipSupService.conf)
 
 - SIP ID：`10000000002000000001`
-- SIP IP：`127.0.1`
+- SIP IP：`127.0.0.1`
 - SIP Port：`5061`
 - RTP 端口范围：`20000-30000`
-- 下级节点：`11000000002000000001@127.0.1:7101`
+- 下级节点：`11000000002000000001@127.0.0.1:7101`
 
 下级配置：[SipSubService/conf/SipSubService.conf](../SipSubService/conf/SipSubService.conf)
 
 - SIP ID：`11000000002000000001`
-- SIP IP：`127.0.1`
+- SIP IP：`127.0.0.1`
 - SIP Port：`7101`
 - RTP 端口范围：`30000-40000`
-- 上级节点：`10000000002000000001@127.0.1:5061`
+- 上级节点：`10000000002000000001@127.0.0.1:5061`
 
 ## 工程化问题清单
 

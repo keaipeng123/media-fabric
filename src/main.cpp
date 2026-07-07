@@ -23,10 +23,13 @@
 namespace {
 
 const char* kDefaultConfigPath = "conf/gb28181-server.conf";
-const char* kSelfTestServerId = "10000000002000000001";
-const char* kSelfTestClientId = "11000000002000000001";
-const char* kSelfTestServerIp = "127.0.1";
-const int kSelfTestServerPort = 5061;
+const char* kSelfTestUpstreamId = "10000000002000000001";
+const char* kSelfTestNodeId = "11000000002000000001";
+const char* kSelfTestDownstreamId = "12000000002000000001";
+const char* kSelfTestNodeIp = "127.0.0.1";
+const int kSelfTestNodePort = 7101;
+const char* kSelfTestUpstreamIp = "127.0.0.1";
+const int kSelfTestUpstreamPort = 5061;
 const char* kSelfTestRealm = "1000000000";
 const char* kSelfTestUsername = "admin";
 const char* kSelfTestPassword = "admin";
@@ -116,9 +119,14 @@ void printUsage(const char* programName)
               << std::endl;
 }
 
-std::string selfTestRegisterUri()
+std::string selfTestNodeRegisterUri()
 {
-    return std::string("sip:") + kSelfTestServerId + "@" + kSelfTestServerIp + ":" + std::to_string(kSelfTestServerPort);
+    return std::string("sip:") + kSelfTestNodeId + "@" + kSelfTestNodeIp + ":" + std::to_string(kSelfTestNodePort);
+}
+
+std::string selfTestUpstreamRegisterUri()
+{
+    return std::string("sip:") + kSelfTestUpstreamId + "@" + kSelfTestUpstreamIp + ":" + std::to_string(kSelfTestUpstreamPort);
 }
 
 void fillRegisterDigest(gb28181::SipRequestContext* request,
@@ -131,7 +139,7 @@ void fillRegisterDigest(gb28181::SipRequestContext* request,
     request->digestAuth.username = kSelfTestUsername;
     request->digestAuth.realm = kSelfTestRealm;
     request->digestAuth.nonce = nonce;
-    request->digestAuth.uri = selfTestRegisterUri();
+    request->digestAuth.uri = selfTestNodeRegisterUri();
     request->digestAuth.response = response;
     request->digestAuth.algorithm = "MD5";
     request->digestAuth.qop = qop;
@@ -439,6 +447,8 @@ int main(int argc, char* argv[])
     std::cout << "gb28181-server started" << std::endl;
     if (selfTest)
     {
+        const bool singleEndpointOk = node.endpointCount() == 1;
+        const bool peerTopologyOk = node.upstreamPeerCount() == 1 && node.downstreamPeerCount() == 1;
         const size_t initialRtpPorts = node.availableRtpPortCount();
         std::string mediaSourceError;
         gb28181::StreamFileFrameSource mediaSource;
@@ -464,15 +474,15 @@ int main(int argc, char* argv[])
         gb28181::SipRequestContext regChallenge;
         regChallenge.method = "REGISTER";
         regChallenge.event = "request";
-        regChallenge.fromId = kSelfTestClientId;
-        regChallenge.toId = kSelfTestServerId;
+        regChallenge.fromId = kSelfTestDownstreamId;
+        regChallenge.toId = kSelfTestNodeId;
         regChallenge.expires = 60;
 
         gb28181::SipRequestContext registerClientChallenge;
         registerClientChallenge.method = "REGISTER";
         registerClientChallenge.event = "response";
-        registerClientChallenge.fromId = kSelfTestClientId;
-        registerClientChallenge.toId = kSelfTestServerId;
+        registerClientChallenge.fromId = kSelfTestUpstreamId;
+        registerClientChallenge.toId = kSelfTestNodeId;
         registerClientChallenge.statusCode = 401;
         registerClientChallenge.reason = "Unauthorized";
         registerClientChallenge.digestAuth.realm = kSelfTestRealm;
@@ -483,12 +493,12 @@ int main(int argc, char* argv[])
         gb28181::SipRequestContext invite;
         invite.method = "INVITE";
         invite.event = "request";
-        invite.fromId = kSelfTestServerId;
-        invite.toId = kSelfTestClientId;
+        invite.fromId = kSelfTestUpstreamId;
+        invite.toId = kSelfTestNodeId;
         invite.callId = "selftest-invite-dialog";
         invite.cseq = "1";
-        invite.contact = "<sip:10000000002000000001@127.0.1:5061>";
-        invite.body = gb28181::buildInviteSdp(kSelfTestClientId, kSelfTestServerIp, 30000, "1234567890");
+        invite.contact = "<sip:10000000002000000001@127.0.0.1:5061>";
+        invite.body = gb28181::buildInviteSdp(kSelfTestNodeId, kSelfTestNodeIp, 30000, "1234567890");
 
         gb28181::SipRequestContext badInvite = invite;
         badInvite.body = "v=0\r\ns=Bad\r\n";
@@ -496,8 +506,8 @@ int main(int argc, char* argv[])
         gb28181::SipRequestContext ack;
         ack.method = "ACK";
         ack.event = "request";
-        ack.fromId = kSelfTestServerId;
-        ack.toId = kSelfTestClientId;
+        ack.fromId = kSelfTestUpstreamId;
+        ack.toId = kSelfTestNodeId;
         ack.callId = invite.callId;
         ack.cseq = invite.cseq;
 
@@ -506,48 +516,48 @@ int main(int argc, char* argv[])
 
         gb28181::SipRequestContext keepalive;
         keepalive.method = "MESSAGE";
-        keepalive.fromId = kSelfTestClientId;
-        keepalive.toId = kSelfTestServerId;
-        fillManscdp(&keepalive, makeSelfTestKeepaliveXml(kSelfTestClientId));
+        keepalive.fromId = kSelfTestDownstreamId;
+        keepalive.toId = kSelfTestNodeId;
+        fillManscdp(&keepalive, makeSelfTestKeepaliveXml(kSelfTestDownstreamId));
 
         gb28181::SipRequestContext badKeepalive = keepalive;
         fillManscdp(&badKeepalive, makeSelfTestKeepaliveXml("00000000000000000000"));
 
         gb28181::SipRequestContext catalog;
         catalog.method = "MESSAGE";
-        catalog.fromId = kSelfTestServerId;
-        catalog.toId = kSelfTestClientId;
-        fillManscdp(&catalog, makeSelfTestQueryXml("Catalog", kSelfTestClientId));
+        catalog.fromId = kSelfTestUpstreamId;
+        catalog.toId = kSelfTestNodeId;
+        fillManscdp(&catalog, makeSelfTestQueryXml("Catalog", kSelfTestNodeId));
 
         gb28181::SipRequestContext record;
         record.method = "MESSAGE";
-        record.fromId = kSelfTestServerId;
-        record.toId = kSelfTestClientId;
-        fillManscdp(&record, makeSelfTestQueryXml("RecordInfo", kSelfTestClientId));
+        record.fromId = kSelfTestUpstreamId;
+        record.toId = kSelfTestNodeId;
+        fillManscdp(&record, makeSelfTestQueryXml("RecordInfo", kSelfTestNodeId));
 
         gb28181::SipRequestContext catalogResponse;
         catalogResponse.method = "MESSAGE";
-        catalogResponse.fromId = kSelfTestClientId;
-        catalogResponse.toId = kSelfTestServerId;
-        fillManscdp(&catalogResponse, makeSelfTestResponseXml("Catalog", kSelfTestClientId));
+        catalogResponse.fromId = kSelfTestDownstreamId;
+        catalogResponse.toId = kSelfTestNodeId;
+        fillManscdp(&catalogResponse, makeSelfTestResponseXml("Catalog", kSelfTestDownstreamId));
 
         gb28181::SipRequestContext badCatalogResponse = catalogResponse;
-        fillManscdp(&badCatalogResponse, makeSelfTestBadResponseXml("Catalog", kSelfTestClientId));
+        fillManscdp(&badCatalogResponse, makeSelfTestBadResponseXml("Catalog", kSelfTestDownstreamId));
 
         gb28181::SipRequestContext recordResponse;
         recordResponse.method = "MESSAGE";
-        recordResponse.fromId = kSelfTestClientId;
-        recordResponse.toId = kSelfTestServerId;
-        fillManscdp(&recordResponse, makeSelfTestResponseXml("RecordInfo", kSelfTestClientId));
+        recordResponse.fromId = kSelfTestDownstreamId;
+        recordResponse.toId = kSelfTestNodeId;
+        fillManscdp(&recordResponse, makeSelfTestResponseXml("RecordInfo", kSelfTestDownstreamId));
 
         gb28181::SipRequestContext badRecordResponse = recordResponse;
-        fillManscdp(&badRecordResponse, makeSelfTestBadResponseXml("RecordInfo", kSelfTestClientId));
+        fillManscdp(&badRecordResponse, makeSelfTestBadResponseXml("RecordInfo", kSelfTestDownstreamId));
 
         gb28181::SipRequestContext bye;
         bye.method = "BYE";
         bye.event = "request";
-        bye.fromId = kSelfTestServerId;
-        bye.toId = kSelfTestClientId;
+        bye.fromId = kSelfTestUpstreamId;
+        bye.toId = kSelfTestNodeId;
         bye.callId = invite.callId;
         bye.cseq = "3";
 
@@ -557,11 +567,11 @@ int main(int argc, char* argv[])
         gb28181::SipRequestContext inviteResponse;
         inviteResponse.method = "INVITE";
         inviteResponse.event = "response";
-        inviteResponse.fromId = kSelfTestServerId;
-        inviteResponse.toId = kSelfTestClientId;
+        inviteResponse.fromId = kSelfTestDownstreamId;
+        inviteResponse.toId = kSelfTestNodeId;
         inviteResponse.callId = "selftest-invite-client-dialog";
         inviteResponse.cseq = "1";
-        inviteResponse.contact = "<sip:11000000002000000001@127.0.1:7101>";
+        inviteResponse.contact = "<sip:12000000002000000001@127.0.0.1:7201>";
         inviteResponse.fromTag = "selftest-local-tag";
         inviteResponse.toTag = "selftest-remote-tag";
         inviteResponse.statusCode = 200;
@@ -586,7 +596,7 @@ int main(int argc, char* argv[])
             registerAuthMessage.digestAuth.username == kSelfTestUsername &&
             registerAuthMessage.digestAuth.realm == kSelfTestRealm &&
             registerAuthMessage.digestAuth.nonce == registerClientChallenge.digestAuth.nonce &&
-            registerAuthMessage.digestAuth.uri == selfTestRegisterUri() &&
+            registerAuthMessage.digestAuth.uri == selfTestUpstreamRegisterUri() &&
             registerAuthMessage.digestAuth.opaque == registerClientChallenge.digestAuth.opaque &&
             gb28181::verifyDigestResponse("REGISTER",
                                           registerAuthMessage.digestAuth,
@@ -597,8 +607,8 @@ int main(int argc, char* argv[])
         gb28181::SipRequestContext reg;
         reg.method = "REGISTER";
         reg.event = "request";
-        reg.fromId = kSelfTestClientId;
-        reg.toId = kSelfTestServerId;
+        reg.fromId = kSelfTestDownstreamId;
+        reg.toId = kSelfTestNodeId;
         reg.expires = 60;
         fillRegisterDigest(&reg,
                            challengeNonce,
@@ -607,7 +617,7 @@ int main(int argc, char* argv[])
                                                           kSelfTestRealm,
                                                           kSelfTestPassword,
                                                           challengeNonce,
-                                                          selfTestRegisterUri(),
+                                                          selfTestNodeRegisterUri(),
                                                           "",
                                                           "",
                                                           ""),
@@ -644,7 +654,7 @@ int main(int argc, char* argv[])
                                                           kSelfTestRealm,
                                                           kSelfTestPassword,
                                                           qopNonce,
-                                                          selfTestRegisterUri(),
+                                                          selfTestNodeRegisterUri(),
                                                           "auth",
                                                           "00000001",
                                                           "selftest-cnonce"),
@@ -670,8 +680,8 @@ int main(int argc, char* argv[])
             inviteAckCaptured &&
             !inviteAckMessage.response &&
             inviteAckMessage.method == "ACK" &&
-            inviteAckMessage.fromId == kSelfTestServerId &&
-            inviteAckMessage.toId == kSelfTestClientId &&
+            inviteAckMessage.fromId == kSelfTestNodeId &&
+            inviteAckMessage.toId == kSelfTestDownstreamId &&
             inviteAckMessage.callId == inviteResponse.callId &&
             inviteAckMessage.cseq == inviteResponse.cseq &&
             inviteAckMessage.contact == inviteResponse.contact &&
@@ -844,10 +854,10 @@ int main(int argc, char* argv[])
         const size_t availableRtpPorts = node.availableRtpPortCount();
         const size_t catalogItems = node.catalogItemCount();
         const size_t recordItems = node.recordItemCount();
-        const std::vector<gb28181::ManscdpItem> catalogSnapshot = node.catalogItems(kSelfTestClientId);
-        const std::vector<gb28181::ManscdpItem> recordSnapshot = node.recordItems(kSelfTestClientId);
+        const std::vector<gb28181::ManscdpItem> catalogSnapshot = node.catalogItems(kSelfTestDownstreamId);
+        const std::vector<gb28181::ManscdpItem> recordSnapshot = node.recordItems(kSelfTestDownstreamId);
         const bool catalogSnapshotOk = catalogSnapshot.size() == 1 &&
-                                       catalogSnapshot.front().deviceId == kSelfTestClientId &&
+                                       catalogSnapshot.front().deviceId == kSelfTestDownstreamId &&
                                        catalogSnapshot.front().name == "SelfTestCamera" &&
                                        catalogSnapshot.front().manufacturer == "GB28181-Server" &&
                                        catalogSnapshot.front().model == "SelfTestModel" &&
@@ -860,24 +870,24 @@ int main(int argc, char* argv[])
                                        catalogSnapshot.front().secrecy == "0" &&
                                        catalogSnapshot.front().status == "ON";
         const bool recordSnapshotOk = recordSnapshot.size() == 1 &&
-                                      recordSnapshot.front().deviceId == kSelfTestClientId &&
+                                      recordSnapshot.front().deviceId == kSelfTestDownstreamId &&
                                       recordSnapshot.front().filePath == "/tmp/self-test.ps";
         const std::string businessStateSnapshot = node.businessStateSnapshot();
         std::string businessStateError;
         gb28181::GB28181Node restoredNode(config);
         const bool businessStateRestoreOk = restoredNode.restoreBusinessStateSnapshot(businessStateSnapshot, &businessStateError);
-        const std::vector<gb28181::ManscdpItem> restoredCatalog = restoredNode.catalogItems(kSelfTestClientId);
-        const std::vector<gb28181::ManscdpItem> restoredRecords = restoredNode.recordItems(kSelfTestClientId);
+        const std::vector<gb28181::ManscdpItem> restoredCatalog = restoredNode.catalogItems(kSelfTestDownstreamId);
+        const std::vector<gb28181::ManscdpItem> restoredRecords = restoredNode.recordItems(kSelfTestDownstreamId);
         const bool businessStateSaveOk = node.saveBusinessStateSnapshot(kSelfTestBusinessStatePath, &businessStateError);
         gb28181::GB28181Node loadedNode(config);
         const bool businessStateLoadOk = businessStateSaveOk &&
                                          loadedNode.loadBusinessStateSnapshot(kSelfTestBusinessStatePath, &businessStateError);
         std::remove(kSelfTestBusinessStatePath);
-        const std::vector<gb28181::ManscdpItem> loadedCatalog = loadedNode.catalogItems(kSelfTestClientId);
-        const std::vector<gb28181::ManscdpItem> loadedRecords = loadedNode.recordItems(kSelfTestClientId);
+        const std::vector<gb28181::ManscdpItem> loadedCatalog = loadedNode.catalogItems(kSelfTestDownstreamId);
+        const std::vector<gb28181::ManscdpItem> loadedRecords = loadedNode.recordItems(kSelfTestDownstreamId);
         const std::string businessSummaryJson = node.businessSummaryJson();
-        const std::string catalogJson = node.catalogJson(kSelfTestClientId);
-        const std::string recordJson = node.recordJson(kSelfTestClientId);
+        const std::string catalogJson = node.catalogJson(kSelfTestDownstreamId);
+        const std::string recordJson = node.recordJson(kSelfTestDownstreamId);
         std::string businessCliSummaryJson;
         std::string businessCliCatalogJson;
         std::string businessCliRecordJson;
@@ -889,12 +899,12 @@ int main(int argc, char* argv[])
                                                             &businessCliError);
         const bool businessCliCatalogOk = queryBusinessJson(node,
                                                             "catalog",
-                                                            kSelfTestClientId,
+                                                            kSelfTestDownstreamId,
                                                             &businessCliCatalogJson,
                                                             &businessCliError);
         const bool businessCliRecordOk = queryBusinessJson(node,
                                                            "record",
-                                                           kSelfTestClientId,
+                                                           kSelfTestDownstreamId,
                                                            &businessCliRecordJson,
                                                            &businessCliError);
         const bool businessCliMissingPeerRejected = !queryBusinessJson(node,
@@ -927,7 +937,7 @@ int main(int argc, char* argv[])
             restoredCatalog.front().name == "SelfTestCamera" &&
             restoredCatalog.front().parental == "1" &&
             restoredRecords.front().filePath == "/tmp/self-test.ps" &&
-            loadedCatalog.front().deviceId == kSelfTestClientId &&
+            loadedCatalog.front().deviceId == kSelfTestDownstreamId &&
             loadedCatalog.front().parental == "1" &&
             loadedRecords.front().filePath == "/tmp/self-test.ps";
         const bool rtpPortsReleased = availableRtpPorts == initialRtpPorts;
@@ -971,6 +981,9 @@ int main(int argc, char* argv[])
                   << " BYE=" << (byeOk ? "ok" : "failed")
                   << " MD5=" << (md5Ok ? "ok" : "failed")
                   << " sessions=" << node.sessionCount()
+                  << " endpoints=" << node.endpointCount()
+                  << " upstream_peers=" << node.upstreamPeerCount()
+                  << " downstream_peers=" << node.downstreamPeerCount()
                   << " registered_peers=" << node.registeredPeerCount()
                   << " keepalive_peers=" << node.keepalivePeerCount()
                   << " routes=" << node.routeCount()
@@ -988,7 +1001,7 @@ int main(int argc, char* argv[])
                   << " available_rtp_ports=" << availableRtpPorts
                   << std::endl;
 
-        if (!mediaSourceOk || !mediaSourcePsOk || !regChallengeOk || !challengeNonceOk || !registerAuthRetryOk || !badRegRejected || !regOk || !replayRegRejected || !qopChallengeOk || !qopChallengeNonceOk || !qopRegOk || !qopReplayRejected || !badKeepaliveRejected || !keepaliveOk || !catalogOk || !recordOk || !badCatalogResponseRejected || !catalogResponseOk || !badRecordResponseRejected || !recordResponseOk || !inviteResponseOk || !inviteAckOk || catalogItems != 1 || recordItems != 1 || !catalogSnapshotOk || !recordSnapshotOk || !businessStatePersistenceOk || !businessQueryJsonOk || !badInviteRejected || !earlyAckRejected || !inviteOk || !badAckCseqRejected || !ackOk || !badRtpSsrcRejected || !rtpPacketizeOk || !rtpOk || !mediaReceivingOk || !rtpAdapterOk || !adapterSendOk || !frameFileOk || !wrongDialogByeRejected || !byeOk || !md5Ok || sentMessages == 0 || scheduledTasks < 3 || mediaSessions != 0 || !rtpPortsReleased)
+        if (!singleEndpointOk || !peerTopologyOk || !mediaSourceOk || !mediaSourcePsOk || !regChallengeOk || !challengeNonceOk || !registerAuthRetryOk || !badRegRejected || !regOk || !replayRegRejected || !qopChallengeOk || !qopChallengeNonceOk || !qopRegOk || !qopReplayRejected || !badKeepaliveRejected || !keepaliveOk || !catalogOk || !recordOk || !badCatalogResponseRejected || !catalogResponseOk || !badRecordResponseRejected || !recordResponseOk || !inviteResponseOk || !inviteAckOk || catalogItems != 1 || recordItems != 1 || !catalogSnapshotOk || !recordSnapshotOk || !businessStatePersistenceOk || !businessQueryJsonOk || !badInviteRejected || !earlyAckRejected || !inviteOk || !badAckCseqRejected || !ackOk || !badRtpSsrcRejected || !rtpPacketizeOk || !rtpOk || !mediaReceivingOk || !rtpAdapterOk || !adapterSendOk || !frameFileOk || !wrongDialogByeRejected || !byeOk || !md5Ok || sentMessages == 0 || scheduledTasks < 3 || mediaSessions != 0 || !rtpPortsReleased)
         {
             node.stop();
             return 1;

@@ -32,6 +32,9 @@ public:
     bool dispatchSipRequest(const SipRequestContext& request);
 
     std::vector<std::string> capabilityNames() const;
+    size_t endpointCount() const;
+    size_t upstreamPeerCount() const;
+    size_t downstreamPeerCount() const;
     size_t routeCount() const;
     size_t sessionCount() const;
     size_t registeredPeerCount() const;

@@ -66,6 +66,19 @@ std::string sipUriFromContact(const std::string& contact)
     return contact.substr(begin, end == std::string::npos ? std::string::npos : end - begin);
 }
 
+std::string pjStatusText(pj_status_t status)
+{
+    char buffer[PJ_ERR_MSG_SIZE] = {0};
+    pj_strerror(status, buffer, sizeof(buffer));
+    return buffer;
+}
+
+void logPjFailure(const std::string& action, pj_status_t status)
+{
+    std::cerr << action << " failed: status=" << status
+              << " message=" << pjStatusText(status) << std::endl;
+}
+
 void setPoolString(pj_pool_t* pool, pj_str_t* target, const std::string& value)
 {
     pj_strdup2(pool, target, value.c_str());
@@ -460,6 +473,11 @@ bool PjsipStackAdapter::send(const SipMessageContext& message)
     initMethod(message.method, &method);
 
     const std::string contactTarget = sipUriFromContact(message.contact);
+    if (contactTarget.empty() && (message.remoteIp.empty() || message.remotePort <= 0))
+    {
+        return false;
+    }
+
     const std::string targetValue = contactTarget.empty() ? sipUri(message.toId, message.remoteIp, message.remotePort) : contactTarget;
     const std::string fromValue = sipUri(message.fromId, message.localIp, message.localPort);
     const std::string toValue = sipUri(message.toId, message.remoteIp, message.remotePort);
@@ -573,13 +591,18 @@ bool PjsipStackAdapter::send(const SipMessageContext& message)
 
 bool PjsipStackAdapter::initPjlib()
 {
-    if (pj_init() != PJ_SUCCESS)
+    pj_status_t status = pj_init();
+    if (status != PJ_SUCCESS)
     {
+        logPjFailure("pj_init", status);
         return false;
     }
     m_pjlibInitialized = true;
-    if (pjlib_util_init() != PJ_SUCCESS)
+
+    status = pjlib_util_init();
+    if (status != PJ_SUCCESS)
     {
+        logPjFailure("pjlib_util_init", status);
         return false;
     }
     pj_log_set_level(0);
@@ -590,23 +613,33 @@ bool PjsipStackAdapter::initEndpoint()
 {
     pj_caching_pool_init(&m_cachingPool, NULL, SIP_STACK_SIZE);
     m_cachingPoolInitialized = true;
-    if (pjsip_endpt_create(&m_cachingPool.factory, NULL, &m_endpoint) != PJ_SUCCESS)
+
+    pj_status_t status = pjsip_endpt_create(&m_cachingPool.factory, NULL, &m_endpoint);
+    if (status != PJ_SUCCESS)
     {
+        logPjFailure("pjsip_endpt_create", status);
         return false;
     }
 
     pj_ioqueue_t* ioqueue = pjsip_endpt_get_ioqueue(m_endpoint);
-    if (pjmedia_endpt_create(&m_cachingPool.factory, ioqueue, 0, &m_mediaEndpoint) != PJ_SUCCESS)
+    status = pjmedia_endpt_create(&m_cachingPool.factory, ioqueue, 0, &m_mediaEndpoint);
+    if (status != PJ_SUCCESS)
     {
+        logPjFailure("pjmedia_endpt_create", status);
         return false;
     }
 
-    if (pjsip_tsx_layer_init_module(m_endpoint) != PJ_SUCCESS)
+    status = pjsip_tsx_layer_init_module(m_endpoint);
+    if (status != PJ_SUCCESS)
     {
+        logPjFailure("pjsip_tsx_layer_init_module", status);
         return false;
     }
-    if (pjsip_ua_init_module(m_endpoint, NULL) != PJ_SUCCESS)
+
+    status = pjsip_ua_init_module(m_endpoint, NULL);
+    if (status != PJ_SUCCESS)
     {
+        logPjFailure("pjsip_ua_init_module", status);
         return false;
     }
 
@@ -622,12 +655,28 @@ bool PjsipStackAdapter::startTransport(int sipPort)
     addr.sin_addr.s_addr = 0;
     addr.sin_port = pj_htons((pj_uint16_t)sipPort);
 
-    if (pjsip_udp_transport_start(m_endpoint, &addr, NULL, 1, NULL) != PJ_SUCCESS)
+    pj_status_t status = pjsip_udp_transport_start(m_endpoint, &addr, NULL, 1, NULL);
+    if (status != PJ_SUCCESS)
     {
+        std::ostringstream action;
+        action << "pjsip_udp_transport_start port=" << sipPort;
+        logPjFailure(action.str(), status);
         return false;
     }
-    if (pjsip_tcp_transport_start(m_endpoint, &addr, 1, NULL) != PJ_SUCCESS)
+
+    status = pjsip_tcp_transport_start(m_endpoint, &addr, 1, NULL);
+    if (status != PJ_SUCCESS)
     {
+        if (status == PJSIP_ETYPEEXISTS)
+        {
+            std::cerr << "pjsip_tcp_transport_start port=" << sipPort
+                      << " skipped: TCP transport factory already exists" << std::endl;
+            return true;
+        }
+
+        std::ostringstream action;
+        action << "pjsip_tcp_transport_start port=" << sipPort;
+        logPjFailure(action.str(), status);
         return false;
     }
 

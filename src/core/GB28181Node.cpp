@@ -132,6 +132,21 @@ size_t GB28181Node::routeCount() const
     return m_sipStack.routeCount();
 }
 
+size_t GB28181Node::endpointCount() const
+{
+    return m_sipStack.endpointCount();
+}
+
+size_t GB28181Node::upstreamPeerCount() const
+{
+    return m_peerRegistry.upstreamCount();
+}
+
+size_t GB28181Node::downstreamPeerCount() const
+{
+    return m_peerRegistry.downstreamCount();
+}
+
 size_t GB28181Node::sessionCount() const
 {
     return m_sessionManager.sessionCount();

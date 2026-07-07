@@ -22,6 +22,12 @@ struct PeerInfo
     std::string ip;
     int port;
     PeerRelation relation;
+    bool registerTo;
+    bool allowRegister;
+    int registerExpires;
+    std::string realm;
+    std::string username;
+    std::string password;
     bool registered;
     int expires;
     std::time_t lastRegisterTime;
@@ -40,6 +46,7 @@ public:
     bool markRegistered(const std::string& sipId, int expires);
     bool markUnregistered(const std::string& sipId);
     bool markKeepalive(const std::string& sipId);
+    bool updateAddress(const std::string& sipId, const std::string& ip, int port);
 
     size_t upstreamCount() const;
     size_t downstreamCount() const;

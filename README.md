@@ -155,8 +155,8 @@ scripts/prepare-jrtplib-linux.sh /path/to/jrtplib-3.11.2
 
 ```bash
 ./build/gb28181-server -c conf/gb28181-server.conf --business-query summary --business-state-file state.snapshot
-./build/gb28181-server -c conf/gb28181-server.conf --business-query catalog --business-state-file state.snapshot --peer-id 11000000002000000001
-./build/gb28181-server -c conf/gb28181-server.conf --business-query record --business-state-file state.snapshot --peer-id 11000000002000000001
+./build/gb28181-server -c conf/gb28181-server.conf --business-query catalog --business-state-file state.snapshot --peer-id 12000000002000000001
+./build/gb28181-server -c conf/gb28181-server.conf --business-query record --business-state-file state.snapshot --peer-id 12000000002000000001
 ```
 
 历史服务目录仍可作为迁移对照目标配置，但不作为默认交付目标。第三方静态库以 Linux 目标为主，例如 `x86_64-unknown-linux-gnu`，因此历史目标建议在 Linux 环境验证。
@@ -171,7 +171,20 @@ cmake -S . -B build-legacy -DGB28181_BUILD_LEGACY_SERVICES=ON
 
 ## 配置现状
 
-历史配置源仍分散在两个旧目录中，当前已新增 `conf/gb28181-server.conf` 作为统一入口的过渡样例。最终统一配置应描述节点自身、级联对端、SIP 监听、媒体端口和各能力所需参数，而不是按上下级拆成两个服务模块。
+历史配置源仍分散在两个旧目录中，当前已新增 `conf/gb28181-server.conf` 作为统一入口样例。统一配置描述一个本地 SIP 节点和多个 peer 关系：`[node]` 持有唯一的本地 SIP/RTP 配置，`[peer.upstream.*]` 描述需要注册到的远端平台，`[peer.downstream.*]` 描述允许接入或预期接入的下级设备。peer 中的 `remote_port` 是远端端口，不是本地监听端口。
+
+当前统一入口默认本地节点：
+
+- SIP ID：`11000000002000000001`
+- SIP 地址：`127.0.0.1:7101`
+- RTP 端口范围：`30000-40000`
+
+当前统一入口默认 peer：
+
+- 上级平台注册目标：`10000000002000000001@127.0.0.1:5061`
+- 允许接入的下级设备：`12000000002000000001`
+
+旧 `[sup]` / `[sub]` 配置段仅保留临时兼容，用于迁移期测试；默认交付模型不再把上级和下级实现为两个本地 SIP endpoint。
 
 接收下级注册关系的历史配置：
 

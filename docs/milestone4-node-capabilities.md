@@ -264,14 +264,14 @@ scripts/verify-milestone4-linux.sh default
 运行输出确认：
 
 - `gb28181-server` 成功创建 `GB28181Node`。
-- 统一配置中的 `[sup]` 与 `[sub]` 过渡配置被解析为两个 SIP endpoint。
-- `PeerRegistry` 能识别 1 个 upstream 和 1 个 downstream。
+- 统一配置中的 `[node]` 被解析为唯一 SIP endpoint。
+- `PeerRegistry` 从 `[peer.upstream.*]` / `[peer.downstream.*]` 能识别 1 个 upstream 和 1 个 downstream。
 - `MediaManager` 能建立 RTP 端口池。
 - 标准能力模块按顺序启动，并注册 11 条 SIP 路由。
 - `--self-test` 能将 REGISTER response 401 自动认证重试、REGISTER challenge、bad REGISTER Digest、valid REGISTER Digest、REGISTER replay、qop REGISTER replay、bad Keepalive XML、valid Keepalive XML、Catalog、RecordInfo、bad Catalog Response、Catalog Response、bad RecordInfo Response、RecordInfo Response、INVITE SIP response、INVITE 2xx ACK、bad INVITE SDP、early ACK、valid INVITE SDP、bad ACK CSeq、ACK、wrong dialog BYE、BYE 请求分发到对应能力模块，并创建会话。
 - `--self-test` 已覆盖 REGISTER response 401 -> Authorization REGISTER retry、REGISTER 401 challenge、REGISTER 403、REGISTER 200、REGISTER nonce replay reject、REGISTER qop/nc replay reject、Keepalive XML 400、Keepalive 200、Catalog、RecordInfo、Catalog/RecordInfo 列表响应解析与坏响应拒绝、Catalog 常用字段（含 Parental）落地、RecordInfo 明细落地、快照查询、导出恢复、文件持久化加载、JSON 查询和 CLI 查询分发、INVITE SIP response 分发、INVITE 2xx 后 ACK 出站、INVITE 400、early ACK reject、INVITE 200 SDP、ACK CSeq reject、ACK confirm、历史 `stream.file` 首帧读取、bad RTP SSRC reject、RTP packetize、RTP receive、RTP payload marker 重组、RTP adapter receive、RTP adapter send、PS parse、H.264 NAL parse、frame file output、BYE 481、BYE 200 的内部路由、状态变更、出站消息生成和 RTP 端口释放。
-- `--self-test` 当前输出 `REGISTER_AUTH_RETRY=ok INVITE_RESPONSE=ok INVITE_ACK=ok routes=11 sent_messages=24 scheduled_tasks=3 catalog_items=1 record_items=1 catalog_snapshot=ok record_snapshot=ok business_state_restore=ok business_state_file=ok business_query_json=ok business_query_cli=ok MEDIA_SOURCE=ok MEDIA_SOURCE_PS=ok BAD_RTP_SSRC=rejected RTP_PACKETIZE=ok RTP=ok PS=ok H264=ok FRAME=ok FRAME_FILE=ok RTP_ADAPTER=ok SEND_ADAPTER=ok MEDIA_RECEIVING=ok MD5=ok sessions=24 media_sessions=0 available_rtp_ports=10001`，包含启动阶段客户端请求、请求处理阶段服务端响应/业务响应、REGISTER refresh、keepalive 与 media-send 毫秒级周期任务注册。
-- CTest 已注册 `gb28181-server-self-test`，默认使用 `conf/gb28181-server.conf`，可通过 `-DGB28181_SELF_TEST_CONFIG=path/to/conf` 覆盖；测试用 `REGISTER_AUTH_RETRY=ok`、`INVITE_ACK=ok`、`routes=11`、`sent_messages=24`、`sessions=24` 作为通过标记。`scripts/verify-milestone4-linux.sh preflight` 可检查目标环境命令、配置、媒体源和第三方静态库是否齐备，设置 `GB28181_PREFLIGHT_STRICT=1` 后可作为 Linux 硬门禁。
+- `--self-test` 当前输出 `REGISTER_AUTH_RETRY=ok INVITE_RESPONSE=ok INVITE_ACK=ok routes=11 sent_messages=24 scheduled_tasks=3 catalog_items=1 record_items=1 catalog_snapshot=ok record_snapshot=ok business_state_restore=ok business_state_file=ok business_query_json=ok business_query_cli=ok MEDIA_SOURCE=ok MEDIA_SOURCE_PS=ok BAD_RTP_SSRC=rejected RTP_PACKETIZE=ok RTP=ok PS=ok H264=ok FRAME=ok FRAME_FILE=ok RTP_ADAPTER=ok SEND_ADAPTER=ok MEDIA_RECEIVING=ok MD5=ok sessions=24 media_sessions=0 endpoints=1 upstream_peers=1 downstream_peers=1 available_rtp_ports=5001`，包含启动阶段客户端请求、请求处理阶段服务端响应/业务响应、REGISTER refresh、keepalive 与 media-send 毫秒级周期任务注册。
+- CTest 已注册 `gb28181-server-self-test`，默认使用 `conf/gb28181-server.conf`，可通过 `-DGB28181_SELF_TEST_CONFIG=path/to/conf` 覆盖；测试用 `REGISTER_AUTH_RETRY=ok`、`INVITE_ACK=ok`、`routes=11`、`sent_messages=24`、`sessions=24`、`endpoints=1`、`upstream_peers=1`、`downstream_peers=1` 作为通过标记。`scripts/verify-milestone4-linux.sh preflight` 可检查目标环境命令、配置、媒体源和第三方静态库是否齐备，设置 `GB28181_PREFLIGHT_STRICT=1` 后可作为 Linux 硬门禁。
 - 停止时能力模块按反向顺序释放。
 
 PJSIP adapter 在当前非 Linux 编辑环境下已执行接口级语法检查：

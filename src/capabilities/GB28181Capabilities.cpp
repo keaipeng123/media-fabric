@@ -31,6 +31,14 @@ int nextSn()
     return sn++;
 }
 
+int parseInt(const std::string& value)
+{
+    std::istringstream input(value);
+    int result = 0;
+    input >> result;
+    return input ? result : 0;
+}
+
 const int kRegisterExpires = 3600;
 const int kRegisterRefreshIntervalSeconds = 300;
 const int kRegisterChallengeExpiresSeconds = 300;
@@ -62,7 +70,7 @@ const SipEndpointConfig* findEndpointBySipId(const NodeRuntime& runtime, const s
     return NULL;
 }
 
-const SipEndpointConfig* localEndpointForPeer(const NodeRuntime& runtime, const PeerInfo& peer)
+const SipEndpointConfig* localEndpointForPeer(const NodeRuntime& runtime, const PeerInfo&)
 {
     const SipEndpointConfig* node = findEndpointByName(runtime, "node");
     if (node != NULL)
@@ -70,28 +78,7 @@ const SipEndpointConfig* localEndpointForPeer(const NodeRuntime& runtime, const 
         return node;
     }
 
-    const SipEndpointConfig* preferred = NULL;
-    if (peer.relation == PEER_UPSTREAM)
-    {
-        preferred = findEndpointByName(runtime, "sub");
-    }
-    else
-    {
-        preferred = findEndpointByName(runtime, "sup");
-    }
-    if (preferred != NULL)
-    {
-        return preferred;
-    }
-
     const std::vector<SipEndpointConfig>& endpoints = runtime.config->sipEndpoints();
-    for (std::vector<SipEndpointConfig>::const_iterator it = endpoints.begin(); it != endpoints.end(); ++it)
-    {
-        if (it->sipId != peer.sipId)
-        {
-            return &(*it);
-        }
-    }
     return endpoints.empty() ? NULL : &endpoints.front();
 }
 
@@ -226,6 +213,52 @@ SipMessageContext makeRequest(const PeerInfo& peer,
     message.remoteIp = peer.ip;
     message.remotePort = peer.port;
     return message;
+}
+
+bool parseContactAddress(const std::string& contact, std::string* ip, int* port)
+{
+    if (ip == NULL || port == NULL)
+    {
+        return false;
+    }
+
+    const std::string marker = "sip:";
+    std::string::size_type begin = contact.find(marker);
+    if (begin == std::string::npos)
+    {
+        return false;
+    }
+    begin += marker.size();
+
+    const std::string::size_type at = contact.find('@', begin);
+    if (at == std::string::npos)
+    {
+        return false;
+    }
+
+    std::string::size_type end = contact.find_first_of(">; \t\r\n", at + 1);
+    if (end == std::string::npos)
+    {
+        end = contact.size();
+    }
+
+    const std::string hostPort = contact.substr(at + 1, end - at - 1);
+    const std::string::size_type colon = hostPort.rfind(':');
+    if (colon == std::string::npos)
+    {
+        return false;
+    }
+
+    const std::string parsedIp = hostPort.substr(0, colon);
+    const int parsedPort = parseInt(hostPort.substr(colon + 1));
+    if (parsedIp.empty() || parsedPort <= 0)
+    {
+        return false;
+    }
+
+    *ip = parsedIp;
+    *port = parsedPort;
+    return true;
 }
 
 std::string sipUri(const std::string& sipId, const std::string& ip, int port)
@@ -405,7 +438,7 @@ bool sendRegister(NodeRuntime& runtime, const std::string& capability, const Pee
     }
 
     SipMessageContext message = makeRequest(peer, *local, "REGISTER", "request");
-    message.expires = kRegisterExpires;
+    message.expires = peer.registerExpires > 0 ? peer.registerExpires : kRegisterExpires;
     const bool sent = runtime.sipStack->send(message);
     createSendSession(runtime, capability, peer, "register", sent);
     return sent;
@@ -418,12 +451,11 @@ bool challengeSupportsAuthQop(const std::string& qop)
 
 DigestAuthFields makeRegisterDigest(const SipRequestContext& response,
                                     const PeerInfo& peer,
-                                    const SipEndpointConfig& local,
-                                    const SipEndpointConfig& target)
+                                    const SipEndpointConfig& local)
 {
     DigestAuthFields digest;
-    digest.username = target.username.empty() ? local.sipId : target.username;
-    digest.realm = response.digestAuth.realm.empty() ? target.realm : response.digestAuth.realm;
+    digest.username = peer.username.empty() ? local.sipId : peer.username;
+    digest.realm = response.digestAuth.realm.empty() ? peer.realm : response.digestAuth.realm;
     digest.nonce = response.digestAuth.nonce;
     digest.uri = sipUri(peer.sipId, peer.ip, peer.port);
     digest.algorithm = response.digestAuth.algorithm.empty() ? "MD5" : response.digestAuth.algorithm;
@@ -437,7 +469,7 @@ DigestAuthFields makeRegisterDigest(const SipRequestContext& response,
     digest.response = computeDigestResponse("REGISTER",
                                             digest.username,
                                             digest.realm,
-                                            target.password,
+                                            peer.password,
                                             digest.nonce,
                                             digest.uri,
                                             digest.qop,
@@ -450,18 +482,17 @@ bool sendRegisterWithDigest(NodeRuntime& runtime,
                             const std::string& capability,
                             const PeerInfo& peer,
                             const SipEndpointConfig& local,
-                            const SipEndpointConfig& target,
                             const SipRequestContext& response)
 {
-    if (target.password.empty() || response.digestAuth.nonce.empty())
+    if (peer.password.empty() || response.digestAuth.nonce.empty())
     {
         createSendSession(runtime, capability, peer, "register-auth", false);
         return false;
     }
 
     SipMessageContext message = makeRequest(peer, local, "REGISTER", "request");
-    message.expires = kRegisterExpires;
-    message.digestAuth = makeRegisterDigest(response, peer, local, target);
+    message.expires = peer.registerExpires > 0 ? peer.registerExpires : kRegisterExpires;
+    message.digestAuth = makeRegisterDigest(response, peer, local);
     const bool sent = runtime.sipStack->send(message);
     createSendSession(runtime, capability, peer, "register-auth", sent);
     return sent;
@@ -474,7 +505,10 @@ void sendRegisterToUpstreams(NodeRuntime& runtime, const std::string& capability
     {
         if (it->relation == PEER_UPSTREAM)
         {
-            sendRegister(runtime, capability, *it);
+            if (it->registerTo)
+            {
+                sendRegister(runtime, capability, *it);
+            }
         }
     }
 }
@@ -558,7 +592,10 @@ void sendKeepaliveToUpstreams(NodeRuntime& runtime, const std::string& capabilit
     {
         if (it->relation == PEER_UPSTREAM)
         {
-            sendKeepalive(runtime, capability, *it);
+            if (it->registerTo)
+            {
+                sendKeepalive(runtime, capability, *it);
+            }
         }
     }
 }
@@ -642,21 +679,21 @@ bool RegisterClientCapability::handleSipRequest(const SipRequestContext& request
     session.state = state.str();
     runtime.sessionManager->createSession(session);
 
-    if (request.statusCode == 401)
+        if (request.statusCode == 401)
     {
         const SipEndpointConfig* local = localEndpointForPeer(runtime, *peer);
-        const SipEndpointConfig* target = findEndpointBySipId(runtime, peer->sipId);
-        if (local == NULL || target == NULL)
+        if (local == NULL)
         {
             createSendSession(runtime, name(), *peer, "register-auth", false);
             return false;
         }
-        return sendRegisterWithDigest(runtime, name(), *peer, *local, *target, request);
+        return sendRegisterWithDigest(runtime, name(), *peer, *local, request);
     }
 
     if (request.statusCode >= 200 && request.statusCode < 300)
     {
-        return runtime.peerRegistry->markRegistered(peer->sipId, kRegisterExpires);
+        const int expires = peer->registerExpires > 0 ? peer->registerExpires : kRegisterExpires;
+        return runtime.peerRegistry->markRegistered(peer->sipId, expires);
     }
 
     return request.statusCode > 0 && request.statusCode < 400;
@@ -784,6 +821,19 @@ bool RegisterServerCapability::handleSipRequest(const SipRequestContext& request
         runtime.sipStack->send(response);
         return false;
     }
+    if (peer->relation == PEER_DOWNSTREAM && !peer->allowRegister)
+    {
+        SessionInfo session;
+        session.id = name() + ":register-not-allowed:" + request.fromId;
+        session.capability = name();
+        session.peerId = request.fromId;
+        session.state = "register-not-allowed";
+        runtime.sessionManager->createSession(session);
+
+        SipMessageContext response = makeResponse(request, name(), 403, "Forbidden");
+        runtime.sipStack->send(response);
+        return false;
+    }
 
     const SipEndpointConfig* targetEndpoint = findEndpointBySipId(runtime, request.toId);
     if (endpointRequiresAuth(targetEndpoint) && request.digestAuth.response.empty())
@@ -827,6 +877,12 @@ bool RegisterServerCapability::handleSipRequest(const SipRequestContext& request
     else
     {
         ok = runtime.peerRegistry->markRegistered(request.fromId, request.expires);
+        std::string contactIp;
+        int contactPort = 0;
+        if (ok && parseContactAddress(request.contact, &contactIp, &contactPort))
+        {
+            runtime.peerRegistry->updateAddress(request.fromId, contactIp, contactPort);
+        }
         state = ok ? "registered" : "unknown-peer";
     }
 

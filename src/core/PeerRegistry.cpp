@@ -7,6 +7,9 @@ namespace gb28181 {
 PeerInfo::PeerInfo()
     : port(0),
       relation(PEER_DOWNSTREAM),
+      registerTo(false),
+      allowRegister(false),
+      registerExpires(0),
       registered(false),
       expires(0),
       lastRegisterTime(0),
@@ -18,17 +21,23 @@ bool PeerRegistry::configure(const NodeConfig& config)
 {
     m_peers.clear();
 
-    const std::vector<SipEndpointConfig>& endpoints = config.sipEndpoints();
-    for (std::vector<SipEndpointConfig>::const_iterator it = endpoints.begin();
-         it != endpoints.end();
+    const std::vector<PeerConfig>& peers = config.peers();
+    for (std::vector<PeerConfig>::const_iterator it = peers.begin();
+         it != peers.end();
          ++it)
     {
         PeerInfo peer;
         peer.name = it->name;
         peer.sipId = it->sipId;
-        peer.ip = it->sipIp;
-        peer.port = it->sipPort;
-        peer.relation = it->name == "sup" ? PEER_UPSTREAM : PEER_DOWNSTREAM;
+        peer.ip = it->remoteIp;
+        peer.port = it->remotePort;
+        peer.relation = it->relation == "upstream" ? PEER_UPSTREAM : PEER_DOWNSTREAM;
+        peer.registerTo = it->registerTo;
+        peer.allowRegister = it->allowRegister;
+        peer.registerExpires = it->expires;
+        peer.realm = it->realm;
+        peer.username = it->username;
+        peer.password = it->password;
         peer.registered = false;
         peer.expires = 0;
         peer.lastRegisterTime = 0;
@@ -101,6 +110,24 @@ bool PeerRegistry::markKeepalive(const std::string& sipId)
     }
 
     peer->lastKeepaliveTime = std::time(NULL);
+    return true;
+}
+
+bool PeerRegistry::updateAddress(const std::string& sipId, const std::string& ip, int port)
+{
+    if (ip.empty() || port <= 0)
+    {
+        return false;
+    }
+
+    PeerInfo* peer = findBySipId(sipId);
+    if (peer == NULL)
+    {
+        return false;
+    }
+
+    peer->ip = ip;
+    peer->port = port;
     return true;
 }
 

@@ -136,6 +136,8 @@ scripts/verify-milestone4-linux.sh capture-audit artifacts/milestone4
 scripts/verify-milestone4-linux.sh capture-audit artifacts/milestone4/milestone4-full-report-<timestamp>.txt
 ```
 
+当前统一配置只从 `[node]` 启动一个本地 SIP listener；`peer.upstream.*.remote_port` 是远端平台端口，不会创建第二个本地 TCP listener。PJSIP 2.7.2 在旧迁移配置或重复 transport 场景下仍可能返回 `PJSIP_ETYPEEXISTS`，adapter 会把重复 TCP listener 记录为 warning 后继续启动；默认验收应以单 listener 模型为准。
+
 ## 抓包证据
 
 `full-capture` 应输出：

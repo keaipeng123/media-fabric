@@ -28,20 +28,19 @@ SipStack::~SipStack()
 bool SipStack::configure(const NodeConfig& config)
 {
     m_endpoints.clear();
-    const std::vector<SipEndpointConfig>& configEndpoints = config.sipEndpoints();
-    for (std::vector<SipEndpointConfig>::const_iterator it = configEndpoints.begin();
-         it != configEndpoints.end();
-         ++it)
+    const SipEndpointConfig& node = config.node();
+    if (!node.valid())
     {
-        SipListenEndpoint endpoint;
-        endpoint.name = it->name;
-        endpoint.sipId = it->sipId;
-        endpoint.ip = it->sipIp;
-        endpoint.port = it->sipPort;
-        m_endpoints.push_back(endpoint);
+        return false;
     }
 
-    return !m_endpoints.empty();
+    SipListenEndpoint endpoint;
+    endpoint.name = "node";
+    endpoint.sipId = node.sipId;
+    endpoint.ip = node.sipIp;
+    endpoint.port = node.sipPort;
+    m_endpoints.push_back(endpoint);
+    return true;
 }
 
 bool SipStack::start()
