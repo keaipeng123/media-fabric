@@ -19,6 +19,7 @@ Usage:
   scripts/verify-milestone4-linux.sh full-build
   scripts/verify-milestone4-linux.sh full-smoke
   scripts/verify-milestone4-linux.sh full-capture
+  scripts/verify-milestone4-linux.sh full-capture-pair
   scripts/verify-milestone4-linux.sh completion-gate
   scripts/verify-milestone4-linux.sh capture-audit [report-or-capture-dir]
   scripts/verify-milestone4-linux.sh all-build
@@ -325,6 +326,245 @@ run_jrtplib_smoke() {
 run_full_smoke() {
     run_full_build
     run_smoke "$ROOT_DIR/build-linux-full/gb28181-server" "full"
+}
+
+wait_for_server_started() {
+    local log_file="$1"
+    local timeout_seconds="${2:-30}"
+    for ((i = 0; i < timeout_seconds; i++)); do
+        if [[ -f "$log_file" ]] && grep -q "gb28181-server started" "$log_file" 2>/dev/null; then
+            return 0
+        fi
+        sleep 1
+    done
+    return 1
+}
+
+run_full_capture_pair() {
+    require_linux
+    if ! command -v tcpdump >/dev/null 2>&1; then
+        echo "error: full-capture-pair requires tcpdump." >&2
+        return 7
+    fi
+
+    run_full_build
+
+    local capture_seconds="${GB28181_CAPTURE_SECONDS:-10}"
+    local iface="${GB28181_CAPTURE_IFACE:-lo}"
+    local pair_dir
+    local timestamp
+    local sip_pcap
+    local rtp_pcap
+    local report
+    local sup_log
+    local sub_log
+    local sup_pid
+    local sub_pid
+
+    pair_dir="$(resolve_path "${GB28181_CAPTURE_DIR:-artifacts/milestone4}/pair")"
+    timestamp="$(date +%Y%m%d-%H%M%S)"
+    sip_pcap="$pair_dir/milestone4-pair-sip-$timestamp.pcap"
+    rtp_pcap="$pair_dir/milestone4-pair-rtp-$timestamp.pcap"
+    report="$pair_dir/milestone4-pair-report-$timestamp.txt"
+    sup_log="$pair_dir/sup-$timestamp.log"
+    sub_log="$pair_dir/sub-$timestamp.log"
+
+    mkdir -p "$pair_dir"
+
+    cat >"$pair_dir/sup.conf" <<EOF
+[node]
+sip_id = 10000000002000000001
+sip_ip = 127.0.0.1
+sip_port = 5061
+sip_realm = 1000000000
+sip_usr = admin
+sip_pwd = admin
+rtp_port_begin = 30000
+rtp_port_end = 30999
+
+[peer.downstream.1]
+sip_id = 11000000002000000001
+remote_ip = 127.0.0.1
+remote_port = 7101
+allow_register = true
+
+[media]
+stream_file = $ROOT_DIR/SipSubService/conf/stream.file
+rtp_payload_bytes = 1300
+rtp_timestamp_increment = 3600
+stream_send_interval_ms = 1000
+stream_loop = true
+EOF
+
+    cat >"$pair_dir/sub.conf" <<EOF
+[node]
+sip_id = 11000000002000000001
+sip_ip = 127.0.0.1
+sip_port = 7101
+sip_realm = 1000000000
+sip_usr = admin
+sip_pwd = admin
+rtp_port_begin = 31000
+rtp_port_end = 31999
+
+[peer.upstream.1]
+sip_id = 10000000002000000001
+remote_ip = 127.0.0.1
+remote_port = 5061
+register_to = true
+expires = 300
+sip_realm = 1000000000
+sip_usr = admin
+sip_pwd = admin
+
+[media]
+stream_file = $ROOT_DIR/SipSubService/conf/stream.file
+rtp_payload_bytes = 1300
+rtp_timestamp_increment = 3600
+stream_send_interval_ms = 1000
+stream_loop = true
+EOF
+
+    echo "capture-pair: interface=$iface seconds=$capture_seconds"
+    echo "capture-pair: dir=$pair_dir"
+    echo "capture-pair: sip=$sip_pcap"
+    echo "capture-pair: rtp=$rtp_pcap"
+
+    "$ROOT_DIR/build-linux-full/gb28181-server" -c "$pair_dir/sup.conf" >"$sup_log" 2>&1 &
+    sup_pid=$!
+
+    if ! wait_for_server_started "$sup_log" 30; then
+        echo "error: sup node failed to start within 30s" >&2
+        echo "sup log: $sup_log" >&2
+        kill "$sup_pid" 2>/dev/null || true
+        wait "$sup_pid" 2>/dev/null || true
+        return 10
+    fi
+    echo "capture-pair: sup node started (pid=$sup_pid)"
+
+    "$ROOT_DIR/build-linux-full/gb28181-server" -c "$pair_dir/sub.conf" >"$sub_log" 2>&1 &
+    sub_pid=$!
+
+    if ! wait_for_server_started "$sub_log" 30; then
+        echo "error: sub node failed to start within 30s" >&2
+        echo "sub log: $sub_log" >&2
+        kill "$sub_pid" 2>/dev/null || true
+        wait "$sub_pid" 2>/dev/null || true
+        kill "$sup_pid" 2>/dev/null || true
+        wait "$sup_pid" 2>/dev/null || true
+        return 10
+    fi
+    echo "capture-pair: sub node started (pid=$sub_pid)"
+
+    echo "capture-pair: waiting 3s for sub to register to sup"
+    sleep 3
+
+    set +e
+    timeout "$capture_seconds" tcpdump -i "$iface" -w "$sip_pcap" \
+        'udp port 5061 or tcp port 5061 or udp port 7101 or tcp port 7101' >/dev/null 2>&1 &
+    local sip_pid=$!
+    timeout "$capture_seconds" tcpdump -i "$iface" -w "$rtp_pcap" \
+        'udp portrange 20000-40000' >/dev/null 2>&1 &
+    local rtp_pid=$!
+    set -e
+
+    set +e
+    wait "$sip_pid"
+    local sip_status=$?
+    wait "$rtp_pid"
+    local rtp_status=$?
+    set -e
+
+    echo "capture-pair: stopping nodes"
+    kill "$sub_pid" 2>/dev/null || true
+    wait "$sub_pid" 2>/dev/null || true
+    kill "$sup_pid" 2>/dev/null || true
+    wait "$sup_pid" 2>/dev/null || true
+
+    local capture_status=0
+    if [[ "$sip_status" -ne 0 && "$sip_status" -ne 124 ]]; then
+        echo "warning: SIP tcpdump exited with $sip_status" >&2
+        capture_status=8
+    fi
+    if [[ "$rtp_status" -ne 0 && "$rtp_status" -ne 124 ]]; then
+        echo "warning: RTP tcpdump exited with $rtp_status" >&2
+        capture_status=8
+    fi
+    if [[ ! -s "$sip_pcap" ]]; then
+        echo "error: SIP pcap missing or empty: $sip_pcap" >&2
+        capture_status=8
+    fi
+    if [[ ! -s "$rtp_pcap" ]]; then
+        echo "error: RTP pcap missing or empty: $rtp_pcap" >&2
+        capture_status=8
+    fi
+
+    local sip_packets
+    local rtp_packets
+    sip_packets="$(pcap_packets "$sip_pcap")"
+    rtp_packets="$(pcap_packets "$rtp_pcap")"
+    if [[ "$sip_packets" == "0" || "$sip_packets" == "missing" || "$sip_packets" == "unreadable" ]]; then
+        echo "error: SIP pcap has no readable packets: $sip_pcap" >&2
+        capture_status=8
+    fi
+    if [[ "$rtp_packets" == "0" || "$rtp_packets" == "missing" || "$rtp_packets" == "unreadable" ]]; then
+        echo "error: RTP pcap has no readable packets: $rtp_pcap" >&2
+        capture_status=8
+    fi
+
+    {
+        echo "milestone4 full capture pair report"
+        echo "timestamp: $timestamp"
+        echo "host: $(uname -a)"
+        echo "sup_config: $pair_dir/sup.conf"
+        echo "sub_config: $pair_dir/sub.conf"
+        echo "interface: $iface"
+        echo "capture_seconds: $capture_seconds"
+        echo "capture_status: $capture_status"
+        echo "sip_tcpdump_status: $sip_status"
+        echo "rtp_tcpdump_status: $rtp_status"
+        echo "sip_pcap: $sip_pcap"
+        echo "sip_pcap_bytes: $(file_size "$sip_pcap")"
+        echo "sip_pcap_packets: $sip_packets"
+        echo "rtp_pcap: $rtp_pcap"
+        echo "rtp_pcap_bytes: $(file_size "$rtp_pcap")"
+        echo "rtp_pcap_packets: $rtp_packets"
+        echo
+        echo "manual SIP checks:"
+        echo "- REGISTER 401 challenge"
+        echo "- REGISTER Authorization retry"
+        echo "- REGISTER 200 OK"
+        echo "- Keepalive MESSAGE and 200 response"
+        echo "- Catalog MESSAGE Query/Response"
+        echo "- RecordInfo MESSAGE Query/Response"
+        echo "- INVITE 200 OK"
+        echo "- ACK with correct Call-ID/CSeq/From tag/To tag"
+        echo "- BYE 200 OK"
+        echo
+        echo "manual RTP checks:"
+        echo "- payload type 96"
+        echo "- continuous sequence numbers"
+        echo "- timestamp progression"
+        echo "- marker on frame boundary"
+        echo "- PS payload carrying Annex-B H.264/H.265 video PES"
+        echo
+        echo "logs:"
+        echo "- sup log: $sup_log"
+        echo "- sub log: $sub_log"
+        echo
+        echo "docs:"
+        echo "- docs/wireshark.md"
+        echo "- docs/milestone4-completion-audit.md"
+    } >"$report"
+    LAST_CAPTURE_REPORT="$report"
+
+    echo "capture-pair: done"
+    echo "capture-pair: report=$report"
+    echo "capture-pair: inspect with docs/wireshark.md"
+
+    if [[ "$capture_status" -ne 0 ]]; then
+        return "$capture_status"
+    fi
 }
 
 run_full_capture() {
@@ -681,6 +921,9 @@ case "$MODE" in
         ;;
     full-capture)
         run_full_capture
+        ;;
+    full-capture-pair)
+        run_full_capture_pair
         ;;
     completion-gate)
         run_completion_gate
