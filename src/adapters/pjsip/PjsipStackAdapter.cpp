@@ -581,9 +581,16 @@ bool PjsipStackAdapter::send(const SipMessageContext& message)
         tdata->msg->body = pjsip_msg_body_create(tdata->pool, &pjType, &pjSubtype, &pjBody);
     }
 
+    std::cout << "pjsip send: method=" << message.method
+              << " target=" << targetValue
+              << " from=" << fromValue
+              << " to=" << toValue << std::endl;
+
     const pj_status_t sendStatus = pjsip_endpt_send_request_stateless(m_endpoint, tdata, NULL, NULL);
     if (sendStatus != PJ_SUCCESS)
     {
+        std::cerr << "pjsip send failed: status=" << sendStatus
+                  << " message=" << pjStatusText(sendStatus) << std::endl;
         return false;
     }
 
