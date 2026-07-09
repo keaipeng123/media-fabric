@@ -79,6 +79,19 @@ void logPjFailure(const std::string& action, pj_status_t status)
               << " message=" << pjStatusText(status) << std::endl;
 }
 
+void ensurePjThreadRegistered()
+{
+    if (pj_thread_is_registered())
+    {
+        return;
+    }
+
+    static thread_local pj_thread_desc desc;
+    static thread_local pj_thread_t* thread = NULL;
+    std::memset(desc, 0, sizeof(desc));
+    pj_thread_register("pjsip_external", desc, &thread);
+}
+
 void setPoolString(pj_pool_t* pool, pj_str_t* target, const std::string& value)
 {
     pj_strdup2(pool, target, value.c_str());
@@ -373,6 +386,8 @@ PjsipStackAdapter::~PjsipStackAdapter()
 
 bool PjsipStackAdapter::start(const std::vector<SipListenEndpoint>& endpoints, const RequestHandler& handler)
 {
+    ensurePjThreadRegistered();
+
     if (endpoints.empty() || !handler)
     {
         return false;
@@ -409,6 +424,8 @@ bool PjsipStackAdapter::start(const std::vector<SipListenEndpoint>& endpoints, c
 
 void PjsipStackAdapter::stop()
 {
+    ensurePjThreadRegistered();
+
     m_running.store(false);
     m_sentMessageCount = 0;
     if (m_eventThread.joinable())
@@ -458,6 +475,8 @@ size_t PjsipStackAdapter::sentMessageCount() const
 
 bool PjsipStackAdapter::send(const SipMessageContext& message)
 {
+    ensurePjThreadRegistered();
+
     if (!m_running.load() || m_endpoint == NULL || message.method.empty())
     {
         return false;
