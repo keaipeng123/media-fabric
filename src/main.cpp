@@ -13,14 +13,37 @@
 #include "StreamFileFrameSource.h"
 
 #include <cstdio>
+#include <atomic>
+#include <csignal>
+#include <condition_variable>
 #include <fstream>
 #include <iostream>
 #include <iterator>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
 namespace {
+
+std::atomic<bool> g_serverStopSignal(false);
+std::mutex g_serverStopMutex;
+std::condition_variable g_serverStopCondition;
+
+void onServerSignal(int)
+{
+    std::lock_guard<std::mutex> lock(g_serverStopMutex);
+    g_serverStopSignal.store(true);
+    g_serverStopCondition.notify_all();
+}
+
+void waitForServerStopSignal()
+{
+    std::signal(SIGINT, onServerSignal);
+    std::signal(SIGTERM, onServerSignal);
+    std::unique_lock<std::mutex> lock(g_serverStopMutex);
+    g_serverStopCondition.wait(lock, [] { return g_serverStopSignal.load(); });
+}
 
 const char* kDefaultConfigPath = "conf/gb28181-server.conf";
 const char* kSelfTestUpstreamId = "10000000002000000001";
@@ -1006,6 +1029,10 @@ int main(int argc, char* argv[])
             node.stop();
             return 1;
         }
+    }
+    else
+    {
+        waitForServerStopSignal();
     }
     node.stop();
     std::cout << "gb28181-server stopped" << std::endl;
