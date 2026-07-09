@@ -47,6 +47,8 @@ private:
     bool m_pjlibInitialized;
     bool m_cachingPoolInitialized;
     std::thread m_eventThread;
+    pj_thread_desc m_eventThreadDesc;
+    pj_thread_t* m_eventThreadPj;
 };
 
 } // namespace gb28181

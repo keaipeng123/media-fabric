@@ -359,9 +359,11 @@ PjsipStackAdapter::PjsipStackAdapter()
       m_hasPendingResponse(false),
       m_pendingResponse(),
       m_pjlibInitialized(false),
-      m_cachingPoolInitialized(false)
+      m_cachingPoolInitialized(false),
+      m_eventThreadPj(NULL)
 {
     std::memset(&m_cachingPool, 0, sizeof(m_cachingPool));
+    std::memset(m_eventThreadDesc, 0, sizeof(m_eventThreadDesc));
 }
 
 PjsipStackAdapter::~PjsipStackAdapter()
@@ -741,6 +743,9 @@ bool PjsipStackAdapter::sendStatelessResponse(pjsip_rx_data* rdata, const SipMes
 
 void PjsipStackAdapter::eventLoop()
 {
+    std::memset(m_eventThreadDesc, 0, sizeof(m_eventThreadDesc));
+    pj_thread_register("pjsip_event_loop", m_eventThreadDesc, &m_eventThreadPj);
+
     while (m_running.load())
     {
         pj_time_val timeout = {0, 500};
