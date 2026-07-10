@@ -430,6 +430,16 @@ EOF
     echo "capture-pair: sip=$sip_pcap"
     echo "capture-pair: rtp=$rtp_pcap"
 
+    echo "capture-pair: starting tcpdump before nodes to capture full flow"
+    set +e
+    timeout "$capture_seconds" tcpdump -i "$iface" -w "$sip_pcap" \
+        'udp port 5061 or tcp port 5061 or udp port 7101 or tcp port 7101' >/dev/null 2>&1 &
+    local sip_pid=$!
+    timeout "$capture_seconds" tcpdump -i "$iface" -w "$rtp_pcap" \
+        'udp portrange 20000-40000' >/dev/null 2>&1 &
+    local rtp_pid=$!
+    set -e
+
     "$ROOT_DIR/build-linux-full/gb28181-server" -c "$pair_dir/sup.conf" >"$sup_log" 2>&1 &
     sup_pid=$!
 
@@ -456,17 +466,14 @@ EOF
     fi
     echo "capture-pair: sub node started (pid=$sub_pid)"
 
-    echo "capture-pair: waiting 3s for sub to register to sup"
-    sleep 3
+    echo "capture-pair: waiting $capture_seconds seconds for traffic"
+    sleep "$capture_seconds"
 
-    set +e
-    timeout "$capture_seconds" tcpdump -i "$iface" -w "$sip_pcap" \
-        'udp port 5061 or tcp port 5061 or udp port 7101 or tcp port 7101' >/dev/null 2>&1 &
-    local sip_pid=$!
-    timeout "$capture_seconds" tcpdump -i "$iface" -w "$rtp_pcap" \
-        'udp portrange 20000-40000' >/dev/null 2>&1 &
-    local rtp_pid=$!
-    set -e
+    echo "capture-pair: stopping nodes"
+    kill "$sub_pid" 2>/dev/null || true
+    wait "$sub_pid" 2>/dev/null || true
+    kill "$sup_pid" 2>/dev/null || true
+    wait "$sup_pid" 2>/dev/null || true
 
     set +e
     wait "$sip_pid"
@@ -474,12 +481,6 @@ EOF
     wait "$rtp_pid"
     local rtp_status=$?
     set -e
-
-    echo "capture-pair: stopping nodes"
-    kill "$sub_pid" 2>/dev/null || true
-    wait "$sub_pid" 2>/dev/null || true
-    kill "$sup_pid" 2>/dev/null || true
-    wait "$sup_pid" 2>/dev/null || true
 
     local capture_status=0
     if [[ "$sip_status" -ne 0 && "$sip_status" -ne 124 ]]; then

@@ -342,6 +342,29 @@ pj_bool_t onRxResponse(pjsip_rx_data* rdata)
     return g_adapter->handleRxResponse(rdata) ? PJ_TRUE : PJ_FALSE;
 }
 
+std::string rxDataMethod(pjsip_rx_data* rdata)
+{
+    if (rdata == NULL || rdata->msg_info.msg == NULL)
+    {
+        return "";
+    }
+    pjsip_msg* msg = rdata->msg_info.msg;
+    if (msg->type == PJSIP_REQUEST_MSG)
+    {
+        return pjStrToString(msg->line.req.method.name);
+    }
+    if (msg->type == PJSIP_RESPONSE_MSG)
+    {
+        pjsip_cseq_hdr* cseq = static_cast<pjsip_cseq_hdr*>(pjsip_msg_find_hdr(msg, PJSIP_H_CSEQ, NULL));
+        if (cseq != NULL)
+        {
+            return pjStrToString(cseq->method.name) + "/" + std::to_string(msg->line.status.code);
+        }
+        return std::to_string(msg->line.status.code);
+    }
+    return "";
+}
+
 char g_recvModuleName[] = "mod-gb28181-node";
 
 pjsip_module g_recvModule =
@@ -786,6 +809,8 @@ bool PjsipStackAdapter::handleRxRequest(pjsip_rx_data* rdata)
         return false;
     }
 
+    std::cout << "pjsip rx request: " << rxDataMethod(rdata) << std::endl;
+
     m_hasPendingResponse = false;
     const bool handled = m_handler(toRequestContext(rdata));
 
@@ -812,6 +837,8 @@ bool PjsipStackAdapter::handleRxResponse(pjsip_rx_data* rdata)
     {
         return false;
     }
+
+    std::cout << "pjsip rx response: " << rxDataMethod(rdata) << std::endl;
 
     return m_handler(toResponseContext(rdata));
 }
