@@ -628,6 +628,20 @@ bool PjsipStackAdapter::send(const SipMessageContext& message)
               << " from=" << fromValue
               << " to=" << toValue << std::endl;
 
+    if (message.method == "INVITE")
+    {
+        const pj_status_t sendStatus = pjsip_endpt_send_request(m_endpoint, tdata, -1, this, &PjsipStackAdapter::sendCallback);
+        if (sendStatus != PJ_SUCCESS)
+        {
+            std::cerr << "pjsip send failed: status=" << sendStatus
+                      << " message=" << pjStatusText(sendStatus) << std::endl;
+            return false;
+        }
+
+        ++m_sentMessageCount;
+        return true;
+    }
+
     const pj_status_t sendStatus = pjsip_endpt_send_request_stateless(m_endpoint, tdata, NULL, NULL);
     if (sendStatus != PJ_SUCCESS)
     {
@@ -638,6 +652,34 @@ bool PjsipStackAdapter::send(const SipMessageContext& message)
 
     ++m_sentMessageCount;
     return true;
+}
+
+void PjsipStackAdapter::sendCallback(void* token, pjsip_event* event)
+{
+    PjsipStackAdapter* adapter = static_cast<PjsipStackAdapter*>(token);
+    if (adapter == NULL || event == NULL)
+    {
+        return;
+    }
+
+    if (event->type != PJSIP_EVENT_TSX_STATE)
+    {
+        return;
+    }
+
+    pjsip_rx_data* rdata = event->body.tsx_state.src.rdata;
+    if (rdata == NULL || rdata->msg_info.msg == NULL)
+    {
+        return;
+    }
+
+    if (rdata->msg_info.msg->type != PJSIP_RESPONSE_MSG)
+    {
+        return;
+    }
+
+    std::cout << "pjsip tsx response: " << rxDataMethod(rdata) << std::endl;
+    adapter->handleRxResponse(rdata);
 }
 
 bool PjsipStackAdapter::initPjlib()
