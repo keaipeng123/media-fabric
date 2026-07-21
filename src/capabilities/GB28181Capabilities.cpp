@@ -277,7 +277,7 @@ std::string sipUri(const std::string& sipId, const std::string& ip, int port)
 }
 
 SipMessageContext makeResponse(const SipRequestContext& request,
-                               const std::string& capability,
+                               const std::string&,
                                int statusCode,
                                const std::string& reason)
 {
@@ -289,7 +289,6 @@ SipMessageContext makeResponse(const SipRequestContext& request,
     response.response = true;
     response.statusCode = statusCode;
     response.reason = reason;
-    response.body = capability;
     return response;
 }
 
@@ -496,6 +495,15 @@ bool sendRegisterWithDigest(NodeRuntime& runtime,
 
     SipMessageContext message = makeRequest(peer, local, "REGISTER", "request");
     message.expires = peer.registerExpires > 0 ? peer.registerExpires : kRegisterExpires;
+    // Digest retry is a new REGISTER transaction in the same registration context:
+    // retain Call-ID and local From tag, then advance CSeq.
+    message.callId = response.callId;
+    message.fromTag = response.fromTag;
+    const int challengedCseq = parseInt(response.cseq);
+    if (challengedCseq > 0)
+    {
+        message.cseq = std::to_string(challengedCseq + 1);
+    }
     message.digestAuth = makeRegisterDigest(response, peer, local);
     const bool sent = runtime.sipStack->send(message);
     createSendSession(runtime, capability, peer, "register-auth", sent);
