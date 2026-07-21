@@ -13,11 +13,16 @@
 #include "TaskScheduler.h"
 #include "SdpSession.h"
 
+#ifdef GB28181_ENABLE_JRTPLIB
+#include "JrtplibRtpSessionAdapter.h"
+#endif
+
 #include <algorithm>
 #include <cctype>
 #include <climits>
 #include <cstdlib>
 #include <ctime>
+#include <iostream>
 #include <random>
 #include <sstream>
 #include <vector>
@@ -1302,6 +1307,25 @@ bool InviteServerCapability::handleSipRequest(const SipRequestContext& request, 
         {
             return false;
         }
+#ifdef GB28181_ENABLE_JRTPLIB
+        if (!runtime.mediaManager->rtpSessionAdapterRunning(sessionId))
+        {
+            std::string rtpError;
+            if (!runtime.mediaManager->startRtpSessionAdapter(
+                    sessionId,
+                    std::unique_ptr<RtpSessionAdapter>(new JrtplibRtpSessionAdapter()),
+                    &rtpError))
+            {
+                runtime.mediaManager->updateSessionState(sessionId, "rtp-start-failed:" + rtpError);
+                return false;
+            }
+
+            std::cout << "rtp session started: " << sessionId
+                      << " local=" << mediaSession->localIp << ":" << mediaSession->localRtpPort
+                      << " remote=" << mediaSession->remoteIp << ":" << mediaSession->remoteRtpPort
+                      << std::endl;
+        }
+#endif
         if (!runtime.mediaManager->updateSessionState(sessionId, "stream-confirmed"))
         {
             return false;

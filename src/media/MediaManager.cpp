@@ -293,6 +293,17 @@ void MediaManager::stopRtpSessionAdapter(const std::string& sessionId)
     m_rtpSessionAdapters.erase(adapter);
 }
 
+void MediaManager::stopAllRtpSessionAdapters()
+{
+    for (std::map<std::string, std::unique_ptr<RtpSessionAdapter> >::iterator adapter = m_rtpSessionAdapters.begin();
+         adapter != m_rtpSessionAdapters.end();
+         ++adapter)
+    {
+        adapter->second->stop();
+    }
+    m_rtpSessionAdapters.clear();
+}
+
 bool MediaManager::rtpSessionAdapterRunning(const std::string& sessionId) const
 {
     std::map<std::string, std::unique_ptr<RtpSessionAdapter> >::const_iterator adapter = m_rtpSessionAdapters.find(sessionId);

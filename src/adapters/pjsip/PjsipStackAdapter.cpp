@@ -372,7 +372,8 @@ pjsip_module g_recvModule =
     NULL, NULL,
     {g_recvModuleName, 16},
     -1,
-    PJSIP_MOD_PRIORITY_APPLICATION,
+    // Handle dialog ACKs before PJSIP's UA layer consumes unknown dialogs.
+    PJSIP_MOD_PRIORITY_UA_PROXY_LAYER - 1,
     NULL,
     NULL,
     NULL,
@@ -861,7 +862,7 @@ bool PjsipStackAdapter::handleRxRequest(pjsip_rx_data* rdata)
         sendStatelessResponse(rdata, m_pendingResponse);
         m_hasPendingResponse = false;
     }
-    else
+    else if (rxDataMethod(rdata) != "ACK")
     {
         SipMessageContext response;
         response.response = true;

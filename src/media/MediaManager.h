@@ -97,6 +97,7 @@ public:
                                 std::unique_ptr<RtpSessionAdapter> adapter,
                                 std::string* error);
     void stopRtpSessionAdapter(const std::string& sessionId);
+    void stopAllRtpSessionAdapters();
     bool rtpSessionAdapterRunning(const std::string& sessionId) const;
     bool receiveRtpPacket(const std::string& sessionId,
                           const std::vector<unsigned char>& packetBytes,

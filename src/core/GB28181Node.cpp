@@ -93,6 +93,7 @@ void GB28181Node::stop()
     }
 
     m_taskScheduler.stopAll();
+    m_mediaManager.stopAllRtpSessionAdapters();
 
     for (std::vector<std::unique_ptr<Capability> >::reverse_iterator it = m_capabilities.rbegin();
          it != m_capabilities.rend();

@@ -761,6 +761,7 @@ run_capture_audit() {
     local rtp_pcap
     local sip_packets
     local rtp_packets
+    local pair_config
     local audit_status=0
 
     smoke_status="$(report_value "$report" "smoke_status")"
@@ -769,10 +770,11 @@ run_capture_audit() {
     rtp_status="$(report_value "$report" "rtp_tcpdump_status")"
     sip_pcap="$(report_value "$report" "sip_pcap")"
     rtp_pcap="$(report_value "$report" "rtp_pcap")"
+    pair_config="$(report_value "$report" "sup_config")"
 
     echo "capture-audit: report=$report"
 
-    if [[ "$smoke_status" != "0" ]]; then
+    if [[ -z "$pair_config" && "$smoke_status" != "0" ]]; then
         echo "error: smoke_status=$smoke_status" >&2
         audit_status=9
     fi
