@@ -95,6 +95,15 @@ ctest --test-dir build --output-on-failure -R media-fabric-self-test
 
 注册成功后，服务会按 `[timers] heartbeat_interval_seconds` 自动发送心跳；`peers` 显示上下级节点的实时注册与最后心跳时间。
 
+本地模拟上下级可分别使用 `conf/media-fabric-sup.conf` 和 `conf/media-fabric-sub.conf`。先启动上级与下级，再从下级发起注册：
+
+```bash
+./build/media-fabric -c conf/media-fabric-sup.conf
+./build/media-fabric -c conf/media-fabric-sub.conf
+./build/mfcli --socket /tmp/media-fabric-sub.sock register 10000000002000000001
+./build/mfcli --socket /tmp/media-fabric-sup.sock peers
+```
+
 默认 CTest 使用 `conf/media-fabric.conf`；如需指定其它配置，可在 CMake 阶段传入 `-DMEDIA_FABRIC_SELF_TEST_CONFIG=path/to/conf`。
 
 里程碑 4 默认构建与自测：
