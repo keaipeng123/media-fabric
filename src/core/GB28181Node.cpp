@@ -1,6 +1,9 @@
 #include "GB28181Node.h"
 
+#include "SipMessageContext.h"
+
 #include <iostream>
+#include <sstream>
 
 namespace gb28181 {
 
@@ -161,6 +164,46 @@ size_t GB28181Node::registeredPeerCount() const
 size_t GB28181Node::keepalivePeerCount() const
 {
     return m_peerRegistry.keepaliveCount();
+}
+
+std::string GB28181Node::peersStatusText() const
+{
+    std::ostringstream output;
+    const std::vector<PeerInfo>& peers = m_peerRegistry.peers();
+    for (std::vector<PeerInfo>::const_iterator it = peers.begin(); it != peers.end(); ++it)
+    {
+        output << it->sipId << " " << (it->relation == PEER_UPSTREAM ? "upstream" : "downstream")
+               << " " << it->ip << ":" << it->port
+               << " registered=" << (it->registered ? "yes" : "no")
+               << " last_register=" << static_cast<long>(it->lastRegisterTime)
+               << " last_keepalive=" << static_cast<long>(it->lastKeepaliveTime) << "\n";
+    }
+    return output.str();
+}
+
+bool GB28181Node::requestRegistration(const std::string& peerId, std::string* error)
+{
+    PeerInfo* peer = m_peerRegistry.findBySipId(peerId);
+    if (peer == NULL || peer->relation != PEER_UPSTREAM) { if(error) *error="unknown upstream peer"; return false; }
+    const SipEndpointConfig& local = m_config.node();
+    SipMessageContext message; message.method="REGISTER"; message.event="request"; message.fromId=local.sipId; message.toId=peer->sipId;
+    message.localIp=local.sipIp; message.localPort=local.sipPort; message.remoteIp=peer->ip; message.remotePort=peer->port; message.expires=peer->registerExpires > 0 ? peer->registerExpires : 3600;
+    peer->registrationRequested = true;
+    if (!m_sipStack.send(message)) { peer->registrationRequested=false; if(error) *error="failed to send REGISTER"; return false; }
+    return true;
+}
+
+bool GB28181Node::requestInvite(const std::string& peerId, std::string* error)
+{
+    PeerInfo* peer = m_peerRegistry.findBySipId(peerId);
+    if (peer == NULL || peer->relation != PEER_DOWNSTREAM) { if(error) *error="unknown downstream peer"; return false; }
+    if (!peer->registered) { if(error) *error="downstream peer is not registered"; return false; }
+    const SipEndpointConfig& local = m_config.node();
+    SipMessageContext message; message.method="INVITE"; message.event="request"; message.fromId=local.sipId; message.toId=peer->sipId;
+    message.localIp=local.sipIp; message.localPort=local.sipPort; message.remoteIp=peer->ip; message.remotePort=peer->port; message.contentType="Application/SDP";
+    message.body="v=0\r\no=" + local.sipId + " 0 0 IN IP4 " + local.sipIp + "\r\ns=media-fabric\r\nc=IN IP4 " + local.sipIp + "\r\nt=0 0\r\nm=video 30000 RTP/AVP 96\r\na=sendrecv\r\n";
+    if (!m_sipStack.send(message)) { if(error) *error="failed to send INVITE"; return false; }
+    return true;
 }
 
 size_t GB28181Node::sentSipMessageCount() const

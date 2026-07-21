@@ -11,6 +11,7 @@ PeerInfo::PeerInfo()
       allowRegister(false),
       registerExpires(0),
       registered(false),
+      registrationRequested(false),
       expires(0),
       lastRegisterTime(0),
       lastKeepaliveTime(0)
@@ -39,6 +40,7 @@ bool PeerRegistry::configure(const NodeConfig& config)
         peer.username = it->username;
         peer.password = it->password;
         peer.registered = false;
+        peer.registrationRequested = false;
         peer.expires = 0;
         peer.lastRegisterTime = 0;
         peer.lastKeepaliveTime = 0;

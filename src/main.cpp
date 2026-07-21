@@ -2,6 +2,8 @@
 #include "DigestAuth.h"
 #include "ManscdpMessage.h"
 #include "MediaFrameSink.h"
+#include "ManagementServer.h"
+#include "Logger.h"
 #include "NodeConfig.h"
 #include "ProgramStream.h"
 #include "RtpPacket.h"
@@ -21,6 +23,7 @@
 #include <iterator>
 #include <memory>
 #include <mutex>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -45,7 +48,7 @@ void waitForServerStopSignal()
     g_serverStopCondition.wait(lock, [] { return g_serverStopSignal.load(); });
 }
 
-const char* kDefaultConfigPath = "conf/gb28181-server.conf";
+const char* kDefaultConfigPath = "conf/media-fabric.conf";
 const char* kSelfTestUpstreamId = "10000000002000000001";
 const char* kSelfTestNodeId = "11000000002000000001";
 const char* kSelfTestDownstreamId = "12000000002000000001";
@@ -233,7 +236,7 @@ std::string makeSelfTestResponseXml(const std::string& cmdType, const std::strin
                 deviceId +
                 "</DeviceID>\r\n"
                 "<Name>SelfTestCamera</Name>\r\n"
-                "<Manufacturer>GB28181-Server</Manufacturer>\r\n"
+                "<Manufacturer>media-fabric</Manufacturer>\r\n"
                 "<Model>SelfTestModel</Model>\r\n"
                 "<Owner>SelfTestOwner</Owner>\r\n"
                 "<CivilCode>110000</CivilCode>\r\n"
@@ -413,6 +416,7 @@ int main(int argc, char* argv[])
         std::cerr << "failed to load config: " << configPath << std::endl;
         return 1;
     }
+    media_fabric::Logger::instance().configure(media_fabric::LOG_INFO, "media-fabric.log", 10 * 1024 * 1024, 5);
 
     gb28181::GB28181Node node(config);
     if (!businessQuery.empty())
@@ -461,13 +465,32 @@ int main(int argc, char* argv[])
         node.addCapability(std::move(*it));
     }
 
-    std::cout << "gb28181-server starting" << std::endl;
+    std::cout << "media-fabric starting" << std::endl;
+    media_fabric::Logger::instance().log(media_fabric::LOG_INFO, "server", "starting with config " + configPath);
     if (!node.start())
     {
         return 1;
     }
 
-    std::cout << "gb28181-server started" << std::endl;
+    std::cout << "media-fabric started" << std::endl;
+    gb28181::ManagementServer managementServer;
+    if (!selfTest)
+    {
+        std::string managementError;
+        if (!managementServer.start(config.managementSocketPath(), [&node](const std::string& request) {
+                std::istringstream input(request); std::string command, peerId; input >> command >> peerId;
+                if (command == "peers") return std::string("OK\n") + node.peersStatusText();
+                std::string error;
+                if (command == "register") return node.requestRegistration(peerId, &error) ? std::string("OK REGISTER sent\n") : std::string("ERROR ") + error + "\n";
+                if (command == "invite") return node.requestInvite(peerId, &error) ? std::string("OK INVITE sent\n") : std::string("ERROR ") + error + "\n";
+                if (command == "help") return std::string("OK commands: peers, register <peer-id>, invite <peer-id>\n");
+                return std::string("ERROR unknown command\n");
+            }, &managementError))
+        {
+            std::cerr << "failed to start management server: " << managementError << std::endl;
+            node.stop(); return 1;
+        }
+    }
     if (selfTest)
     {
         const bool singleEndpointOk = node.endpointCount() == 1;
@@ -882,7 +905,7 @@ int main(int argc, char* argv[])
         const bool catalogSnapshotOk = catalogSnapshot.size() == 1 &&
                                        catalogSnapshot.front().deviceId == kSelfTestDownstreamId &&
                                        catalogSnapshot.front().name == "SelfTestCamera" &&
-                                       catalogSnapshot.front().manufacturer == "GB28181-Server" &&
+                                       catalogSnapshot.front().manufacturer == "media-fabric" &&
                                        catalogSnapshot.front().model == "SelfTestModel" &&
                                        catalogSnapshot.front().owner == "SelfTestOwner" &&
                                        catalogSnapshot.front().civilCode == "110000" &&
@@ -1035,7 +1058,9 @@ int main(int argc, char* argv[])
         waitForServerStopSignal();
     }
     node.stop();
-    std::cout << "gb28181-server stopped" << std::endl;
+    managementServer.stop();
+    std::cout << "media-fabric stopped" << std::endl;
+    media_fabric::Logger::instance().log(media_fabric::LOG_INFO, "server", "stopped");
 
     return 0;
 }

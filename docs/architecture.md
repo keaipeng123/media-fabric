@@ -4,9 +4,9 @@
 
 ## 项目定位
 
-当前项目是一个 GB/T 28181 学习工程，已经具备上下级信令交互和基础媒体收发能力。阶段 0 的目标不是马上新增播放协议，而是先把当前代码整理成后续 `gb28181-server` 单进程架构的底座。
+当前项目是一个 GB/T 28181 学习工程，已经具备上下级信令交互和基础媒体收发能力。阶段 0 的目标不是马上新增播放协议，而是先把当前代码整理成后续 `media-fabric` 单进程架构的底座。
 
-最终工程标准是：`gb28181-server` 一个二进制、一个进程，同时内置上级平台能力和下级平台/设备模拟能力。当前 `SipSupService` 与 `SipSubService` 只是历史代码目录，不代表最终需要拆成两个服务或提供运行模式选择。
+最终工程标准是：`media-fabric` 一个二进制、一个进程，同时内置上级平台能力和下级平台/设备模拟能力。当前 `SipSupService` 与 `SipSubService` 只是历史代码目录，不代表最终需要拆成两个服务或提供运行模式选择。
 
 ## 当前历史目录
 
@@ -81,14 +81,14 @@ SipSubService/conf/stream.file
 
 ## 当前统一配置
 
-统一入口配置：[conf/gb28181-server.conf](../conf/gb28181-server.conf)
+统一入口配置：[conf/media-fabric.conf](../conf/media-fabric.conf)
 
 - 本地 node：`11000000002000000001@127.0.0.1:7101`
 - 本地 RTP 端口范围：`30000-40000`
 - upstream 远端平台：`10000000002000000001@127.0.0.1:5061`
 - downstream 允许接入设备：`12000000002000000001`
 
-`gb28181-server` 运行时只启动 `[node]` 里的一个本地 SIP listener。`peer.upstream.*.remote_port` 表示远端平台端口，不是本地监听端口；downstream 的实际地址可通过 REGISTER/Contact/Via 动态学习。
+`media-fabric` 运行时只启动 `[node]` 里的一个本地 SIP listener。`peer.upstream.*.remote_port` 表示远端平台端口，不是本地监听端口；downstream 的实际地址可通过 REGISTER/Contact/Via 动态学习。
 
 ## 历史对照配置
 
@@ -110,7 +110,7 @@ SipSubService/conf/stream.file
 
 ## 工程化问题清单
 
-- 根目录已经有统一构建入口，默认目标为 `gb28181-server`；历史服务目标只作为显式开启的迁移对照目标。
+- 根目录已经有统一构建入口，默认目标为 `media-fabric`；历史服务目标只作为显式开启的迁移对照目标。
 - `SipSupService` 与 `SipSubService` 存在大量重复基础类，如 `ConfReader`、`ECSocket`、`ECThread`、`ThreadPool`、`TaskTimer`、`XmlParser`。
 - 配置文件、日志目录、目录 JSON 读取存在硬编码绝对路径。
 - 上下级历史代码都使用全局控制对象，后续单进程实现需要收敛为一个 `GB28181Node`，再按注册、心跳、目录、开流、媒体收发等能力隔离状态。
@@ -120,7 +120,7 @@ SipSubService/conf/stream.file
 ## 目标架构
 
 ```text
-gb28181-server
+media-fabric
   common/
     config, socket, thread, timer, xml, sip message
   core/
@@ -135,7 +135,7 @@ gb28181-server
 
 ```text
 main()
-  -> load gb28181-server.conf
+  -> load media-fabric.conf
   -> init GB28181Node
   -> register capability modules
   -> start GB28181Node
@@ -143,4 +143,4 @@ main()
   -> stop GB28181Node
 ```
 
-阶段 0 后续里程碑会逐步抽公共库、封装节点与能力模块，最后以 `gb28181-server` 作为唯一正式入口。同一进程内必须具备完整 GB28181 节点能力，不按上级/下级拆分服务入口。
+阶段 0 后续里程碑会逐步抽公共库、封装节点与能力模块，最后以 `media-fabric` 作为唯一正式入口。同一进程内必须具备完整 GB28181 节点能力，不按上级/下级拆分服务入口。

@@ -1,11 +1,11 @@
-# GB28181-Server
+# media-fabric
 
-`GB28181-Server` 是一个 GB/T 28181 学习与流媒体工程化实践项目。当前仓库包含两个历史服务：
+`media-fabric` 是一个 GB/T 28181 学习与流媒体工程化实践项目。当前仓库包含两个历史服务：
 
 - `SipSupService`：上级平台历史目录，负责接收下级注册、处理心跳、发起目录查询和实时预览 INVITE，并接收 RTP/PS 媒体流。
 - `SipSubService`：下级平台/设备模拟历史目录，负责向上级注册、发送心跳、响应目录/录像查询、处理 INVITE，并从本地 H.264 测试流封装 PS/RTP 后发送。
 
-阶段 0 的工程目标是把这两个历史服务逐步整理为一个统一项目，最终形成单一服务入口 `gb28181-server`。标准形态是**同一个进程内的 GB28181 节点同时具备注册客户端、注册服务端、心跳、目录、INVITE、媒体收发等能力**。上级/下级是某条级联关系中的相对身份，不应成为工程拆分边界。
+阶段 0 的工程目标是把这两个历史服务逐步整理为一个统一项目，最终形成单一服务入口 `media-fabric`。标准形态是**同一个进程内的 GB28181 节点同时具备注册客户端、注册服务端、心跳、目录、INVITE、媒体收发等能力**。上级/下级是某条级联关系中的相对身份，不应成为工程拆分边界。
 
 ## 当前能力
 
@@ -21,11 +21,11 @@
 - H.264 裸流读取、PS 封装、RTP 发送。
 - RTP/PS 接收、组包、PS 解封装、H.264 裸流提取。
 
-统一入口 `gb28181-server` 当前已具备的阶段性能力：
+统一入口 `media-fabric` 当前已具备的阶段性能力：
 
 - 创建单一 `GB28181Node` 并同时装配注册客户端、注册服务端、心跳、目录、录像查询、INVITE、媒体收发能力模块。
-- 通过 `SipTransport` 抽象承载 SIP 收发，默认内存传输用于自测，Linux 可通过 `GB28181_ENABLE_PJSIP` 打开实验性 PJSIP adapter；PJSIP adapter 已覆盖入站 SIP request 和 SIP response 到统一路由的转换。
-- 通过 `RtpSessionAdapter` 抽象承载真实 RTP 会话，默认自测使用适配器入口验证 RTP/PS/ES/帧输出和 adapter 发送链路，Linux 可通过 `GB28181_ENABLE_JRTPLIB` 打开实验性 JRTPLIB RTP adapter。
+- 通过 `SipTransport` 抽象承载 SIP 收发，默认内存传输用于自测，Linux 可通过 `MEDIA_FABRIC_ENABLE_PJSIP` 打开实验性 PJSIP adapter；PJSIP adapter 已覆盖入站 SIP request 和 SIP response 到统一路由的转换。
+- 通过 `RtpSessionAdapter` 抽象承载真实 RTP 会话，默认自测使用适配器入口验证 RTP/PS/ES/帧输出和 adapter 发送链路，Linux 可通过 `MEDIA_FABRIC_ENABLE_JRTPLIB` 打开实验性 JRTPLIB RTP adapter。
 - 通过 `StreamFileFrameSource` 读取历史 `stream.file` 测试流，`MediaSendCapability` 启动时会校验配置媒体源，并按 `[media] stream_send_interval_ms` 周期循环驱动 `sendAnnexBFrame`。
 - 能生成 REGISTER、REGISTER Digest 认证重试、MESSAGE keepalive、Catalog、RecordInfo、INVITE 和 INVITE 2xx 后 ACK 出站请求意图。
 - 能处理 REGISTER、Keepalive、Catalog、RecordInfo、INVITE、ACK、BYE 入站请求，并生成基础 SIP 响应或业务响应消息；REGISTER 已具备随机 401 Digest challenge、MD5 response 校验、nonce 缓存和 replay 拒绝边界。
@@ -35,7 +35,7 @@
 - 已通过节点级任务注册 REGISTER refresh 和 keepalive 周期保活。
 - `--self-test` 可验证 11 条 SIP 路由、REGISTER Digest 认证重试、REGISTER Digest 接受/拒绝、REGISTER nonce replay 拒绝、MESSAGE XML 接受/拒绝、Catalog/RecordInfo 列表响应解析、业务状态快照查询、文件持久化恢复和 JSON 查询、INVITE SIP response 分发、INVITE 2xx 后 ACK 出站、INVITE SDP 接受/拒绝、ACK 确认、历史测试流首帧读取和 PS 回环解析、RTP packetize、RTP 包解析、RTP payload marker 重组、RTP adapter 收包入口、RTP adapter 发送入口、PS/PES 基础解析、H.264/H.265 NAL 识别、Annex-B 帧文件输出和媒体接收状态、peer 注册/心跳状态、RTP 端口分配/释放、出站 SIP 消息计数和周期任务注册。
 
-当前媒体发送配置位于 `conf/gb28181-server.conf` 的 `[media]`：
+当前媒体发送配置位于 `conf/media-fabric.conf` 的 `[media]`：
 
 ```ini
 stream_file = SipSubService/conf/stream.file
@@ -72,17 +72,30 @@ stream_loop = true
 
 ## 构建
 
-当前已经具备根目录统一 `CMakeLists.txt`，默认构建目标是最终入口 `gb28181-server`。
+当前已经具备根目录统一 `CMakeLists.txt`，默认构建目标是最终入口 `media-fabric`。
 
 默认构建：
 
 ```bash
 cmake -S . -B build
 cmake --build build
-ctest --test-dir build --output-on-failure -R gb28181-server-self-test
+ctest --test-dir build --output-on-failure -R media-fabric-self-test
 ```
 
-默认 CTest 使用 `conf/gb28181-server.conf`；如需指定其它配置，可在 CMake 阶段传入 `-DGB28181_SELF_TEST_CONFIG=path/to/conf`。
+## 本地管理命令行
+
+`media-fabric` 是常驻服务；`mfcli` 通过 `[management] socket_path` 指定的本机 Unix Socket 连接服务，不直接发送 SIP 消息：
+
+```bash
+./build/media-fabric -c conf/media-fabric.conf
+./build/mfcli peers
+./build/mfcli register 10000000002000000001
+./build/mfcli invite 12000000002000000001
+```
+
+注册成功后，服务会按 `[timers] heartbeat_interval_seconds` 自动发送心跳；`peers` 显示上下级节点的实时注册与最后心跳时间。
+
+默认 CTest 使用 `conf/media-fabric.conf`；如需指定其它配置，可在 CMake 阶段传入 `-DMEDIA_FABRIC_SELF_TEST_CONFIG=path/to/conf`。
 
 里程碑 4 默认构建与自测：
 
@@ -91,7 +104,7 @@ scripts/verify-milestone4-linux.sh preflight
 scripts/verify-milestone4-linux.sh default
 ```
 
-脚本模式可通过 `GB28181_CONFIG=path/to/conf` 指定自测配置；`preflight` 默认只报告 ready/not-ready，设置 `GB28181_PREFLIGHT_STRICT=1` 后缺关键依赖会返回失败。Linux smoke 启动默认运行 5 秒，可通过 `GB28181_SMOKE_SECONDS=10` 调整。
+脚本模式可通过 `MEDIA_FABRIC_CONFIG=path/to/conf` 指定自测配置；`preflight` 默认只报告 ready/not-ready，设置 `GB28181_PREFLIGHT_STRICT=1` 后缺关键依赖会返回失败。Linux smoke 启动默认运行 5 秒，可通过 `GB28181_SMOKE_SECONDS=10` 调整。
 
 启用 Linux PJSIP adapter：
 
@@ -137,7 +150,7 @@ scripts/verify-milestone4-linux.sh capture-help
 
 里程碑 4 是否可以标记完成，以 [里程碑 4 完成审计清单](docs/milestone4-completion-audit.md) 为准。
 
-说明：当前编辑环境不是 Linux；PJSIP/JRTPLIB 的真实链接、启动和抓包验证需要放到 Linux 目标环境执行。当前仓库已有 `3rd/lib/libjthread.a`，但缺少 `3rd/lib/libjrtp.a`，因此 `GB28181_ENABLE_JRTPLIB=ON` 需要先补齐 JRTPLIB 静态库。
+说明：当前编辑环境不是 Linux；PJSIP/JRTPLIB 的真实链接、启动和抓包验证需要放到 Linux 目标环境执行。当前仓库已有 `3rd/lib/libjthread.a`，但缺少 `3rd/lib/libjrtp.a`，因此 `MEDIA_FABRIC_ENABLE_JRTPLIB=ON` 需要先补齐 JRTPLIB 静态库。
 
 在 Linux 目标环境已有 `jrtplib-3.11.2` 源码时，可以用脚本补齐：
 
@@ -148,15 +161,15 @@ scripts/prepare-jrtplib-linux.sh /path/to/jrtplib-3.11.2
 运行统一入口：
 
 ```bash
-./build/gb28181-server -c conf/gb28181-server.conf
+./build/media-fabric -c conf/media-fabric.conf
 ```
 
 查询已保存的业务状态快照：
 
 ```bash
-./build/gb28181-server -c conf/gb28181-server.conf --business-query summary --business-state-file state.snapshot
-./build/gb28181-server -c conf/gb28181-server.conf --business-query catalog --business-state-file state.snapshot --peer-id 12000000002000000001
-./build/gb28181-server -c conf/gb28181-server.conf --business-query record --business-state-file state.snapshot --peer-id 12000000002000000001
+./build/media-fabric -c conf/media-fabric.conf --business-query summary --business-state-file state.snapshot
+./build/media-fabric -c conf/media-fabric.conf --business-query catalog --business-state-file state.snapshot --peer-id 12000000002000000001
+./build/media-fabric -c conf/media-fabric.conf --business-query record --business-state-file state.snapshot --peer-id 12000000002000000001
 ```
 
 历史服务目录仍可作为迁移对照目标配置，但不作为默认交付目标。第三方静态库以 Linux 目标为主，例如 `x86_64-unknown-linux-gnu`，因此历史目标建议在 Linux 环境验证。
@@ -164,14 +177,14 @@ scripts/prepare-jrtplib-linux.sh /path/to/jrtplib-3.11.2
 历史目标配置示例：
 
 ```bash
-cmake -S . -B build-legacy -DGB28181_BUILD_LEGACY_SERVICES=ON
+cmake -S . -B build-legacy -DMEDIA_FABRIC_BUILD_LEGACY_SERVICES=ON
 ```
 
-注意：当前配置文件和日志路径存在 `/home/GB28181-Server/...` 这类硬编码路径，阶段 0 后续会整理为统一配置。
+注意：当前配置文件和日志路径存在 `/home/media-fabric/...` 这类硬编码路径，阶段 0 后续会整理为统一配置。
 
 ## 配置现状
 
-历史配置源仍分散在两个旧目录中，当前已新增 `conf/gb28181-server.conf` 作为统一入口样例。统一配置描述一个本地 SIP 节点和多个 peer 关系：`[node]` 持有唯一的本地 SIP/RTP 配置，`[peer.upstream.*]` 描述需要注册到的远端平台，`[peer.downstream.*]` 描述允许接入或预期接入的下级设备。peer 中的 `remote_port` 是远端端口，不是本地监听端口。
+历史配置源仍分散在两个旧目录中，当前已新增 `conf/media-fabric.conf` 作为统一入口样例。统一配置描述一个本地 SIP 节点和多个 peer 关系：`[node]` 持有唯一的本地 SIP/RTP 配置，`[peer.upstream.*]` 描述需要注册到的远端平台，`[peer.downstream.*]` 描述允许接入或预期接入的下级设备。peer 中的 `remote_port` 是远端端口，不是本地监听端口。
 
 当前统一入口默认本地节点：
 
@@ -219,7 +232,7 @@ rtp_timestamp_increment = 3600
 阶段 0 后续目标：
 
 ```bash
-./gb28181-server -c conf/gb28181-server.conf
+./media-fabric -c conf/media-fabric.conf
 ```
 
-统一进程启动后初始化 `GB28181Node`，再装配注册客户端、注册服务端、心跳、目录、INVITE、媒体接收、媒体发送等能力模块。`SipSupService` 和 `SipSubService` 仅作为迁移前的代码来源，后续完成整合后以 `gb28181-server` 为唯一工程入口。
+统一进程启动后初始化 `GB28181Node`，再装配注册客户端、注册服务端、心跳、目录、INVITE、媒体接收、媒体发送等能力模块。`SipSupService` 和 `SipSubService` 仅作为迁移前的代码来源，后续完成整合后以 `media-fabric` 为唯一工程入口。

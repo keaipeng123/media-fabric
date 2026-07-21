@@ -29,6 +29,7 @@ struct PeerInfo
     std::string username;
     std::string password;
     bool registered;
+    bool registrationRequested;
     int expires;
     std::time_t lastRegisterTime;
     std::time_t lastKeepaliveTime;

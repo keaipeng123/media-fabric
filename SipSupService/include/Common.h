@@ -13,7 +13,7 @@
 
 using namespace std;
 
-#define LOG_DIR "/home/GB28181-Server/log"
+#define LOG_DIR "/home/media-fabric/log"
 #define LOG_FILE_NAME "SipSupService.log" 
 
 class AutoMutexLock

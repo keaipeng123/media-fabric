@@ -53,6 +53,13 @@ struct MediaConfig
     MediaConfig();
 };
 
+struct TimerConfig
+{
+    int heartbeatIntervalSeconds;
+    int registerRefreshSeconds;
+    TimerConfig();
+};
+
 class NodeConfig
 {
 public:
@@ -64,6 +71,8 @@ public:
     const std::vector<SipEndpointConfig>& sipEndpoints() const;
     const std::vector<PeerConfig>& peers() const;
     const MediaConfig& media() const;
+    const TimerConfig& timers() const;
+    const std::string& managementSocketPath() const;
 
 private:
     std::string m_configPath;
@@ -71,6 +80,8 @@ private:
     std::vector<SipEndpointConfig> m_sipEndpoints;
     std::vector<PeerConfig> m_peers;
     MediaConfig m_media;
+    TimerConfig m_timers;
+    std::string m_managementSocketPath;
 };
 
 } // namespace gb28181

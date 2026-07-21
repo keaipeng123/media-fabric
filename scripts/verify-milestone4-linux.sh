@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODE="${1:-default}"
 CAPTURE_AUDIT_TARGET="${2:-${GB28181_CAPTURE_AUDIT_TARGET:-}}"
-CONFIG="${GB28181_CONFIG:-conf/gb28181-server.conf}"
+CONFIG="${MEDIA_FABRIC_CONFIG:-conf/media-fabric.conf}"
 LAST_CAPTURE_REPORT=""
 
 usage() {
@@ -26,7 +26,7 @@ Usage:
   scripts/verify-milestone4-linux.sh capture-help
 
 Environment:
-  GB28181_CONFIG=conf/gb28181-server.conf
+  MEDIA_FABRIC_CONFIG=conf/media-fabric.conf
   GB28181_PREFLIGHT_STRICT=0
   GB28181_SMOKE_SECONDS=5
   GB28181_CAPTURE_SECONDS=10
@@ -241,21 +241,21 @@ run_preflight() {
 }
 
 run_default() {
-    cmake -S "$ROOT_DIR" -B "$ROOT_DIR/build" -DGB28181_SELF_TEST_CONFIG="$CONFIG"
+    cmake -S "$ROOT_DIR" -B "$ROOT_DIR/build" -DMEDIA_FABRIC_SELF_TEST_CONFIG="$CONFIG"
     cmake --build "$ROOT_DIR/build"
-    ctest --test-dir "$ROOT_DIR/build" --output-on-failure -R gb28181-server-self-test
+    ctest --test-dir "$ROOT_DIR/build" --output-on-failure -R media-fabric-self-test
 }
 
 run_pjsip_build() {
     require_linux
-    cmake -S "$ROOT_DIR" -B "$ROOT_DIR/build-linux-pjsip" -DGB28181_ENABLE_PJSIP=ON
+    cmake -S "$ROOT_DIR" -B "$ROOT_DIR/build-linux-pjsip" -DMEDIA_FABRIC_ENABLE_PJSIP=ON
     cmake --build "$ROOT_DIR/build-linux-pjsip"
 }
 
 require_jrtplib_libs() {
     if [[ ! -f "$ROOT_DIR/3rd/lib/libjrtp.a" ]]; then
         echo "error: missing $ROOT_DIR/3rd/lib/libjrtp.a" >&2
-        echo "build or copy JRTPLIB static library before enabling GB28181_ENABLE_JRTPLIB." >&2
+        echo "build or copy JRTPLIB static library before enabling MEDIA_FABRIC_ENABLE_JRTPLIB." >&2
         echo "see docs/third-party-libs.md" >&2
         exit 3
     fi
@@ -268,7 +268,7 @@ require_jrtplib_libs() {
 run_jrtplib_build() {
     require_linux
     require_jrtplib_libs
-    cmake -S "$ROOT_DIR" -B "$ROOT_DIR/build-linux-rtp" -DGB28181_ENABLE_JRTPLIB=ON
+    cmake -S "$ROOT_DIR" -B "$ROOT_DIR/build-linux-rtp" -DMEDIA_FABRIC_ENABLE_JRTPLIB=ON
     cmake --build "$ROOT_DIR/build-linux-rtp"
 }
 
@@ -276,8 +276,8 @@ run_full_build() {
     require_linux
     require_jrtplib_libs
     cmake -S "$ROOT_DIR" -B "$ROOT_DIR/build-linux-full" \
-        -DGB28181_ENABLE_PJSIP=ON \
-        -DGB28181_ENABLE_JRTPLIB=ON
+        -DMEDIA_FABRIC_ENABLE_PJSIP=ON \
+        -DMEDIA_FABRIC_ENABLE_JRTPLIB=ON
     cmake --build "$ROOT_DIR/build-linux-full"
 }
 
@@ -301,7 +301,7 @@ run_smoke() {
     local status=$?
     set -e
 
-    if grep -q "gb28181-server started" "$log"; then
+    if grep -q "media-fabric started" "$log"; then
         echo "smoke: $label started"
         echo "smoke log: $log"
         return 0
@@ -315,24 +315,24 @@ run_smoke() {
 
 run_pjsip_smoke() {
     run_pjsip_build
-    run_smoke "$ROOT_DIR/build-linux-pjsip/gb28181-server" "pjsip"
+    run_smoke "$ROOT_DIR/build-linux-pjsip/media-fabric" "pjsip"
 }
 
 run_jrtplib_smoke() {
     run_jrtplib_build
-    run_smoke "$ROOT_DIR/build-linux-rtp/gb28181-server" "jrtplib"
+    run_smoke "$ROOT_DIR/build-linux-rtp/media-fabric" "jrtplib"
 }
 
 run_full_smoke() {
     run_full_build
-    run_smoke "$ROOT_DIR/build-linux-full/gb28181-server" "full"
+    run_smoke "$ROOT_DIR/build-linux-full/media-fabric" "full"
 }
 
 wait_for_server_started() {
     local log_file="$1"
     local timeout_seconds="${2:-30}"
     for ((i = 0; i < timeout_seconds; i++)); do
-        if [[ -f "$log_file" ]] && grep -q "gb28181-server started" "$log_file" 2>/dev/null; then
+        if [[ -f "$log_file" ]] && grep -q "media-fabric started" "$log_file" 2>/dev/null; then
             return 0
         fi
         sleep 1
@@ -440,7 +440,7 @@ EOF
     local rtp_pid=$!
     set -e
 
-    "$ROOT_DIR/build-linux-full/gb28181-server" -c "$pair_dir/sup.conf" >"$sup_log" 2>&1 &
+    "$ROOT_DIR/build-linux-full/media-fabric" -c "$pair_dir/sup.conf" >"$sup_log" 2>&1 &
     sup_pid=$!
 
     if ! wait_for_server_started "$sup_log" 30; then
@@ -452,7 +452,7 @@ EOF
     fi
     echo "capture-pair: sup node started (pid=$sup_pid)"
 
-    "$ROOT_DIR/build-linux-full/gb28181-server" -c "$pair_dir/sub.conf" >"$sub_log" 2>&1 &
+    "$ROOT_DIR/build-linux-full/media-fabric" -c "$pair_dir/sub.conf" >"$sub_log" 2>&1 &
     sub_pid=$!
 
     if ! wait_for_server_started "$sub_log" 30; then
@@ -612,7 +612,7 @@ run_full_capture() {
 
     sleep 1
     set +e
-    GB28181_SMOKE_SECONDS="$smoke_seconds" run_smoke "$ROOT_DIR/build-linux-full/gb28181-server" "full-capture"
+    GB28181_SMOKE_SECONDS="$smoke_seconds" run_smoke "$ROOT_DIR/build-linux-full/media-fabric" "full-capture"
     local smoke_status=$?
     set -e
 
@@ -863,7 +863,7 @@ Expected self-test markers:
   sessions=24
 
 CTest:
-  ctest --test-dir build --output-on-failure -R gb28181-server-self-test
+  ctest --test-dir build --output-on-failure -R media-fabric-self-test
 
 Linux smoke:
   GB28181_SMOKE_SECONDS=5 scripts/verify-milestone4-linux.sh pjsip-smoke

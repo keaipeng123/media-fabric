@@ -1,6 +1,6 @@
 #include "SipLocalConfig.h"
 
-#define CONFIGFILE_PATH "/home/GB28181-Server/SipSubService/conf/SipSubService.conf"
+#define CONFIGFILE_PATH "/home/media-fabric/SipSubService/conf/SipSubService.conf"
 #define LOCAL_SECTION "localserver"
 #define SIP_SECTION "sipserver"
 

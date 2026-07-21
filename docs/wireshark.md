@@ -188,7 +188,7 @@ a=sendonly
 ```bash
 scripts/verify-milestone4-linux.sh preflight
 scripts/verify-milestone4-linux.sh default
-ctest --test-dir build --output-on-failure -R gb28181-server-self-test
+ctest --test-dir build --output-on-failure -R media-fabric-self-test
 ```
 
 2. PJSIP adapter 构建、启动并抓 SIP：

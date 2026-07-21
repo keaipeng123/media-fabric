@@ -21,7 +21,7 @@
 
 ```bash
 scripts/verify-milestone4-linux.sh default
-ctest --test-dir build --output-on-failure -R gb28181-server-self-test
+ctest --test-dir build --output-on-failure -R media-fabric-self-test
 ```
 
 通过标记：
@@ -37,7 +37,7 @@ sessions=24
 当前自测覆盖的关键能力：
 
 ```text
-同一 gb28181-server 进程承载注册、被注册、保活、Catalog、RecordInfo、INVITE、ACK、BYE、媒体状态和业务查询能力
+同一 media-fabric 进程承载注册、被注册、保活、Catalog、RecordInfo、INVITE、ACK、BYE、媒体状态和业务查询能力
 REGISTER 401 response -> Authorization REGISTER retry
 REGISTER challenge、Digest 校验、nonce/nc replay 拒绝
 Keepalive、Catalog、RecordInfo 请求与响应解析

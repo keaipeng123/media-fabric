@@ -224,7 +224,7 @@ void SipDirectory::resDir(pjsip_rx_data *rdata,int* sn)
 }
 void SipDirectory::directoryQuery(Json::Value& jsonOut)
 {
-    std::ifstream file("/home/GB28181-Server/SipSubService/conf/catalog.json");
+    std::ifstream file("/home/media-fabric/SipSubService/conf/catalog.json");
     std::stringstream buffer;
     buffer<<file.rdbuf();
     string payload =buffer.str();

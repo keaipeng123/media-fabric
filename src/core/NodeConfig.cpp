@@ -155,6 +155,16 @@ MediaConfig readMediaConfig(const IniData& data)
     return media;
 }
 
+TimerConfig readTimerConfig(const IniData& data)
+{
+    TimerConfig timers;
+    timers.heartbeatIntervalSeconds = toInt(getValue(data, "timers", "heartbeat_interval_seconds"));
+    timers.registerRefreshSeconds = toInt(getValue(data, "timers", "register_refresh_seconds"));
+    if (timers.heartbeatIntervalSeconds <= 0) timers.heartbeatIntervalSeconds = TimerConfig().heartbeatIntervalSeconds;
+    if (timers.registerRefreshSeconds <= 0) timers.registerRefreshSeconds = TimerConfig().registerRefreshSeconds;
+    return timers;
+}
+
 } // namespace
 
 SipEndpointConfig::SipEndpointConfig()
@@ -190,6 +200,8 @@ MediaConfig::MediaConfig()
       streamLoop(true)
 {
 }
+
+TimerConfig::TimerConfig() : heartbeatIntervalSeconds(60), registerRefreshSeconds(300) {}
 
 NodeConfig::NodeConfig()
 {
@@ -320,6 +332,9 @@ bool NodeConfig::load(const std::string& configPath)
     m_sipEndpoints = endpoints;
     m_peers = peers;
     m_media = readMediaConfig(data);
+    m_timers = readTimerConfig(data);
+    m_managementSocketPath = getValue(data, "management", "socket_path");
+    if (m_managementSocketPath.empty()) m_managementSocketPath = "/tmp/media-fabric.sock";
     return true;
 }
 
@@ -347,5 +362,8 @@ const MediaConfig& NodeConfig::media() const
 {
     return m_media;
 }
+
+const TimerConfig& NodeConfig::timers() const { return m_timers; }
+const std::string& NodeConfig::managementSocketPath() const { return m_managementSocketPath; }
 
 } // namespace gb28181

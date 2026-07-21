@@ -106,4 +106,4 @@ cp "$static_lib" "$OUTPUT_LIB"
 
 echo "prepare-jrtplib: copied $static_lib"
 echo "prepare-jrtplib: output=$OUTPUT_LIB"
-echo "prepare-jrtplib: run GB28181_PREFLIGHT_STRICT=1 scripts/verify-milestone4-linux.sh preflight"
+echo "prepare-jrtplib: run MEDIA_FABRIC_PREFLIGHT_STRICT=1 scripts/verify-milestone4-linux.sh preflight"

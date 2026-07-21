@@ -45,9 +45,7 @@ int parseInt(const std::string& value)
 }
 
 const int kRegisterExpires = 3600;
-const int kRegisterRefreshIntervalSeconds = 300;
 const int kRegisterChallengeExpiresSeconds = 300;
-const int kKeepaliveIntervalSeconds = 60;
 
 const SipEndpointConfig* findEndpointByName(const NodeRuntime& runtime, const std::string& name)
 {
@@ -380,7 +378,7 @@ std::string makeResponseBody(const std::string& root,
              << "<Item>\r\n"
              << "<DeviceID>" << deviceId << "</DeviceID>\r\n"
              << "<Name>gb28181-node</Name>\r\n"
-             << "<Manufacturer>GB28181-Server</Manufacturer>\r\n"
+             << "<Manufacturer>media-fabric</Manufacturer>\r\n"
              << "<Model>GB28181Node</Model>\r\n"
              << "<Owner>GB28181</Owner>\r\n"
              << "<CivilCode>000000</CivilCode>\r\n"
@@ -510,7 +508,7 @@ void sendRegisterToUpstreams(NodeRuntime& runtime, const std::string& capability
     {
         if (it->relation == PEER_UPSTREAM)
         {
-            if (it->registerTo)
+            if (it->registrationRequested)
             {
                 sendRegister(runtime, capability, *it);
             }
@@ -597,7 +595,7 @@ void sendKeepaliveToUpstreams(NodeRuntime& runtime, const std::string& capabilit
     {
         if (it->relation == PEER_UPSTREAM)
         {
-            if (it->registerTo)
+            if (it->registrationRequested && it->registered)
             {
                 sendKeepalive(runtime, capability, *it);
             }
@@ -639,7 +637,6 @@ bool RegisterClientCapability::onStart(NodeRuntime& runtime)
         session.state = "pending-register";
         runtime.sessionManager->createSession(session);
 
-        sendRegister(runtime, name(), *it);
     }
 
     if (!registerSipHandler(runtime, "REGISTER", "response"))
@@ -649,7 +646,7 @@ bool RegisterClientCapability::onStart(NodeRuntime& runtime)
 
     const std::string capabilityName = name();
     runtime.taskScheduler->scheduleEvery(name() + ":register-refresh",
-                                         kRegisterRefreshIntervalSeconds,
+                                         runtime.config->timers().registerRefreshSeconds,
                                          [&runtime, capabilityName]() {
                                              sendRegisterToUpstreams(runtime, capabilityName);
                                          });
@@ -915,20 +912,9 @@ bool KeepaliveClientCapability::onStart(NodeRuntime& runtime)
         return false;
     }
 
-    const std::vector<PeerInfo>& peers = runtime.peerRegistry->peers();
-    for (std::vector<PeerInfo>::const_iterator it = peers.begin(); it != peers.end(); ++it)
-    {
-        if (it->relation != PEER_UPSTREAM)
-        {
-            continue;
-        }
-
-        sendKeepalive(runtime, name(), *it);
-    }
-
     const std::string capabilityName = name();
     runtime.taskScheduler->scheduleEvery(name() + ":keepalive",
-                                         kKeepaliveIntervalSeconds,
+                                         runtime.config->timers().heartbeatIntervalSeconds,
                                          [&runtime, capabilityName]() {
                                              sendKeepaliveToUpstreams(runtime, capabilityName);
                                          });
@@ -1223,34 +1209,6 @@ bool InviteClientCapability::onStart(NodeRuntime& runtime)
     {
         return false;
     }
-
-    const std::string capabilityName = name();
-    auto sendInvite = [&runtime, capabilityName]() {
-        const std::vector<PeerInfo>& peers = runtime.peerRegistry->peers();
-        for (std::vector<PeerInfo>::const_iterator it = peers.begin(); it != peers.end(); ++it)
-        {
-            if (it->relation != PEER_DOWNSTREAM)
-            {
-                continue;
-            }
-
-            const SipEndpointConfig* local = localEndpointForPeer(runtime, *it);
-            if (local == NULL)
-            {
-                createSendSession(runtime, capabilityName, *it, "invite", false);
-                continue;
-            }
-
-            SipMessageContext message = makeRequest(*it, *local, "INVITE", "request");
-            message.body = makeInviteBody(*local);
-            message.contentType = "Application/SDP";
-            const bool sent = runtime.sipStack->send(message);
-            createSendSession(runtime, capabilityName, *it, "invite", sent);
-        }
-    };
-
-    sendInvite();
-    runtime.taskScheduler->scheduleEvery(name() + ":invite-retry", 5, sendInvite);
 
     return registerSipHandler(runtime, "INVITE", "response");
 }

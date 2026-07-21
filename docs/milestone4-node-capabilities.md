@@ -75,7 +75,7 @@ src/adapters/pjsip/
   PjsipStackAdapter.cpp
 ```
 
-默认构建使用 `InMemorySipTransport` 支撑内部自测；Linux 目标环境可通过 `-DGB28181_ENABLE_PJSIP=ON` 打开实验性的 PJSIP UDP/TCP 监听 adapter。这个 adapter 已经能把 PJSIP 收到的 SIP request 和 SIP response 转换为统一的 `SipRequestContext`，再交给能力模块路由处理；能力模块发出的 `SipMessageContext` 可由传输层转换为出站 SIP 请求或请求上下文内的 stateless response。
+默认构建使用 `InMemorySipTransport` 支撑内部自测；Linux 目标环境可通过 `-DMEDIA_FABRIC_ENABLE_PJSIP=ON` 打开实验性的 PJSIP UDP/TCP 监听 adapter。这个 adapter 已经能把 PJSIP 收到的 SIP request 和 SIP response 转换为统一的 `SipRequestContext`，再交给能力模块路由处理；能力模块发出的 `SipMessageContext` 可由传输层转换为出站 SIP 请求或请求上下文内的 stateless response。
 
 已新增可替换的 RTP 会话适配边界：
 
@@ -88,9 +88,9 @@ src/adapters/jrtplib/
   JrtplibRtpSessionAdapter.cpp
 ```
 
-默认自测通过 `RtpSessionAdapter` 抽象入口把 RTP 包送入 `MediaManager`，验证适配器收包入口与直接注入 RTP 入口共用同一条 RTP/PS/ES/帧聚合链路；Linux 目标环境可通过 `-DGB28181_ENABLE_JRTPLIB=ON` 打开实验性的 JRTPLIB RTP adapter。当前仓库 `3rd/lib` 有 `libjthread.a`，但缺少 `libjrtp.a`，所以 JRTPLIB 真实链接、启动和抓包验证仍需在 Linux 环境补齐依赖后执行。
+默认自测通过 `RtpSessionAdapter` 抽象入口把 RTP 包送入 `MediaManager`，验证适配器收包入口与直接注入 RTP 入口共用同一条 RTP/PS/ES/帧聚合链路；Linux 目标环境可通过 `-DMEDIA_FABRIC_ENABLE_JRTPLIB=ON` 打开实验性的 JRTPLIB RTP adapter。当前仓库 `3rd/lib` 有 `libjthread.a`，但缺少 `libjrtp.a`，所以 JRTPLIB 真实链接、启动和抓包验证仍需在 Linux 环境补齐依赖后执行。
 
-当前 `gb28181-server` 启动流程已经从 bootstrap 文案变为：
+当前 `media-fabric` 启动流程已经从 bootstrap 文案变为：
 
 ```text
 main()
@@ -242,7 +242,7 @@ MediaSendCapability
 - `MediaFrameSink` 是媒体层的帧输出边界，当前提供文件 sink，可把聚合后的 Annex-B 帧写入文件。
 - `StreamFileFrameSource` 是媒体层的历史测试流输入边界，当前读取旧 `stream.file` 中的 `StreamHeader + frame payload`，跳过非视频帧并返回视频帧数据；EOF 后可由发送能力按配置重开文件实现循环发送。
 - `RtpSessionAdapter` 是媒体层真实 RTP 会话适配边界，`MediaManager` 只依赖该抽象，不直接依赖 JRTPLIB 类型；当前边界覆盖 RTP 收包回调和 RTP payload packet 发送。
-- `JrtplibRtpSessionAdapter` 是实验性 JRTPLIB 实现，负责在真实 UDP RTP 会话收到包后回调统一 RTP 字节流，并可通过 `SendPacket` 发送 RTP payload packet；该实现默认不参与构建，只在 `GB28181_ENABLE_JRTPLIB=ON` 时编译链接。
+- `JrtplibRtpSessionAdapter` 是实验性 JRTPLIB 实现，负责在真实 UDP RTP 会话收到包后回调统一 RTP 字节流，并可通过 `SendPacket` 发送 RTP payload packet；该实现默认不参与构建，只在 `MEDIA_FABRIC_ENABLE_JRTPLIB=ON` 时编译链接。
 - `MediaManager` 已维护 RTP 端口池和轻量媒体会话表；INVITE 成功后记录本地/远端 RTP、传输协议、方向、SSRC、Call-ID、INVITE CSeq 和远端 Contact，ACK 后确认会话。发送侧可把 Annex-B 帧封 PS 并通过 RTP adapter 分片发送；`MediaSendCapability` 会按 `[media] stream_send_interval_ms` 扫描已确认/接收中的媒体会话，从 `StreamFileFrameSource` 取下一帧并循环驱动 `sendAnnexBFrame`。接收侧可对同 timestamp 的 RTP payload 按 marker 重组完整 PS，再解析 PS/PES/H.264/H.265，输出完整 Annex-B 帧并进入 `stream-receiving` 状态，BYE 后停止 RTP adapter 并释放端口。
 - `TaskScheduler` 支持毫秒/秒级周期任务和可唤醒停止，节点停止时先停周期任务，再停止能力模块，避免长间隔任务拖慢退出。
 - 当前阶段不修改 `SipSupService/src`、`SipSupService/include`、`SipSubService/src`、`SipSubService/include`。
@@ -254,16 +254,16 @@ MediaSendCapability
 ```bash
 cmake -S . -B build
 cmake --build build
-ctest --test-dir build --output-on-failure -R gb28181-server-self-test
-./build/gb28181-server -c conf/gb28181-server.conf
-./build/gb28181-server -c conf/gb28181-server.conf --self-test
+ctest --test-dir build --output-on-failure -R media-fabric-self-test
+./build/media-fabric -c conf/media-fabric.conf
+./build/media-fabric -c conf/media-fabric.conf --self-test
 scripts/verify-milestone4-linux.sh preflight
 scripts/verify-milestone4-linux.sh default
 ```
 
 运行输出确认：
 
-- `gb28181-server` 成功创建 `GB28181Node`。
+- `media-fabric` 成功创建 `GB28181Node`。
 - 统一配置中的 `[node]` 被解析为唯一 SIP endpoint。
 - `PeerRegistry` 从 `[peer.upstream.*]` / `[peer.downstream.*]` 能识别 1 个 upstream 和 1 个 downstream。
 - `MediaManager` 能建立 RTP 端口池。
@@ -271,7 +271,7 @@ scripts/verify-milestone4-linux.sh default
 - `--self-test` 能将 REGISTER response 401 自动认证重试、REGISTER challenge、bad REGISTER Digest、valid REGISTER Digest、REGISTER replay、qop REGISTER replay、bad Keepalive XML、valid Keepalive XML、Catalog、RecordInfo、bad Catalog Response、Catalog Response、bad RecordInfo Response、RecordInfo Response、INVITE SIP response、INVITE 2xx ACK、bad INVITE SDP、early ACK、valid INVITE SDP、bad ACK CSeq、ACK、wrong dialog BYE、BYE 请求分发到对应能力模块，并创建会话。
 - `--self-test` 已覆盖 REGISTER response 401 -> Authorization REGISTER retry、REGISTER 401 challenge、REGISTER 403、REGISTER 200、REGISTER nonce replay reject、REGISTER qop/nc replay reject、Keepalive XML 400、Keepalive 200、Catalog、RecordInfo、Catalog/RecordInfo 列表响应解析与坏响应拒绝、Catalog 常用字段（含 Parental）落地、RecordInfo 明细落地、快照查询、导出恢复、文件持久化加载、JSON 查询和 CLI 查询分发、INVITE SIP response 分发、INVITE 2xx 后 ACK 出站、INVITE 400、early ACK reject、INVITE 200 SDP、ACK CSeq reject、ACK confirm、历史 `stream.file` 首帧读取、bad RTP SSRC reject、RTP packetize、RTP receive、RTP payload marker 重组、RTP adapter receive、RTP adapter send、PS parse、H.264 NAL parse、frame file output、BYE 481、BYE 200 的内部路由、状态变更、出站消息生成和 RTP 端口释放。
 - `--self-test` 当前输出 `REGISTER_AUTH_RETRY=ok INVITE_RESPONSE=ok INVITE_ACK=ok routes=11 sent_messages=24 scheduled_tasks=3 catalog_items=1 record_items=1 catalog_snapshot=ok record_snapshot=ok business_state_restore=ok business_state_file=ok business_query_json=ok business_query_cli=ok MEDIA_SOURCE=ok MEDIA_SOURCE_PS=ok BAD_RTP_SSRC=rejected RTP_PACKETIZE=ok RTP=ok PS=ok H264=ok FRAME=ok FRAME_FILE=ok RTP_ADAPTER=ok SEND_ADAPTER=ok MEDIA_RECEIVING=ok MD5=ok sessions=24 media_sessions=0 endpoints=1 upstream_peers=1 downstream_peers=1 available_rtp_ports=5001`，包含启动阶段客户端请求、请求处理阶段服务端响应/业务响应、REGISTER refresh、keepalive 与 media-send 毫秒级周期任务注册。
-- CTest 已注册 `gb28181-server-self-test`，默认使用 `conf/gb28181-server.conf`，可通过 `-DGB28181_SELF_TEST_CONFIG=path/to/conf` 覆盖；测试用 `REGISTER_AUTH_RETRY=ok`、`INVITE_ACK=ok`、`routes=11`、`sent_messages=24`、`sessions=24`、`endpoints=1`、`upstream_peers=1`、`downstream_peers=1` 作为通过标记。`scripts/verify-milestone4-linux.sh preflight` 可检查目标环境命令、配置、媒体源和第三方静态库是否齐备，设置 `GB28181_PREFLIGHT_STRICT=1` 后可作为 Linux 硬门禁。
+- CTest 已注册 `media-fabric-self-test`，默认使用 `conf/media-fabric.conf`，可通过 `-DMEDIA_FABRIC_SELF_TEST_CONFIG=path/to/conf` 覆盖；测试用 `REGISTER_AUTH_RETRY=ok`、`INVITE_ACK=ok`、`routes=11`、`sent_messages=24`、`sessions=24`、`endpoints=1`、`upstream_peers=1`、`downstream_peers=1` 作为通过标记。`scripts/verify-milestone4-linux.sh preflight` 可检查目标环境命令、配置、媒体源和第三方静态库是否齐备，设置 `GB28181_PREFLIGHT_STRICT=1` 后可作为 Linux 硬门禁。
 - 停止时能力模块按反向顺序释放。
 
 PJSIP adapter 在当前非 Linux 编辑环境下已执行接口级语法检查：
@@ -322,7 +322,7 @@ scripts/verify-milestone4-linux.sh full-smoke
 scripts/verify-milestone4-linux.sh full-capture
 ```
 
-该组合会生成 `build-linux-full/gb28181-server`，用于后续同一进程内的真实 SIP + RTP 抓包验收。`full-capture` 会把 SIP/RTP pcap 输出到 `artifacts/milestone4/`。
+该组合会生成 `build-linux-full/media-fabric`，用于后续同一进程内的真实 SIP + RTP 抓包验收。`full-capture` 会把 SIP/RTP pcap 输出到 `artifacts/milestone4/`。
 
 ## 未完成项
 

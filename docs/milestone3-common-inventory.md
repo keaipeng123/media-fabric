@@ -42,7 +42,7 @@ src/common/
 gb28181_common
 ```
 
-当前 `gb28181-server` 已链接 `gb28181_common`。
+当前 `media-fabric` 已链接 `gb28181_common`。
 
 ## 模块判断
 
@@ -92,13 +92,13 @@ StreamHeader.h
 ```bash
 cmake -S . -B build
 cmake --build build
-./build/gb28181-server -c conf/gb28181-server.conf
+./build/media-fabric -c conf/media-fabric.conf
 ```
 
 验证结果：
 
 - `gb28181_common` 可独立编译为静态库。
-- `gb28181-server` 可链接该静态库。
+- `media-fabric` 可链接该静态库。
 - 统一入口仍可正常启动 bootstrap。
 
 当前编辑环境构建 `ThreadPool` 时可能出现 unnamed semaphore 的平台警告。目标运行环境是 Linux，该警告不影响 Linux 目标开发判断。
