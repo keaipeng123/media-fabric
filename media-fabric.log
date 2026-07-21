@@ -53,3 +53,56 @@
 2026-07-21 15:19:58 [node] [INFO] stop capability=RegisterServerCapability
 2026-07-21 15:19:58 [node] [INFO] stop capability=RegisterClientCapability
 2026-07-21 15:19:58 [server] [INFO] stopped
+2026-07-21 17:10:13 [server] [INFO] starting with config /Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-21 17:10:13 [node] [INFO] config=/Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-21 17:10:13 [sip] [INFO] endpoint=node sip_id=11000000002000000001 address=127.0.0.1:7101
+2026-07-21 17:10:13 [node] [INFO] upstream_peers=1 downstream_peers=1 available_rtp_ports=5001
+2026-07-21 17:10:13 [node] [INFO] start capability=RegisterClientCapability
+2026-07-21 17:10:13 [scheduler] [INFO] task=RegisterClientCapability:register-refresh interval_ms=300000
+2026-07-21 17:10:13 [node] [INFO] start capability=RegisterServerCapability
+2026-07-21 17:10:13 [node] [INFO] start capability=KeepaliveClientCapability
+2026-07-21 17:10:13 [scheduler] [INFO] task=KeepaliveClientCapability:keepalive interval_ms=60000
+2026-07-21 17:10:13 [node] [INFO] start capability=KeepaliveServerCapability
+2026-07-21 17:10:13 [node] [INFO] start capability=CatalogClientCapability
+2026-07-21 17:10:13 [node] [INFO] start capability=CatalogServerCapability
+2026-07-21 17:10:13 [node] [INFO] start capability=RecordQueryClientCapability
+2026-07-21 17:10:13 [node] [INFO] start capability=RecordQueryServerCapability
+2026-07-21 17:10:13 [node] [INFO] start capability=InviteClientCapability
+2026-07-21 17:10:13 [node] [INFO] start capability=InviteServerCapability
+2026-07-21 17:10:13 [node] [INFO] start capability=MediaReceiveCapability
+2026-07-21 17:10:13 [node] [INFO] start capability=MediaSendCapability
+2026-07-21 17:10:13 [scheduler] [INFO] task=MediaSendCapability:media-send interval_ms=1000
+2026-07-21 17:10:13 [node] [INFO] sip_routes=11
+2026-07-21 17:10:13 [server] [INFO] started
+2026-07-21 17:10:13 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000 body_bytes=24
+2026-07-21 17:10:13 [sip] [INFO] direction=outbound request method=REGISTER event=request from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 authorization_user=admin
+2026-07-21 17:10:13 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 body_bytes=24
+2026-07-21 17:10:13 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 body_bytes=24
+2026-07-21 17:10:13 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 body_bytes=24
+2026-07-21 17:10:13 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000 body_bytes=24
+2026-07-21 17:10:13 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 body_bytes=24
+2026-07-21 17:10:13 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 body_bytes=24
+2026-07-21 17:10:13 [sip] [INFO] direction=outbound response status=400 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001 body_bytes=25
+2026-07-21 17:10:13 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001 body_bytes=25
+2026-07-21 17:10:13 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/Catalog from=11000000002000000001 to=10000000002000000001 body_bytes=23
+2026-07-21 17:10:13 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/Catalog from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 body_bytes=588
+2026-07-21 17:10:13 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/RecordInfo from=11000000002000000001 to=10000000002000000001 body_bytes=27
+2026-07-21 17:10:13 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/RecordInfo from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 body_bytes=427
+2026-07-21 17:10:13 [sip] [INFO] direction=outbound request method=ACK event=request from=11000000002000000001 to=12000000002000000001 call_id=selftest-invite-client-dialog cseq=1
+2026-07-21 17:10:13 [sip] [INFO] direction=outbound response status=400 method=INVITE event=request from=11000000002000000001 to=10000000002000000001 body_bytes=22
+2026-07-21 17:10:13 [sip] [INFO] direction=outbound response status=200 method=INVITE event=request from=11000000002000000001 to=10000000002000000001 body_bytes=159
+2026-07-21 17:10:13 [sip] [INFO] direction=outbound response status=481 method=BYE event=request from=11000000002000000001 to=10000000002000000001 body_bytes=22
+2026-07-21 17:10:13 [sip] [INFO] direction=outbound response status=200 method=BYE event=request from=11000000002000000001 to=10000000002000000001 body_bytes=22
+2026-07-21 17:10:13 [node] [INFO] stop capability=MediaSendCapability
+2026-07-21 17:10:13 [node] [INFO] stop capability=MediaReceiveCapability
+2026-07-21 17:10:13 [node] [INFO] stop capability=InviteServerCapability
+2026-07-21 17:10:13 [node] [INFO] stop capability=InviteClientCapability
+2026-07-21 17:10:13 [node] [INFO] stop capability=RecordQueryServerCapability
+2026-07-21 17:10:13 [node] [INFO] stop capability=RecordQueryClientCapability
+2026-07-21 17:10:13 [node] [INFO] stop capability=CatalogServerCapability
+2026-07-21 17:10:13 [node] [INFO] stop capability=CatalogClientCapability
+2026-07-21 17:10:13 [node] [INFO] stop capability=KeepaliveServerCapability
+2026-07-21 17:10:13 [node] [INFO] stop capability=KeepaliveClientCapability
+2026-07-21 17:10:13 [node] [INFO] stop capability=RegisterServerCapability
+2026-07-21 17:10:13 [node] [INFO] stop capability=RegisterClientCapability
+2026-07-21 17:10:13 [server] [INFO] stopped

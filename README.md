@@ -82,6 +82,12 @@ cmake --build build
 ctest --test-dir build --output-on-failure -R media-fabric-self-test
 ```
 
+默认构建启用 PJSIP，因此可进行真实 SIP 网络通信。若只想运行不依赖 PJSIP 的离线自测，可显式关闭网络传输：
+
+```bash
+cmake -S . -B build -DMEDIA_FABRIC_ENABLE_PJSIP=OFF
+```
+
 ## 本地管理命令行
 
 `media-fabric` 是常驻服务；`mfcli` 通过 `[management] socket_path` 指定的本机 Unix Socket 连接服务，不直接发送 SIP 消息：
