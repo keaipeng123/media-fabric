@@ -970,40 +970,8 @@ CatalogClientCapability::CatalogClientCapability()
 
 bool CatalogClientCapability::onStart(NodeRuntime& runtime)
 {
-    if (!LifecycleCapability::onStart(runtime))
-    {
-        return false;
-    }
-
-    const std::string capabilityName = name();
-    auto sendCatalog = [&runtime, capabilityName]() {
-        const std::vector<PeerInfo>& peers = runtime.peerRegistry->peers();
-        for (std::vector<PeerInfo>::const_iterator it = peers.begin(); it != peers.end(); ++it)
-        {
-            if (it->relation != PEER_DOWNSTREAM)
-            {
-                continue;
-            }
-
-            const SipEndpointConfig* local = localEndpointForPeer(runtime, *it);
-            if (local == NULL)
-            {
-                createSendSession(runtime, capabilityName, *it, "catalog-query", false);
-                continue;
-            }
-
-            SipMessageContext message = makeRequest(*it, *local, "MESSAGE", "Query/Catalog");
-            message.body = makeQueryBody("Catalog", it->sipId);
-            message.contentType = "Application/MANSCDP+xml";
-            const bool sent = runtime.sipStack->send(message);
-            createSendSession(runtime, capabilityName, *it, "catalog-query", sent);
-        }
-    };
-
-    sendCatalog();
-    runtime.taskScheduler->scheduleEvery(name() + ":catalog-retry", 5, sendCatalog);
-
-    return registerSipHandler(runtime, "MESSAGE", "Response/Catalog");
+    return LifecycleCapability::onStart(runtime) &&
+           registerSipHandler(runtime, "MESSAGE", "Response/Catalog");
 }
 
 bool CatalogClientCapability::handleSipRequest(const SipRequestContext& request, NodeRuntime& runtime)
@@ -1088,40 +1056,8 @@ RecordQueryClientCapability::RecordQueryClientCapability()
 
 bool RecordQueryClientCapability::onStart(NodeRuntime& runtime)
 {
-    if (!LifecycleCapability::onStart(runtime))
-    {
-        return false;
-    }
-
-    const std::string capabilityName = name();
-    auto sendRecordQuery = [&runtime, capabilityName]() {
-        const std::vector<PeerInfo>& peers = runtime.peerRegistry->peers();
-        for (std::vector<PeerInfo>::const_iterator it = peers.begin(); it != peers.end(); ++it)
-        {
-            if (it->relation != PEER_DOWNSTREAM)
-            {
-                continue;
-            }
-
-            const SipEndpointConfig* local = localEndpointForPeer(runtime, *it);
-            if (local == NULL)
-            {
-                createSendSession(runtime, capabilityName, *it, "record-query", false);
-                continue;
-            }
-
-            SipMessageContext message = makeRequest(*it, *local, "MESSAGE", "Query/RecordInfo");
-            message.body = makeQueryBody("RecordInfo", it->sipId);
-            message.contentType = "Application/MANSCDP+xml";
-            const bool sent = runtime.sipStack->send(message);
-            createSendSession(runtime, capabilityName, *it, "record-query", sent);
-        }
-    };
-
-    sendRecordQuery();
-    runtime.taskScheduler->scheduleEvery(name() + ":record-retry", 5, sendRecordQuery);
-
-    return registerSipHandler(runtime, "MESSAGE", "Response/RecordInfo");
+    return LifecycleCapability::onStart(runtime) &&
+           registerSipHandler(runtime, "MESSAGE", "Response/RecordInfo");
 }
 
 bool RecordQueryClientCapability::handleSipRequest(const SipRequestContext& request, NodeRuntime& runtime)
