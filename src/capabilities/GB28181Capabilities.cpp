@@ -12,6 +12,7 @@
 #include "StreamFileFrameSource.h"
 #include "TaskScheduler.h"
 #include "SdpSession.h"
+#include "Logger.h"
 
 #ifdef GB28181_ENABLE_JRTPLIB
 #include "JrtplibRtpSessionAdapter.h"
@@ -1278,10 +1279,11 @@ bool InviteServerCapability::handleSipRequest(const SipRequestContext& request, 
                 return false;
             }
 
-            std::cout << "rtp session started: " << sessionId
-                      << " local=" << mediaSession->localIp << ":" << mediaSession->localRtpPort
-                      << " remote=" << mediaSession->remoteIp << ":" << mediaSession->remoteRtpPort
-                      << std::endl;
+            std::ostringstream detail;
+            detail << "rtp_session=" << sessionId
+                   << " local=" << mediaSession->localIp << ":" << mediaSession->localRtpPort
+                   << " remote=" << mediaSession->remoteIp << ":" << mediaSession->remoteRtpPort;
+            media_fabric::Logger::instance().log(media_fabric::LOG_INFO, "media", detail.str());
         }
 #endif
         if (!runtime.mediaManager->updateSessionState(sessionId, "stream-confirmed"))

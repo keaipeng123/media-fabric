@@ -465,14 +465,13 @@ int main(int argc, char* argv[])
         node.addCapability(std::move(*it));
     }
 
-    std::cout << "media-fabric starting" << std::endl;
     media_fabric::Logger::instance().log(media_fabric::LOG_INFO, "server", "starting with config " + configPath);
     if (!node.start())
     {
         return 1;
     }
 
-    std::cout << "media-fabric started" << std::endl;
+    media_fabric::Logger::instance().log(media_fabric::LOG_INFO, "server", "started");
     gb28181::ManagementServer managementServer;
     if (!selfTest)
     {
@@ -487,7 +486,7 @@ int main(int argc, char* argv[])
                 return std::string("ERROR unknown command\n");
             }, &managementError))
         {
-            std::cerr << "failed to start management server: " << managementError << std::endl;
+            media_fabric::Logger::instance().log(media_fabric::LOG_ERROR, "management", "startup failed: " + managementError);
             node.stop(); return 1;
         }
     }
@@ -1059,7 +1058,6 @@ int main(int argc, char* argv[])
     }
     node.stop();
     managementServer.stop();
-    std::cout << "media-fabric stopped" << std::endl;
     media_fabric::Logger::instance().log(media_fabric::LOG_INFO, "server", "stopped");
 
     return 0;

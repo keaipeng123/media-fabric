@@ -1,6 +1,8 @@
 #include "SipTransport.h"
 
-#include <iostream>
+#include "Logger.h"
+
+#include <sstream>
 
 namespace gb28181 {
 
@@ -34,46 +36,47 @@ bool InMemorySipTransport::send(const SipMessageContext& message)
 
     m_sentMessages.push_back(message);
 
-    std::cout << "  sip send: ";
+    std::ostringstream detail;
+    detail << "direction=outbound ";
     if (message.response)
     {
-        std::cout << "response " << message.statusCode << " ";
+        detail << "response status=" << message.statusCode << " ";
     }
     else
     {
-        std::cout << "request ";
+        detail << "request ";
     }
-    std::cout << message.method;
+    detail << "method=" << message.method;
     if (!message.event.empty())
     {
-        std::cout << "/" << message.event;
+        detail << " event=" << message.event;
     }
-    std::cout << " " << message.fromId << " -> " << message.toId;
+    detail << " from=" << message.fromId << " to=" << message.toId;
     if (!message.remoteIp.empty() && message.remotePort > 0)
     {
-        std::cout << " @" << message.remoteIp << ":" << message.remotePort;
+        detail << " remote=" << message.remoteIp << ":" << message.remotePort;
     }
     if (!message.callId.empty())
     {
-        std::cout << " call-id=" << message.callId;
+        detail << " call_id=" << message.callId;
     }
     if (!message.cseq.empty())
     {
-        std::cout << " cseq=" << message.cseq;
+        detail << " cseq=" << message.cseq;
     }
     if (!message.authRealm.empty())
     {
-        std::cout << " auth-realm=" << message.authRealm;
+        detail << " auth_realm=" << message.authRealm;
     }
     if (!message.digestAuth.response.empty())
     {
-        std::cout << " authorization-user=" << message.digestAuth.username;
+        detail << " authorization_user=" << message.digestAuth.username;
     }
     if (!message.body.empty())
     {
-        std::cout << " body-bytes=" << message.body.size();
+        detail << " body_bytes=" << message.body.size();
     }
-    std::cout << std::endl;
+    media_fabric::Logger::instance().log(media_fabric::LOG_INFO, "sip", detail.str());
     return true;
 }
 

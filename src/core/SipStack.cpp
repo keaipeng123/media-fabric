@@ -1,11 +1,12 @@
 #include "SipStack.h"
 
 #include "SipTransport.h"
+#include "Logger.h"
 #ifdef GB28181_ENABLE_PJSIP
 #include "PjsipStackAdapter.h"
 #endif
 
-#include <iostream>
+#include <sstream>
 
 namespace gb28181 {
 
@@ -54,7 +55,8 @@ bool SipStack::start()
          it != m_endpoints.end();
          ++it)
     {
-        std::cout << "sip endpoint: " << it->name << " " << it->sipId << "@" << it->ip << ":" << it->port << std::endl;
+        std::ostringstream detail; detail << "endpoint=" << it->name << " sip_id=" << it->sipId << " address=" << it->ip << ":" << it->port;
+        media_fabric::Logger::instance().log(media_fabric::LOG_INFO, "sip", detail.str());
     }
 
     if (!m_transport->start(m_endpoints, [this](const SipRequestContext& request) {
@@ -95,12 +97,7 @@ bool SipStack::registerHandler(const std::string& method,
     route.handler = handler;
     m_routes.push_back(route);
 
-    std::cout << "  sip route: " << method;
-    if (!event.empty())
-    {
-        std::cout << "/" << event;
-    }
-    std::cout << " -> " << capabilityName << std::endl;
+    media_fabric::Logger::instance().log(media_fabric::LOG_DEBUG, "sip", "route=" + method + (event.empty() ? "" : "/" + event) + " capability=" + capabilityName);
     return true;
 }
 

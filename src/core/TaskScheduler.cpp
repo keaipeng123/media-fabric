@@ -1,9 +1,9 @@
 #include "TaskScheduler.h"
+#include "Logger.h"
 
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
-#include <iostream>
 #include <mutex>
 #include <thread>
 
@@ -97,7 +97,7 @@ bool TaskScheduler::scheduleEveryMs(const std::string& taskName, int intervalMil
         return false;
     }
 
-    std::cout << "scheduled task: " << taskName << " interval_ms=" << intervalMilliseconds << std::endl;
+    media_fabric::Logger::instance().log(media_fabric::LOG_INFO, "scheduler", "task=" + taskName + " interval_ms=" + std::to_string(intervalMilliseconds));
     m_tasks.push_back(std::move(scheduledTask));
     return true;
 }

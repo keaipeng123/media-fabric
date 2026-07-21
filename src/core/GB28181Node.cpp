@@ -1,8 +1,8 @@
 #include "GB28181Node.h"
 
 #include "SipMessageContext.h"
+#include "Logger.h"
 
-#include <iostream>
 #include <sstream>
 
 namespace gb28181 {
@@ -41,42 +41,43 @@ bool GB28181Node::start()
         return true;
     }
 
-    std::cout << "gb28181 node config: " << m_config.configPath() << std::endl;
+    media_fabric::Logger::instance().log(media_fabric::LOG_INFO, "node", "config=" + m_config.configPath());
 
     if (!m_sipStack.configure(m_config))
     {
-        std::cerr << "failed to configure sip stack" << std::endl;
+        media_fabric::Logger::instance().log(media_fabric::LOG_ERROR, "node", "failed to configure SIP stack");
         return false;
     }
     if (!m_peerRegistry.configure(m_config))
     {
-        std::cerr << "failed to configure peer registry" << std::endl;
+        media_fabric::Logger::instance().log(media_fabric::LOG_ERROR, "node", "failed to configure peer registry");
         return false;
     }
     m_businessState.clear();
     if (!m_mediaManager.configure(m_config))
     {
-        std::cerr << "failed to configure media manager" << std::endl;
+        media_fabric::Logger::instance().log(media_fabric::LOG_ERROR, "node", "failed to configure media manager");
         return false;
     }
     if (!m_sipStack.start())
     {
-        std::cerr << "failed to start sip stack" << std::endl;
+        media_fabric::Logger::instance().log(media_fabric::LOG_ERROR, "node", "failed to start SIP stack");
         return false;
     }
 
-    std::cout << "peer registry: upstream=" << m_peerRegistry.upstreamCount()
-              << " downstream=" << m_peerRegistry.downstreamCount() << std::endl;
-    std::cout << "media rtp ports available: " << m_mediaManager.availablePortCount() << std::endl;
+    std::ostringstream startup;
+    startup << "upstream_peers=" << m_peerRegistry.upstreamCount() << " downstream_peers=" << m_peerRegistry.downstreamCount()
+            << " available_rtp_ports=" << m_mediaManager.availablePortCount();
+    media_fabric::Logger::instance().log(media_fabric::LOG_INFO, "node", startup.str());
 
     for (std::vector<std::unique_ptr<Capability> >::iterator it = m_capabilities.begin();
          it != m_capabilities.end();
          ++it)
     {
-        std::cout << "start capability: " << (*it)->name() << std::endl;
+        media_fabric::Logger::instance().log(media_fabric::LOG_INFO, "node", "start capability=" + (*it)->name());
         if (!(*it)->start(m_runtime))
         {
-            std::cerr << "failed to start capability: " << (*it)->name() << std::endl;
+            media_fabric::Logger::instance().log(media_fabric::LOG_ERROR, "node", "failed to start capability=" + (*it)->name());
             stop();
             m_sipStack.stop();
             return false;
@@ -84,7 +85,7 @@ bool GB28181Node::start()
     }
 
     m_started = true;
-    std::cout << "sip routes registered: " << m_sipStack.routeCount() << std::endl;
+    media_fabric::Logger::instance().log(media_fabric::LOG_INFO, "node", "sip_routes=" + std::to_string(m_sipStack.routeCount()));
     return true;
 }
 
@@ -102,7 +103,7 @@ void GB28181Node::stop()
          it != m_capabilities.rend();
          ++it)
     {
-        std::cout << "stop capability: " << (*it)->name() << std::endl;
+        media_fabric::Logger::instance().log(media_fabric::LOG_INFO, "node", "stop capability=" + (*it)->name());
         (*it)->stop();
     }
 

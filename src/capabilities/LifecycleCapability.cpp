@@ -7,8 +7,9 @@
 #include "SipRequestContext.h"
 #include "SipStack.h"
 #include "TaskScheduler.h"
+#include "Logger.h"
 
-#include <iostream>
+#include <sstream>
 
 namespace gb28181 {
 
@@ -68,13 +69,14 @@ bool LifecycleCapability::started() const
 
 bool LifecycleCapability::onStart(NodeRuntime& runtime)
 {
-    std::cout << "  runtime: sip_endpoints=" << runtime.sipStack->endpointCount()
-              << " peers=" << runtime.peerRegistry->peers().size()
-              << " sessions=" << runtime.sessionManager->sessionCount()
-              << " scheduled_tasks=" << runtime.taskScheduler->taskCount()
-              << " sip_routes=" << runtime.sipStack->routeCount()
-              << " rtp_ports=" << runtime.mediaManager->availablePortCount()
-              << std::endl;
+    std::ostringstream detail;
+    detail << "capability=" << name() << " sip_endpoints=" << runtime.sipStack->endpointCount()
+           << " peers=" << runtime.peerRegistry->peers().size()
+           << " sessions=" << runtime.sessionManager->sessionCount()
+           << " scheduled_tasks=" << runtime.taskScheduler->taskCount()
+           << " sip_routes=" << runtime.sipStack->routeCount()
+           << " rtp_ports=" << runtime.mediaManager->availablePortCount();
+    media_fabric::Logger::instance().log(media_fabric::LOG_DEBUG, "capability", detail.str());
     return true;
 }
 
