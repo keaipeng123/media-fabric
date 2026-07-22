@@ -7,11 +7,13 @@
 #include <iostream>
 #include <mutex>
 #include <sstream>
+#include <unistd.h>
 
 namespace media_fabric {
 namespace {
 std::mutex g_logMutex;
 const char* levelName(LogLevel level) { return level == LOG_DEBUG ? "DEBUG" : level == LOG_INFO ? "INFO" : level == LOG_WARN ? "WARN" : "ERROR"; }
+const char* levelColor(LogLevel level) { return level == LOG_DEBUG ? "\033[36m" : level == LOG_INFO ? "\033[32m" : level == LOG_WARN ? "\033[33m" : "\033[31m"; }
 }
 
 Logger::Logger() : m_level(LOG_INFO), m_maxBytes(0), m_maxFiles(0) {}
@@ -24,7 +26,14 @@ void Logger::log(LogLevel level, const std::string& module, const std::string& d
     std::lock_guard<std::mutex> lock(g_logMutex);
     const std::time_t now = std::time(NULL); std::tm local; localtime_r(&now, &local);
     std::ostringstream line; line << std::put_time(&local, "%Y-%m-%d %H:%M:%S") << " [" << module << "] [" << levelName(level) << "] " << detail;
-    std::cout << line.str() << std::endl;
+    if (::isatty(STDOUT_FILENO))
+    {
+        std::cout << levelColor(level) << line.str() << "\033[0m" << std::endl;
+    }
+    else
+    {
+        std::cout << line.str() << std::endl;
+    }
     if (m_filePath.empty()) return;
     std::ifstream sizeInput(m_filePath.c_str(), std::ios::binary | std::ios::ate);
     if (m_maxBytes > 0 && sizeInput.good() && static_cast<size_t>(sizeInput.tellg()) >= m_maxBytes) {

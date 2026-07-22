@@ -2,10 +2,10 @@
 
 #include "ManscdpMessage.h"
 #include "SipDef.h"
+#include "Logger.h"
 
 #include <cstdlib>
 #include <cstring>
-#include <iostream>
 #include <sstream>
 
 namespace gb28181 {
@@ -75,8 +75,9 @@ std::string pjStatusText(pj_status_t status)
 
 void logPjFailure(const std::string& action, pj_status_t status)
 {
-    std::cerr << action << " failed: status=" << status
-              << " message=" << pjStatusText(status) << std::endl;
+    std::ostringstream detail;
+    detail << action << " failed: status=" << status << " message=" << pjStatusText(status);
+    media_fabric::Logger::instance().log(media_fabric::LOG_ERROR, "pjsip", detail.str());
 }
 
 void ensurePjThreadRegistered()
@@ -624,18 +625,16 @@ bool PjsipStackAdapter::send(const SipMessageContext& message)
         tdata->msg->body = pjsip_msg_body_create(tdata->pool, &pjType, &pjSubtype, &pjBody);
     }
 
-    std::cout << "pjsip send: method=" << message.method
-              << " target=" << targetValue
-              << " from=" << fromValue
-              << " to=" << toValue << std::endl;
+    media_fabric::Logger::instance().log(media_fabric::LOG_DEBUG, "pjsip",
+                                         "send method=" + message.method + " target=" + targetValue +
+                                         " from=" + fromValue + " to=" + toValue);
 
     if (message.method == "INVITE")
     {
         const pj_status_t sendStatus = pjsip_endpt_send_request(m_endpoint, tdata, -1, this, &PjsipStackAdapter::sendCallback);
         if (sendStatus != PJ_SUCCESS)
         {
-            std::cerr << "pjsip send failed: status=" << sendStatus
-                      << " message=" << pjStatusText(sendStatus) << std::endl;
+            logPjFailure("pjsip INVITE send", sendStatus);
             return false;
         }
 
@@ -646,8 +645,7 @@ bool PjsipStackAdapter::send(const SipMessageContext& message)
     const pj_status_t sendStatus = pjsip_endpt_send_request_stateless(m_endpoint, tdata, NULL, NULL);
     if (sendStatus != PJ_SUCCESS)
     {
-        std::cerr << "pjsip send failed: status=" << sendStatus
-                  << " message=" << pjStatusText(sendStatus) << std::endl;
+        logPjFailure("pjsip stateless send", sendStatus);
         return false;
     }
 
@@ -679,7 +677,7 @@ void PjsipStackAdapter::sendCallback(void* token, pjsip_event* event)
         return;
     }
 
-    std::cout << "pjsip tsx response: " << rxDataMethod(rdata) << std::endl;
+    media_fabric::Logger::instance().log(media_fabric::LOG_DEBUG, "pjsip", "transaction response=" + rxDataMethod(rdata));
     adapter->handleRxResponse(rdata);
 }
 
@@ -763,8 +761,8 @@ bool PjsipStackAdapter::startTransport(int sipPort)
     {
         if (status == PJSIP_ETYPEEXISTS)
         {
-            std::cerr << "pjsip_tcp_transport_start port=" << sipPort
-                      << " skipped: TCP transport factory already exists" << std::endl;
+            media_fabric::Logger::instance().log(media_fabric::LOG_WARN, "pjsip",
+                                                 "TCP transport already exists on port=" + std::to_string(sipPort));
             return true;
         }
 
@@ -852,7 +850,7 @@ bool PjsipStackAdapter::handleRxRequest(pjsip_rx_data* rdata)
         return false;
     }
 
-    std::cout << "pjsip rx request: " << rxDataMethod(rdata) << std::endl;
+    media_fabric::Logger::instance().log(media_fabric::LOG_DEBUG, "pjsip", "rx request=" + rxDataMethod(rdata));
 
     m_hasPendingResponse = false;
     const bool handled = m_handler(toRequestContext(rdata));
@@ -881,7 +879,7 @@ bool PjsipStackAdapter::handleRxResponse(pjsip_rx_data* rdata)
         return false;
     }
 
-    std::cout << "pjsip rx response: " << rxDataMethod(rdata) << std::endl;
+    media_fabric::Logger::instance().log(media_fabric::LOG_DEBUG, "pjsip", "rx response=" + rxDataMethod(rdata));
 
     return m_handler(toResponseContext(rdata));
 }
