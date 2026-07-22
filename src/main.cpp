@@ -587,6 +587,12 @@ int main(int argc, char* argv[])
         catalogResponse.fromId = kSelfTestDownstreamId;
         catalogResponse.toId = kSelfTestNodeId;
         fillManscdp(&catalogResponse, makeSelfTestResponseXml("Catalog", kSelfTestDownstreamId));
+        // Catalog responses are delivered in multiple MESSAGE requests, one item at
+        // a time.  Both messages report the same total item count.
+        catalogResponse.manscdp.sumNum = 2;
+        gb28181::SipRequestContext catalogResponseSecond = catalogResponse;
+        catalogResponseSecond.manscdp.items.front().deviceId = "12000000001310000059";
+        catalogResponseSecond.manscdp.items.front().name = "SelfTestCameraTwo";
 
         gb28181::SipRequestContext badCatalogResponse = catalogResponse;
         fillManscdp(&badCatalogResponse, makeSelfTestBadResponseXml("Catalog", kSelfTestDownstreamId));
@@ -717,6 +723,7 @@ int main(int argc, char* argv[])
         const bool recordOk = node.dispatchSipRequest(record);
         const bool badCatalogResponseRejected = !node.dispatchSipRequest(badCatalogResponse);
         const bool catalogResponseOk = node.dispatchSipRequest(catalogResponse);
+        const bool catalogResponseSecondOk = node.dispatchSipRequest(catalogResponseSecond);
         const bool badRecordResponseRejected = !node.dispatchSipRequest(badRecordResponse);
         const bool recordResponseOk = node.dispatchSipRequest(recordResponse);
         const bool inviteResponseOk = node.dispatchSipRequest(inviteResponse);
@@ -903,7 +910,7 @@ int main(int argc, char* argv[])
         const size_t recordItems = node.recordItemCount();
         const std::vector<gb28181::ManscdpItem> catalogSnapshot = node.catalogItems(kSelfTestDownstreamId);
         const std::vector<gb28181::ManscdpItem> recordSnapshot = node.recordItems(kSelfTestDownstreamId);
-        const bool catalogSnapshotOk = catalogSnapshot.size() == 1 &&
+        const bool catalogSnapshotOk = catalogSnapshot.size() == 2 &&
                                        catalogSnapshot.front().deviceId == kSelfTestDownstreamId &&
                                        catalogSnapshot.front().name == "SelfTestCamera" &&
                                        catalogSnapshot.front().manufacturer == "media-fabric" &&
@@ -915,7 +922,9 @@ int main(int argc, char* argv[])
                                        catalogSnapshot.front().safetyWay == "0" &&
                                        catalogSnapshot.front().registerWay == "1" &&
                                        catalogSnapshot.front().secrecy == "0" &&
-                                       catalogSnapshot.front().status == "ON";
+                                       catalogSnapshot.front().status == "ON" &&
+                                       catalogSnapshot[1].deviceId == "12000000001310000059" &&
+                                       catalogSnapshot[1].name == "SelfTestCameraTwo";
         const bool recordSnapshotOk = recordSnapshot.size() == 1 &&
                                       recordSnapshot.front().deviceId == kSelfTestDownstreamId &&
                                       recordSnapshot.front().filePath == "/tmp/self-test.ps";
@@ -960,7 +969,7 @@ int main(int argc, char* argv[])
                                                                        &businessCliCatalogJson,
                                                                        &businessCliError);
         const bool businessQueryJsonOk =
-            businessSummaryJson.find("\"catalog_items\":1") != std::string::npos &&
+            businessSummaryJson.find("\"catalog_items\":2") != std::string::npos &&
             businessSummaryJson.find("\"record_items\":1") != std::string::npos &&
             catalogJson.find("\"type\":\"catalog\"") != std::string::npos &&
             catalogJson.find("\"name\":\"SelfTestCamera\"") != std::string::npos &&
@@ -977,15 +986,16 @@ int main(int argc, char* argv[])
         const bool businessStatePersistenceOk =
             businessStateRestoreOk &&
             businessStateLoadOk &&
-            restoredCatalog.size() == 1 &&
+            restoredCatalog.size() == 2 &&
             restoredRecords.size() == 1 &&
-            loadedCatalog.size() == 1 &&
+            loadedCatalog.size() == 2 &&
             loadedRecords.size() == 1 &&
             restoredCatalog.front().name == "SelfTestCamera" &&
             restoredCatalog.front().parental == "1" &&
             restoredRecords.front().filePath == "/tmp/self-test.ps" &&
             loadedCatalog.front().deviceId == kSelfTestDownstreamId &&
             loadedCatalog.front().parental == "1" &&
+            loadedCatalog[1].deviceId == "12000000001310000059" &&
             loadedRecords.front().filePath == "/tmp/self-test.ps";
         const bool rtpPortsReleased = availableRtpPorts == initialRtpPorts;
         std::cout << "self-test dispatch REGISTER_CHALLENGE=" << (regChallengeOk ? "ok" : "failed")
@@ -1048,7 +1058,7 @@ int main(int argc, char* argv[])
                   << " available_rtp_ports=" << availableRtpPorts
                   << std::endl;
 
-        if (!singleEndpointOk || !peerTopologyOk || !mediaSourceOk || !mediaSourcePsOk || !regChallengeOk || !challengeNonceOk || !registerAuthRetryOk || !badRegRejected || !regOk || !replayRegRejected || !qopChallengeOk || !qopChallengeNonceOk || !qopRegOk || !qopReplayRejected || !badKeepaliveRejected || !keepaliveOk || !catalogOk || !recordOk || !badCatalogResponseRejected || !catalogResponseOk || !badRecordResponseRejected || !recordResponseOk || !inviteResponseOk || !inviteAckOk || catalogItems != 1 || recordItems != 1 || !catalogSnapshotOk || !recordSnapshotOk || !businessStatePersistenceOk || !businessQueryJsonOk || !badInviteRejected || !earlyAckRejected || !inviteOk || !badAckCseqRejected || !ackOk || !badRtpSsrcRejected || !rtpPacketizeOk || !rtpOk || !mediaReceivingOk || !rtpAdapterOk || !adapterSendOk || !frameFileOk || !wrongDialogByeRejected || !byeOk || !md5Ok || sentMessages == 0 || scheduledTasks < 3 || mediaSessions != 0 || !rtpPortsReleased)
+        if (!singleEndpointOk || !peerTopologyOk || !mediaSourceOk || !mediaSourcePsOk || !regChallengeOk || !challengeNonceOk || !registerAuthRetryOk || !badRegRejected || !regOk || !replayRegRejected || !qopChallengeOk || !qopChallengeNonceOk || !qopRegOk || !qopReplayRejected || !badKeepaliveRejected || !keepaliveOk || !catalogOk || !recordOk || !badCatalogResponseRejected || !catalogResponseOk || !catalogResponseSecondOk || !badRecordResponseRejected || !recordResponseOk || !inviteResponseOk || !inviteAckOk || catalogItems != 2 || recordItems != 1 || !catalogSnapshotOk || !recordSnapshotOk || !businessStatePersistenceOk || !businessQueryJsonOk || !badInviteRejected || !earlyAckRejected || !inviteOk || !badAckCseqRejected || !ackOk || !badRtpSsrcRejected || !rtpPacketizeOk || !rtpOk || !mediaReceivingOk || !rtpAdapterOk || !adapterSendOk || !frameFileOk || !wrongDialogByeRejected || !byeOk || !md5Ok || sentMessages == 0 || scheduledTasks < 3 || mediaSessions != 0 || !rtpPortsReleased)
         {
             node.stop();
             return 1;

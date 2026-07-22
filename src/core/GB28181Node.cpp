@@ -251,6 +251,9 @@ bool GB28181Node::requestCatalog(const std::string& peerId, std::string* error)
         if (error) *error = "failed to send Catalog query";
         return false;
     }
+    // A catalog query starts a new snapshot. Subsequent responses are appended one
+    // item at a time by CatalogClientCapability.
+    m_businessState.updateCatalog(peerId, std::vector<ManscdpItem>());
     return true;
 }
 

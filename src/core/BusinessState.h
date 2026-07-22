@@ -14,6 +14,7 @@ class BusinessState
 public:
     void clear();
     void updateCatalog(const std::string& peerId, const std::vector<ManscdpItem>& items);
+    void appendCatalog(const std::string& peerId, const std::vector<ManscdpItem>& items);
     void updateRecords(const std::string& peerId, const std::vector<ManscdpItem>& items);
     size_t catalogItemCount() const;
     size_t recordItemCount() const;

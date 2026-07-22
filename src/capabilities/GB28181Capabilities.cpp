@@ -421,16 +421,17 @@ std::string makeResponseBody(const std::string& root,
     return body.str();
 }
 
-std::string makeCatalogResponseBody(const std::string& catalogFile,
-                                    const std::string& deviceId,
-                                    std::string* error)
+std::vector<std::string> makeCatalogResponseBodies(const std::string& catalogFile,
+                                                   const std::string& deviceId,
+                                                   const std::string& sn,
+                                                   std::string* error)
 {
 #ifdef MEDIA_FABRIC_ENABLE_JSONCPP
     std::ifstream input(catalogFile.c_str());
     if (!input.good())
     {
         if (error) *error = "cannot open catalog file: " + catalogFile;
-        return makeResponseBody("Response", "Catalog", deviceId, "OK");
+        return std::vector<std::string>(1, makeResponseBody("Response", "Catalog", deviceId, "OK"));
     }
 
     std::ostringstream raw;
@@ -439,21 +440,33 @@ std::string makeCatalogResponseBody(const std::string& catalogFile,
     if (!JsonParse(raw.str()).toJson(root) || !root["data"]["nodeInfo"].isArray())
     {
         if (error) *error = "invalid catalog JSON: " + catalogFile;
-        return makeResponseBody("Response", "Catalog", deviceId, "OK");
+        return std::vector<std::string>(1, makeResponseBody("Response", "Catalog", deviceId, "OK"));
     }
 
     const Json::Value& items = root["data"]["nodeInfo"];
-    std::ostringstream body;
-    body << "<?xml version=\"1.0\"?>\r\n<Response>\r\n"
-         << "<CmdType>Catalog</CmdType>\r\n<SN>" << nextSn() << "</SN>\r\n"
-         << "<DeviceID>" << deviceId << "</DeviceID>\r\n<Result>OK</Result>\r\n"
-         << "<SumNum>" << items.size() << "</SumNum>\r\n<DeviceList Num=\"" << items.size() << "\">\r\n";
+    std::vector<std::string> responses;
+    if (items.empty())
+    {
+        std::ostringstream body;
+        body << "<?xml version=\"1.0\"?>\r\n<Response>\r\n"
+             << "<CmdType>Catalog</CmdType>\r\n<SN>" << sn << "</SN>\r\n"
+             << "<DeviceID>" << deviceId << "</DeviceID>\r\n<Result>OK</Result>\r\n"
+             << "<SumNum>0</SumNum>\r\n<DeviceList Num=\"0\">\r\n</DeviceList>\r\n</Response>\r\n";
+        responses.push_back(body.str());
+        return responses;
+    }
+
     for (Json::ArrayIndex i = 0; i < items.size(); ++i)
     {
         const Json::Value& item = items[i];
         const std::string itemDeviceId = item.get("deviceID", "").asString();
         const std::string manufacturer = item.get("manufacturer", "unknown").asString();
         const std::string model = item.get("model", "unknown").asString();
+        std::ostringstream body;
+        body << "<?xml version=\"1.0\"?>\r\n<Response>\r\n"
+             << "<CmdType>Catalog</CmdType>\r\n<SN>" << sn << "</SN>\r\n"
+             << "<DeviceID>" << deviceId << "</DeviceID>\r\n<Result>OK</Result>\r\n"
+             << "<SumNum>" << items.size() << "</SumNum>\r\n<DeviceList Num=\"1\">\r\n";
         body << "<Item>\r\n"
              << "<DeviceID>" << itemDeviceId << "</DeviceID>\r\n"
              << "<Name>" << item.get("name", "").asString() << "</Name>\r\n"
@@ -470,13 +483,15 @@ std::string makeCatalogResponseBody(const std::string& catalogFile,
              << "<Longitude>" << item.get("longitude", "").asString() << "</Longitude>\r\n"
              << "<Latitude>" << item.get("latitude", "").asString() << "</Latitude>\r\n"
              << "</Item>\r\n";
+        body << "</DeviceList>\r\n</Response>\r\n";
+        responses.push_back(body.str());
     }
-    body << "</DeviceList>\r\n</Response>\r\n";
-    return body.str();
+    return responses;
 #else
     (void)catalogFile;
+    (void)sn;
     if (error) *error = "catalog JSON support is unavailable in this build";
-    return makeResponseBody("Response", "Catalog", deviceId, "OK");
+    return std::vector<std::string>(1, makeResponseBody("Response", "Catalog", deviceId, "OK"));
 #endif
 }
 
@@ -1081,7 +1096,14 @@ bool CatalogClientCapability::handleSipRequest(const SipRequestContext& request,
     session.peerId = request.fromId;
     session.state = responseState("catalog-response-received", request.manscdp);
     runtime.sessionManager->createSession(session);
-    runtime.businessState->updateCatalog(request.fromId, request.manscdp.items);
+    runtime.businessState->appendCatalog(request.fromId, request.manscdp.items);
+    const size_t received = runtime.businessState->catalogItemCount(request.fromId);
+    if (request.manscdp.sumNum > 0 && received >= static_cast<size_t>(request.manscdp.sumNum))
+    {
+        session.state = "catalog-response-complete:sum=" + std::to_string(request.manscdp.sumNum) +
+                        ",items=" + std::to_string(received);
+        runtime.sessionManager->createSession(session);
+    }
     return true;
 }
 
@@ -1128,17 +1150,24 @@ bool CatalogServerCapability::handleSipRequest(const SipRequestContext& request,
         const SipEndpointConfig* local = localEndpointForPeer(runtime, *peer);
         if (local != NULL)
         {
-            SipMessageContext catalog = makeRequest(*peer, *local, "MESSAGE", "Response/Catalog");
             std::string catalogError;
-            catalog.body = makeCatalogResponseBody(runtime.config->media().catalogFile, local->sipId, &catalogError);
-            catalog.contentType = "Application/MANSCDP+xml";
-            catalog.callId = nextOutboundCallId("catalog-response", local->sipId);
-            catalog.cseq = "1";
+            const std::vector<std::string> catalogBodies = makeCatalogResponseBodies(runtime.config->media().catalogFile,
+                                                                                       local->sipId,
+                                                                                       request.manscdp.sn.empty() ? std::to_string(nextSn()) : request.manscdp.sn,
+                                                                                       &catalogError);
             if (!catalogError.empty())
             {
                 media_fabric::Logger::instance().log(media_fabric::LOG_WARN, "catalog", catalogError);
             }
-            runtime.sipStack->send(catalog);
+            for (std::vector<std::string>::const_iterator body = catalogBodies.begin(); body != catalogBodies.end(); ++body)
+            {
+                SipMessageContext catalog = makeRequest(*peer, *local, "MESSAGE", "Response/Catalog");
+                catalog.body = *body;
+                catalog.contentType = "Application/MANSCDP+xml";
+                catalog.callId = nextOutboundCallId("catalog-response", local->sipId);
+                catalog.cseq = "1";
+                runtime.sipStack->send(catalog);
+            }
         }
     }
     return true;

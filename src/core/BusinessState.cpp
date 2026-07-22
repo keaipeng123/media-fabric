@@ -1,5 +1,6 @@
 #include "BusinessState.h"
 
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 
@@ -184,6 +185,25 @@ void BusinessState::clear()
 void BusinessState::updateCatalog(const std::string& peerId, const std::vector<ManscdpItem>& items)
 {
     m_catalogItems[peerId] = items;
+}
+
+void BusinessState::appendCatalog(const std::string& peerId, const std::vector<ManscdpItem>& items)
+{
+    std::vector<ManscdpItem>& catalog = m_catalogItems[peerId];
+    for (std::vector<ManscdpItem>::const_iterator item = items.begin(); item != items.end(); ++item)
+    {
+        std::vector<ManscdpItem>::iterator existing = std::find_if(
+            catalog.begin(), catalog.end(),
+            [item](const ManscdpItem& candidate) { return candidate.deviceId == item->deviceId; });
+        if (existing == catalog.end())
+        {
+            catalog.push_back(*item);
+        }
+        else
+        {
+            *existing = *item;
+        }
+    }
 }
 
 void BusinessState::updateRecords(const std::string& peerId, const std::vector<ManscdpItem>& items)
