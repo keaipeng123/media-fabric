@@ -207,6 +207,41 @@ bool GB28181Node::requestInvite(const std::string& peerId, std::string* error)
     return true;
 }
 
+bool GB28181Node::requestCatalog(const std::string& peerId, std::string* error)
+{
+    PeerInfo* peer = m_peerRegistry.findBySipId(peerId);
+    if (peer == NULL || peer->relation != PEER_DOWNSTREAM)
+    {
+        if (error) *error = "unknown downstream peer";
+        return false;
+    }
+    if (!peer->registered)
+    {
+        if (error) *error = "downstream peer is not registered";
+        return false;
+    }
+
+    const SipEndpointConfig& local = m_config.node();
+    SipMessageContext message;
+    message.method = "MESSAGE";
+    message.event = "Query/Catalog";
+    message.fromId = local.sipId;
+    message.toId = peer->sipId;
+    message.localIp = local.sipIp;
+    message.localPort = local.sipPort;
+    message.remoteIp = peer->ip;
+    message.remotePort = peer->port;
+    message.contentType = "Application/MANSCDP+xml";
+    message.body = "<?xml version=\"1.0\"?>\r\n<Query>\r\n<CmdType>Catalog</CmdType>\r\n<SN>1</SN>\r\n<DeviceID>" +
+                   peer->sipId + "</DeviceID>\r\n</Query>\r\n";
+    if (!m_sipStack.send(message))
+    {
+        if (error) *error = "failed to send Catalog query";
+        return false;
+    }
+    return true;
+}
+
 size_t GB28181Node::sentSipMessageCount() const
 {
     return m_sipStack.sentMessageCount();

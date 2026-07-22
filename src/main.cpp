@@ -482,7 +482,9 @@ int main(int argc, char* argv[])
                 std::string error;
                 if (command == "register") return node.requestRegistration(peerId, &error) ? std::string("OK REGISTER sent\n") : std::string("ERROR ") + error + "\n";
                 if (command == "invite") return node.requestInvite(peerId, &error) ? std::string("OK INVITE sent\n") : std::string("ERROR ") + error + "\n";
-                if (command == "help") return std::string("OK commands: peers, register <peer-id>, invite <peer-id>\n");
+                if (command == "catalog-query") return node.requestCatalog(peerId, &error) ? std::string("OK Catalog query sent\n") : std::string("ERROR ") + error + "\n";
+                if (command == "catalog-show") return std::string("OK\n") + node.catalogJson(peerId) + "\n";
+                if (command == "help") return std::string("OK commands: peers, register <peer-id>, invite <peer-id>, catalog-query <peer-id>, catalog-show <peer-id>\n");
                 return std::string("ERROR unknown command\n");
             }, &managementError))
         {

@@ -97,6 +97,8 @@ cmake -S . -B build -DMEDIA_FABRIC_ENABLE_PJSIP=OFF
 ./build/mfcli peers
 ./build/mfcli register 10000000002000000001
 ./build/mfcli invite 12000000002000000001
+./build/mfcli catalog-query 12000000002000000001
+./build/mfcli catalog-show 12000000002000000001
 ```
 
 注册成功后，服务会按 `[timers] heartbeat_interval_seconds` 自动发送心跳；`peers` 显示上下级节点的实时注册与最后心跳时间。

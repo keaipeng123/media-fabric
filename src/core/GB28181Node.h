@@ -42,6 +42,7 @@ public:
     std::string peersStatusText() const;
     bool requestRegistration(const std::string& peerId, std::string* error);
     bool requestInvite(const std::string& peerId, std::string* error);
+    bool requestCatalog(const std::string& peerId, std::string* error);
     size_t sentSipMessageCount() const;
     bool lastSentSipMessage(SipMessageContext* message) const;
     size_t scheduledTaskCount() const;

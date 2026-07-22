@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
 {
     std::string socketPath = "/tmp/media-fabric.sock"; int first = 1;
     if (argc > 2 && std::string(argv[1]) == "--socket") { socketPath = argv[2]; first = 3; }
-    if (argc <= first) { std::cerr << "Usage: mfcli [--socket path] peers|register|invite [peer-id]" << std::endl; return 1; }
+    if (argc <= first) { std::cerr << "Usage: mfcli [--socket path] peers|register|invite|catalog-query|catalog-show [peer-id]" << std::endl; return 1; }
     std::ostringstream request; for (int i=first;i<argc;++i) { if(i>first) request << ' '; request << argv[i]; } request << '\n';
     int fd = ::socket(AF_UNIX, SOCK_STREAM, 0); if(fd < 0) return 1;
     sockaddr_un address; std::memset(&address,0,sizeof(address)); address.sun_family=AF_UNIX;
