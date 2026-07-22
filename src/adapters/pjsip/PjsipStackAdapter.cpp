@@ -625,9 +625,19 @@ bool PjsipStackAdapter::send(const SipMessageContext& message)
         tdata->msg->body = pjsip_msg_body_create(tdata->pool, &pjType, &pjSubtype, &pjBody);
     }
 
-    media_fabric::Logger::instance().log(media_fabric::LOG_DEBUG, "pjsip",
+    std::string generatedCallId;
+    std::string generatedCseq;
+    if (tdata->msg != NULL)
+    {
+        pjsip_cid_hdr* callId = static_cast<pjsip_cid_hdr*>(pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CALL_ID, NULL));
+        pjsip_cseq_hdr* cseq = static_cast<pjsip_cseq_hdr*>(pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CSEQ, NULL));
+        if (callId != NULL) generatedCallId = pjStrToString(callId->id);
+        if (cseq != NULL) generatedCseq = std::to_string(cseq->cseq);
+    }
+    media_fabric::Logger::instance().log(media_fabric::LOG_INFO, "pjsip",
                                          "send method=" + message.method + " target=" + targetValue +
-                                         " from=" + fromValue + " to=" + toValue);
+                                         " from=" + fromValue + " to=" + toValue +
+                                         " call_id=" + generatedCallId + " cseq=" + generatedCseq);
 
     if (message.method == "INVITE")
     {

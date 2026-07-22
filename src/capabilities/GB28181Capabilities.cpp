@@ -826,12 +826,14 @@ bool RegisterServerCapability::verifyChallenge(const SipRequestContext& request,
     std::map<std::string, DigestChallenge>::iterator it = m_challenges.find(key);
     if (it == m_challenges.end())
     {
+        media_fabric::Logger::instance().log(media_fabric::LOG_WARN, "register", "Digest rejected: challenge not found for peer=" + request.fromId);
         return false;
     }
 
     DigestChallenge& challenge = it->second;
     if (request.digestAuth.nonce != challenge.nonce)
     {
+        media_fabric::Logger::instance().log(media_fabric::LOG_WARN, "register", "Digest rejected: nonce mismatch for peer=" + request.fromId);
         return false;
     }
 
@@ -842,16 +844,22 @@ bool RegisterServerCapability::verifyChallenge(const SipRequestContext& request,
             !parseNonceCount(request.digestAuth.nc, &nonceCount) ||
             nonceCount <= challenge.lastNonceCount)
         {
+            media_fabric::Logger::instance().log(media_fabric::LOG_WARN, "register", "Digest rejected: invalid or replayed nonce-count for peer=" + request.fromId);
             return false;
         }
     }
     else if (challenge.usedWithoutNonceCount)
     {
+        media_fabric::Logger::instance().log(media_fabric::LOG_WARN, "register", "Digest rejected: nonce already used for peer=" + request.fromId);
         return false;
     }
 
     if (!verifyRegisterDigestValue(request, endpoint))
     {
+        media_fabric::Logger::instance().log(media_fabric::LOG_WARN, "register",
+                                             "Digest rejected: username/realm/URI/response mismatch for peer=" + request.fromId +
+                                             " username=" + request.digestAuth.username + " realm=" + request.digestAuth.realm +
+                                             " uri=" + request.digestAuth.uri);
         return false;
     }
 
