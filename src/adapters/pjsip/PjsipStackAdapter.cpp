@@ -593,18 +593,20 @@ bool PjsipStackAdapter::send(const SipMessageContext& message)
     if (!message.digestAuth.response.empty() && tdata->msg != NULL)
     {
         pjsip_authorization_hdr* auth = pjsip_authorization_hdr_create(tdata->pool);
-        auth->scheme = pj_str(const_cast<char*>("Digest"));
-        auth->credential.digest.username = toPjString(message.digestAuth.username);
-        auth->credential.digest.realm = toPjString(message.digestAuth.realm);
-        auth->credential.digest.nonce = toPjString(message.digestAuth.nonce);
-        auth->credential.digest.uri = toPjString(message.digestAuth.uri);
-        auth->credential.digest.response = toPjString(message.digestAuth.response);
+        // Authorization may be serialized after this function returns.  Store every
+        // Digest value in tdata's pool instead of retaining std::string storage.
+        setPoolString(tdata->pool, &auth->scheme, "Digest");
+        setPoolString(tdata->pool, &auth->credential.digest.username, message.digestAuth.username);
+        setPoolString(tdata->pool, &auth->credential.digest.realm, message.digestAuth.realm);
+        setPoolString(tdata->pool, &auth->credential.digest.nonce, message.digestAuth.nonce);
+        setPoolString(tdata->pool, &auth->credential.digest.uri, message.digestAuth.uri);
+        setPoolString(tdata->pool, &auth->credential.digest.response, message.digestAuth.response);
         const std::string algorithm = message.digestAuth.algorithm.empty() ? "MD5" : message.digestAuth.algorithm;
-        auth->credential.digest.algorithm = toPjString(algorithm);
-        auth->credential.digest.opaque = toPjString(message.digestAuth.opaque);
-        auth->credential.digest.qop = toPjString(message.digestAuth.qop);
-        auth->credential.digest.nc = toPjString(message.digestAuth.nc);
-        auth->credential.digest.cnonce = toPjString(message.digestAuth.cnonce);
+        setPoolString(tdata->pool, &auth->credential.digest.algorithm, algorithm);
+        setPoolString(tdata->pool, &auth->credential.digest.opaque, message.digestAuth.opaque);
+        setPoolString(tdata->pool, &auth->credential.digest.qop, message.digestAuth.qop);
+        setPoolString(tdata->pool, &auth->credential.digest.nc, message.digestAuth.nc);
+        setPoolString(tdata->pool, &auth->credential.digest.cnonce, message.digestAuth.cnonce);
         pjsip_msg_add_hdr(tdata->msg, reinterpret_cast<pjsip_hdr*>(auth));
     }
 
