@@ -164,6 +164,11 @@ target_link_libraries(media-fabric PRIVATE
     gb28181_common
 )
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND EXISTS "${CMAKE_SOURCE_DIR}/3rd/lib/libjsoncpp.a")
+    target_link_libraries(media-fabric PRIVATE "${CMAKE_SOURCE_DIR}/3rd/lib/libjsoncpp.a")
+    target_compile_definitions(media-fabric PRIVATE MEDIA_FABRIC_ENABLE_JSONCPP)
+endif()
+
 if(BUILD_TESTING AND NOT CMAKE_CROSSCOMPILING)
     add_test(
         NAME media-fabric-self-test

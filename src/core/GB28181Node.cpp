@@ -4,8 +4,18 @@
 #include "Logger.h"
 
 #include <sstream>
+#include <ctime>
 
 namespace gb28181 {
+namespace {
+std::string nextTransactionCallId(const std::string& prefix, const std::string& localId)
+{
+    static unsigned long counter = 0;
+    std::ostringstream output;
+    output << prefix << "-" << std::time(NULL) << "-" << ++counter << "@" << localId;
+    return output.str();
+}
+}
 
 GB28181Node::GB28181Node(const NodeConfig& config)
     : m_config(config),
@@ -232,6 +242,8 @@ bool GB28181Node::requestCatalog(const std::string& peerId, std::string* error)
     message.remoteIp = peer->ip;
     message.remotePort = peer->port;
     message.contentType = "Application/MANSCDP+xml";
+    message.callId = nextTransactionCallId("catalog-query", local.sipId);
+    message.cseq = "1";
     message.body = "<?xml version=\"1.0\"?>\r\n<Query>\r\n<CmdType>Catalog</CmdType>\r\n<SN>1</SN>\r\n<DeviceID>" +
                    peer->sipId + "</DeviceID>\r\n</Query>\r\n";
     if (!m_sipStack.send(message))

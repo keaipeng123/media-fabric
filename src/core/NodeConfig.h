@@ -45,6 +45,7 @@ struct PeerConfig
 struct MediaConfig
 {
     std::string streamFile;
+    std::string catalogFile;
     size_t rtpPayloadBytes;
     uint32_t rtpTimestampIncrement;
     int streamSendIntervalMs;

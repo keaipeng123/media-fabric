@@ -14,6 +14,10 @@
 #include "SdpSession.h"
 #include "Logger.h"
 
+#ifdef MEDIA_FABRIC_ENABLE_JSONCPP
+#include "JsonParse.h"
+#endif
+
 #ifdef GB28181_ENABLE_JRTPLIB
 #include "JrtplibRtpSessionAdapter.h"
 #endif
@@ -23,6 +27,7 @@
 #include <climits>
 #include <cstdlib>
 #include <ctime>
+#include <fstream>
 #include <iostream>
 #include <random>
 #include <sstream>
@@ -35,6 +40,14 @@ int nextSn()
 {
     static int sn = 1;
     return sn++;
+}
+
+std::string nextOutboundCallId(const std::string& prefix, const std::string& localId)
+{
+    static unsigned long counter = 0;
+    std::ostringstream output;
+    output << prefix << "-" << std::time(NULL) << "-" << ++counter << "@" << localId;
+    return output.str();
 }
 
 int parseInt(const std::string& value)
@@ -406,6 +419,65 @@ std::string makeResponseBody(const std::string& root,
     }
     body << "</" << root << ">\r\n";
     return body.str();
+}
+
+std::string makeCatalogResponseBody(const std::string& catalogFile,
+                                    const std::string& deviceId,
+                                    std::string* error)
+{
+#ifdef MEDIA_FABRIC_ENABLE_JSONCPP
+    std::ifstream input(catalogFile.c_str());
+    if (!input.good())
+    {
+        if (error) *error = "cannot open catalog file: " + catalogFile;
+        return makeResponseBody("Response", "Catalog", deviceId, "OK");
+    }
+
+    std::ostringstream raw;
+    raw << input.rdbuf();
+    Json::Value root;
+    if (!JsonParse(raw.str()).toJson(root) || !root["data"]["nodeInfo"].isArray())
+    {
+        if (error) *error = "invalid catalog JSON: " + catalogFile;
+        return makeResponseBody("Response", "Catalog", deviceId, "OK");
+    }
+
+    const Json::Value& items = root["data"]["nodeInfo"];
+    std::ostringstream body;
+    body << "<?xml version=\"1.0\"?>\r\n<Response>\r\n"
+         << "<CmdType>Catalog</CmdType>\r\n<SN>" << nextSn() << "</SN>\r\n"
+         << "<DeviceID>" << deviceId << "</DeviceID>\r\n<Result>OK</Result>\r\n"
+         << "<SumNum>" << items.size() << "</SumNum>\r\n<DeviceList Num=\"" << items.size() << "\">\r\n";
+    for (Json::ArrayIndex i = 0; i < items.size(); ++i)
+    {
+        const Json::Value& item = items[i];
+        const std::string itemDeviceId = item.get("deviceID", "").asString();
+        const std::string manufacturer = item.get("manufacturer", "unknown").asString();
+        const std::string model = item.get("model", "unknown").asString();
+        body << "<Item>\r\n"
+             << "<DeviceID>" << itemDeviceId << "</DeviceID>\r\n"
+             << "<Name>" << item.get("name", "").asString() << "</Name>\r\n"
+             << "<Manufacturer>" << (manufacturer.empty() ? "unknown" : manufacturer) << "</Manufacturer>\r\n"
+             << "<Model>" << (model.empty() ? "unknown" : model) << "</Model>\r\n"
+             << "<Owner>unknown</Owner>\r\n"
+             << "<CivilCode>" << (itemDeviceId.size() >= 6 ? itemDeviceId.substr(0, 6) : "") << "</CivilCode>\r\n"
+             << "<Parental>" << item.get("parental", 0).asInt() << "</Parental>\r\n"
+             << "<ParentID>" << item.get("parentID", "").asString() << "</ParentID>\r\n"
+             << "<SafetyWay>" << item.get("safetyWay", 0).asInt() << "</SafetyWay>\r\n"
+             << "<RegisterWay>" << item.get("registerWay", 1).asInt() << "</RegisterWay>\r\n"
+             << "<Secrecy>" << item.get("secrecy", 0).asInt() << "</Secrecy>\r\n"
+             << "<Status>" << item.get("status", "ON").asString() << "</Status>\r\n"
+             << "<Longitude>" << item.get("longitude", "").asString() << "</Longitude>\r\n"
+             << "<Latitude>" << item.get("latitude", "").asString() << "</Latitude>\r\n"
+             << "</Item>\r\n";
+    }
+    body << "</DeviceList>\r\n</Response>\r\n";
+    return body.str();
+#else
+    (void)catalogFile;
+    if (error) *error = "catalog JSON support is unavailable in this build";
+    return makeResponseBody("Response", "Catalog", deviceId, "OK");
+#endif
 }
 
 std::string makeInviteBody(const SipEndpointConfig& local)
@@ -1049,8 +1121,15 @@ bool CatalogServerCapability::handleSipRequest(const SipRequestContext& request,
         if (local != NULL)
         {
             SipMessageContext catalog = makeRequest(*peer, *local, "MESSAGE", "Response/Catalog");
-            catalog.body = makeResponseBody("Response", "Catalog", local->sipId, "OK");
+            std::string catalogError;
+            catalog.body = makeCatalogResponseBody(runtime.config->media().catalogFile, local->sipId, &catalogError);
             catalog.contentType = "Application/MANSCDP+xml";
+            catalog.callId = nextOutboundCallId("catalog-response", local->sipId);
+            catalog.cseq = "1";
+            if (!catalogError.empty())
+            {
+                media_fabric::Logger::instance().log(media_fabric::LOG_WARN, "catalog", catalogError);
+            }
             runtime.sipStack->send(catalog);
         }
     }

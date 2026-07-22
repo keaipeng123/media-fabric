@@ -143,6 +143,7 @@ MediaConfig readMediaConfig(const IniData& data)
 {
     MediaConfig media;
     media.streamFile = getValue(data, "media", "stream_file");
+    media.catalogFile = getValue(data, "media", "catalog_file");
     media.rtpPayloadBytes = toSize(getValue(data, "media", "rtp_payload_bytes"), media.rtpPayloadBytes);
     media.rtpTimestampIncrement = toUint32(getValue(data, "media", "rtp_timestamp_increment"),
                                            media.rtpTimestampIncrement);
