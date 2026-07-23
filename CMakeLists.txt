@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(MEDIA_FABRIC_BUILD_LEGACY_SERVICES "Build historical SipSupService and SipSubService targets" OFF)
+option(MEDIA_FABRIC_BUILD_CPP_STANDALONE "Build the standalone C++ diagnostic executable" ON)
 option(MEDIA_FABRIC_ENABLE_PJSIP "Enable PJSIP transport adapter for real SIP networking" ON)
 option(MEDIA_FABRIC_ENABLE_JRTPLIB "Enable JRTPLIB RTP adapter for media-fabric" ON)
 set(MEDIA_FABRIC_SELF_TEST_CONFIG "conf/media-fabric.conf" CACHE STRING "Config file used by media-fabric-self-test")
@@ -47,12 +48,18 @@ target_link_libraries(gb28181_common
         Threads::Threads
 )
 
-add_executable(media-fabric
-    src/main.cpp
+find_library(TINYXML2_LIBRARY NAMES tinyxml2 PATHS 3rd/lib NO_DEFAULT_PATH)
+if(NOT TINYXML2_LIBRARY)
+    message(FATAL_ERROR "media-fabric requires libtinyxml2 in 3rd/lib")
+endif()
+target_link_libraries(gb28181_common PUBLIC ${TINYXML2_LIBRARY})
+
+set(MEDIA_FABRIC_CORE_SOURCES
     src/core/BusinessQueryService.cpp
     src/core/BusinessState.cpp
     src/core/DigestAuth.cpp
     src/core/GB28181Node.cpp
+    src/core/MediaFabricRuntime.cpp
     src/core/ManagementServer.cpp
     src/core/ManscdpMessage.cpp
     src/core/NodeConfig.cpp
@@ -72,23 +79,28 @@ add_executable(media-fabric
     src/capabilities/GB28181Capabilities.cpp
     src/capabilities/LifecycleCapability.cpp
     src/capabilities/StandardCapabilities.cpp
+    src/capi/media_fabric_c_api.cpp
 )
 
-add_executable(mfcli src/mfcli.cpp)
+add_library(media_fabric_core STATIC ${MEDIA_FABRIC_CORE_SOURCES})
+set_target_properties(media_fabric_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 if(MEDIA_FABRIC_ENABLE_PJSIP)
-    target_sources(media-fabric PRIVATE
+    target_sources(media_fabric_core PRIVATE
         src/adapters/pjsip/PjsipStackAdapter.cpp
     )
 endif()
 
 if(MEDIA_FABRIC_ENABLE_JRTPLIB)
-    target_sources(media-fabric PRIVATE
+    target_sources(media_fabric_core PRIVATE
         src/adapters/jrtplib/JrtplibRtpSessionAdapter.cpp
     )
 endif()
 
-target_include_directories(media-fabric PRIVATE
+target_include_directories(media_fabric_core
+    PUBLIC
+        src/capi
+    PRIVATE
     src/core
     src/capabilities
     src/media
@@ -97,17 +109,17 @@ target_include_directories(media-fabric PRIVATE
 if(MEDIA_FABRIC_ENABLE_PJSIP)
     find_package(OpenSSL REQUIRED)
 
-    target_include_directories(media-fabric PRIVATE
+    target_include_directories(media_fabric_core PRIVATE
         src/adapters/pjsip
         3rd/include/pjsip
     )
-    target_compile_definitions(media-fabric PRIVATE
+    target_compile_definitions(media_fabric_core PUBLIC
         GB28181_ENABLE_PJSIP
     )
-    target_link_directories(media-fabric PRIVATE
+    target_link_directories(media_fabric_core PUBLIC
         3rd/lib
     )
-    target_link_libraries(media-fabric PRIVATE
+    target_link_libraries(media_fabric_core PUBLIC
         -lpjsua2-x86_64-unknown-linux-gnu
         -lpjsua-x86_64-unknown-linux-gnu
         -lpjsip-ua-x86_64-unknown-linux-gnu
@@ -135,11 +147,11 @@ if(MEDIA_FABRIC_ENABLE_PJSIP)
 endif()
 
 if(MEDIA_FABRIC_ENABLE_JRTPLIB)
-    target_include_directories(media-fabric PRIVATE
+    target_include_directories(media_fabric_core PRIVATE
         src/adapters/jrtplib
         3rd/include
     )
-    target_compile_definitions(media-fabric PRIVATE
+    target_compile_definitions(media_fabric_core PUBLIC
         GB28181_ENABLE_JRTPLIB
     )
     find_library(JRTPLIB_LIBRARY NAMES jrtp jrtplib PATHS 3rd/lib NO_DEFAULT_PATH)
@@ -150,34 +162,50 @@ if(MEDIA_FABRIC_ENABLE_JRTPLIB)
     if(NOT JTHREAD_LIBRARY)
         message(FATAL_ERROR "MEDIA_FABRIC_ENABLE_JRTPLIB=ON requires libjthread in 3rd/lib")
     endif()
-    target_link_libraries(media-fabric PRIVATE
+    target_link_libraries(media_fabric_core PUBLIC
         ${JRTPLIB_LIBRARY}
         ${JTHREAD_LIBRARY}
     )
 endif()
 
-target_compile_options(media-fabric PRIVATE
+target_compile_options(media_fabric_core PRIVATE
     $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wall -Wextra -Wpedantic>
 )
 
-target_link_libraries(media-fabric PRIVATE
+target_link_libraries(media_fabric_core PUBLIC
     gb28181_common
 )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND EXISTS "${CMAKE_SOURCE_DIR}/3rd/lib/libjsoncpp.a")
-    target_link_libraries(media-fabric PRIVATE "${CMAKE_SOURCE_DIR}/3rd/lib/libjsoncpp.a")
-    target_compile_definitions(media-fabric PRIVATE MEDIA_FABRIC_ENABLE_JSONCPP)
+    target_link_libraries(media_fabric_core PUBLIC "${CMAKE_SOURCE_DIR}/3rd/lib/libjsoncpp.a")
+    target_compile_definitions(media_fabric_core PUBLIC MEDIA_FABRIC_ENABLE_JSONCPP)
 endif()
 
-if(BUILD_TESTING AND NOT CMAKE_CROSSCOMPILING)
+if(MEDIA_FABRIC_BUILD_CPP_STANDALONE)
+    add_executable(media-fabric-cpp src/main.cpp)
+    target_include_directories(media-fabric-cpp PRIVATE
+        src/core
+        src/capabilities
+        src/media
+    )
+    target_link_libraries(media-fabric-cpp PRIVATE media_fabric_core)
+
+    add_executable(media-fabric-capi-smoke tests/capi_smoke.cpp)
+    target_link_libraries(media-fabric-capi-smoke PRIVATE media_fabric_core)
+endif()
+
+add_executable(mfcli src/mfcli.cpp)
+
+if(BUILD_TESTING AND NOT CMAKE_CROSSCOMPILING AND MEDIA_FABRIC_BUILD_CPP_STANDALONE)
     add_test(
         NAME media-fabric-self-test
-        COMMAND $<TARGET_FILE:media-fabric> -c ${MEDIA_FABRIC_SELF_TEST_CONFIG_PATH} --self-test
+        COMMAND $<TARGET_FILE:media-fabric-cpp> -c ${MEDIA_FABRIC_SELF_TEST_CONFIG_PATH} --self-test
     )
     set_tests_properties(media-fabric-self-test PROPERTIES
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         PASS_REGULAR_EXPRESSION "REGISTER_AUTH_RETRY=ok.*INVITE_ACK=ok.*sessions=[0-9]+.*endpoints=1.*upstream_peers=1.*downstream_peers=1.*routes=11.*sent_messages=[0-9]+"
     )
+    add_test(NAME media-fabric-capi-smoke COMMAND $<TARGET_FILE:media-fabric-capi-smoke>)
 endif()
 
 if(MEDIA_FABRIC_BUILD_LEGACY_SERVICES)

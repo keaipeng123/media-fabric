@@ -106,3 +106,671 @@
 2026-07-21 17:10:13 [node] [INFO] stop capability=RegisterServerCapability
 2026-07-21 17:10:13 [node] [INFO] stop capability=RegisterClientCapability
 2026-07-21 17:10:13 [server] [INFO] stopped
+2026-07-21 17:19:25 [server] [INFO] starting with config /Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-21 17:19:25 [node] [INFO] config=/Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-21 17:19:25 [sip] [INFO] endpoint=node sip_id=11000000002000000001 address=127.0.0.1:7101
+2026-07-21 17:19:25 [node] [INFO] upstream_peers=1 downstream_peers=1 available_rtp_ports=5001
+2026-07-21 17:19:25 [node] [INFO] start capability=RegisterClientCapability
+2026-07-21 17:19:25 [scheduler] [INFO] task=RegisterClientCapability:register-refresh interval_ms=300000
+2026-07-21 17:19:25 [node] [INFO] start capability=RegisterServerCapability
+2026-07-21 17:19:25 [node] [INFO] start capability=KeepaliveClientCapability
+2026-07-21 17:19:25 [scheduler] [INFO] task=KeepaliveClientCapability:keepalive interval_ms=60000
+2026-07-21 17:19:25 [node] [INFO] start capability=KeepaliveServerCapability
+2026-07-21 17:19:25 [node] [INFO] start capability=CatalogClientCapability
+2026-07-21 17:19:25 [node] [INFO] start capability=CatalogServerCapability
+2026-07-21 17:19:25 [node] [INFO] start capability=RecordQueryClientCapability
+2026-07-21 17:19:25 [node] [INFO] start capability=RecordQueryServerCapability
+2026-07-21 17:19:25 [node] [INFO] start capability=InviteClientCapability
+2026-07-21 17:19:25 [node] [INFO] start capability=InviteServerCapability
+2026-07-21 17:19:25 [node] [INFO] start capability=MediaReceiveCapability
+2026-07-21 17:19:25 [node] [INFO] start capability=MediaSendCapability
+2026-07-21 17:19:25 [scheduler] [INFO] task=MediaSendCapability:media-send interval_ms=1000
+2026-07-21 17:19:25 [node] [INFO] sip_routes=11
+2026-07-21 17:19:25 [server] [INFO] started
+2026-07-21 17:19:25 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-21 17:19:25 [sip] [INFO] direction=outbound request method=REGISTER event=request from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 authorization_user=admin
+2026-07-21 17:19:25 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-21 17:19:25 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-21 17:19:25 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-21 17:19:25 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-21 17:19:25 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-21 17:19:25 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-21 17:19:25 [sip] [INFO] direction=outbound response status=400 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-21 17:19:25 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-21 17:19:25 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/Catalog from=11000000002000000001 to=10000000002000000001
+2026-07-21 17:19:25 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/Catalog from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 body_bytes=588
+2026-07-21 17:19:25 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/RecordInfo from=11000000002000000001 to=10000000002000000001
+2026-07-21 17:19:25 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/RecordInfo from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 body_bytes=427
+2026-07-21 17:19:25 [sip] [INFO] direction=outbound request method=ACK event=request from=11000000002000000001 to=12000000002000000001 call_id=selftest-invite-client-dialog cseq=1
+2026-07-21 17:19:25 [sip] [INFO] direction=outbound response status=400 method=INVITE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-21 17:19:25 [sip] [INFO] direction=outbound response status=200 method=INVITE event=request from=11000000002000000001 to=10000000002000000001 body_bytes=159
+2026-07-21 17:19:25 [sip] [INFO] direction=outbound response status=481 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-21 17:19:25 [sip] [INFO] direction=outbound response status=200 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-21 17:19:25 [node] [INFO] stop capability=MediaSendCapability
+2026-07-21 17:19:25 [node] [INFO] stop capability=MediaReceiveCapability
+2026-07-21 17:19:25 [node] [INFO] stop capability=InviteServerCapability
+2026-07-21 17:19:25 [node] [INFO] stop capability=InviteClientCapability
+2026-07-21 17:19:25 [node] [INFO] stop capability=RecordQueryServerCapability
+2026-07-21 17:19:25 [node] [INFO] stop capability=RecordQueryClientCapability
+2026-07-21 17:19:25 [node] [INFO] stop capability=CatalogServerCapability
+2026-07-21 17:19:25 [node] [INFO] stop capability=CatalogClientCapability
+2026-07-21 17:19:25 [node] [INFO] stop capability=KeepaliveServerCapability
+2026-07-21 17:19:25 [node] [INFO] stop capability=KeepaliveClientCapability
+2026-07-21 17:19:25 [node] [INFO] stop capability=RegisterServerCapability
+2026-07-21 17:19:25 [node] [INFO] stop capability=RegisterClientCapability
+2026-07-21 17:19:25 [server] [INFO] stopped
+2026-07-22 10:10:32 [server] [INFO] starting with config /Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-22 10:10:32 [node] [INFO] config=/Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-22 10:10:32 [sip] [INFO] endpoint=node sip_id=11000000002000000001 address=127.0.0.1:7101
+2026-07-22 10:10:32 [node] [INFO] upstream_peers=1 downstream_peers=1 available_rtp_ports=5001
+2026-07-22 10:10:32 [node] [INFO] start capability=RegisterClientCapability
+2026-07-22 10:10:32 [scheduler] [INFO] task=RegisterClientCapability:register-refresh interval_ms=300000
+2026-07-22 10:10:32 [node] [INFO] start capability=RegisterServerCapability
+2026-07-22 10:10:32 [node] [INFO] start capability=KeepaliveClientCapability
+2026-07-22 10:10:32 [scheduler] [INFO] task=KeepaliveClientCapability:keepalive interval_ms=60000
+2026-07-22 10:10:32 [node] [INFO] start capability=KeepaliveServerCapability
+2026-07-22 10:10:32 [node] [INFO] start capability=CatalogClientCapability
+2026-07-22 10:10:32 [node] [INFO] start capability=CatalogServerCapability
+2026-07-22 10:10:32 [node] [INFO] start capability=RecordQueryClientCapability
+2026-07-22 10:10:32 [node] [INFO] start capability=RecordQueryServerCapability
+2026-07-22 10:10:32 [node] [INFO] start capability=InviteClientCapability
+2026-07-22 10:10:32 [node] [INFO] start capability=InviteServerCapability
+2026-07-22 10:10:32 [node] [INFO] start capability=MediaReceiveCapability
+2026-07-22 10:10:32 [node] [INFO] start capability=MediaSendCapability
+2026-07-22 10:10:32 [scheduler] [INFO] task=MediaSendCapability:media-send interval_ms=1000
+2026-07-22 10:10:32 [node] [INFO] sip_routes=11
+2026-07-22 10:10:32 [server] [INFO] started
+2026-07-22 10:10:32 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-22 10:10:32 [sip] [INFO] direction=outbound request method=REGISTER event=request from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 authorization_user=admin
+2026-07-22 10:10:32 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 10:10:32 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 10:10:32 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 10:10:32 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-22 10:10:32 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 10:10:32 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 10:10:32 [sip] [INFO] direction=outbound response status=400 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-22 10:10:32 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-22 10:10:32 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/Catalog from=11000000002000000001 to=10000000002000000001
+2026-07-22 10:10:32 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/Catalog from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 body_bytes=588
+2026-07-22 10:10:32 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/RecordInfo from=11000000002000000001 to=10000000002000000001
+2026-07-22 10:10:32 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/RecordInfo from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 body_bytes=427
+2026-07-22 10:10:32 [sip] [INFO] direction=outbound request method=ACK event=request from=11000000002000000001 to=12000000002000000001 call_id=selftest-invite-client-dialog cseq=1
+2026-07-22 10:10:32 [sip] [INFO] direction=outbound response status=400 method=INVITE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-22 10:10:32 [sip] [INFO] direction=outbound response status=200 method=INVITE event=request from=11000000002000000001 to=10000000002000000001 body_bytes=159
+2026-07-22 10:10:32 [sip] [INFO] direction=outbound response status=481 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-22 10:10:32 [sip] [INFO] direction=outbound response status=200 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-22 10:10:32 [node] [INFO] stop capability=MediaSendCapability
+2026-07-22 10:10:32 [node] [INFO] stop capability=MediaReceiveCapability
+2026-07-22 10:10:32 [node] [INFO] stop capability=InviteServerCapability
+2026-07-22 10:10:32 [node] [INFO] stop capability=InviteClientCapability
+2026-07-22 10:10:32 [node] [INFO] stop capability=RecordQueryServerCapability
+2026-07-22 10:10:32 [node] [INFO] stop capability=RecordQueryClientCapability
+2026-07-22 10:10:32 [node] [INFO] stop capability=CatalogServerCapability
+2026-07-22 10:10:32 [node] [INFO] stop capability=CatalogClientCapability
+2026-07-22 10:10:32 [node] [INFO] stop capability=KeepaliveServerCapability
+2026-07-22 10:10:32 [node] [INFO] stop capability=KeepaliveClientCapability
+2026-07-22 10:10:32 [node] [INFO] stop capability=RegisterServerCapability
+2026-07-22 10:10:32 [node] [INFO] stop capability=RegisterClientCapability
+2026-07-22 10:10:32 [server] [INFO] stopped
+2026-07-22 10:25:34 [server] [INFO] starting with config /Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-22 10:25:34 [node] [INFO] config=/Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-22 10:25:34 [sip] [INFO] endpoint=node sip_id=11000000002000000001 address=127.0.0.1:7101
+2026-07-22 10:25:34 [node] [INFO] upstream_peers=1 downstream_peers=1 available_rtp_ports=5001
+2026-07-22 10:25:34 [node] [INFO] start capability=RegisterClientCapability
+2026-07-22 10:25:34 [scheduler] [INFO] task=RegisterClientCapability:register-refresh interval_ms=300000
+2026-07-22 10:25:34 [node] [INFO] start capability=RegisterServerCapability
+2026-07-22 10:25:34 [node] [INFO] start capability=KeepaliveClientCapability
+2026-07-22 10:25:34 [scheduler] [INFO] task=KeepaliveClientCapability:keepalive interval_ms=60000
+2026-07-22 10:25:34 [node] [INFO] start capability=KeepaliveServerCapability
+2026-07-22 10:25:34 [node] [INFO] start capability=CatalogClientCapability
+2026-07-22 10:25:34 [node] [INFO] start capability=CatalogServerCapability
+2026-07-22 10:25:34 [node] [INFO] start capability=RecordQueryClientCapability
+2026-07-22 10:25:34 [node] [INFO] start capability=RecordQueryServerCapability
+2026-07-22 10:25:34 [node] [INFO] start capability=InviteClientCapability
+2026-07-22 10:25:34 [node] [INFO] start capability=InviteServerCapability
+2026-07-22 10:25:34 [node] [INFO] start capability=MediaReceiveCapability
+2026-07-22 10:25:34 [node] [INFO] start capability=MediaSendCapability
+2026-07-22 10:25:34 [scheduler] [INFO] task=MediaSendCapability:media-send interval_ms=1000
+2026-07-22 10:25:34 [node] [INFO] sip_routes=11
+2026-07-22 10:25:34 [server] [INFO] started
+2026-07-22 10:25:34 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-22 10:25:34 [sip] [INFO] direction=outbound request method=REGISTER event=request from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 authorization_user=admin
+2026-07-22 10:25:34 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 10:25:34 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 10:25:34 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 10:25:34 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-22 10:25:34 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 10:25:34 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 10:25:34 [sip] [INFO] direction=outbound response status=400 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-22 10:25:34 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-22 10:25:34 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/Catalog from=11000000002000000001 to=10000000002000000001
+2026-07-22 10:25:34 [catalog] [WARN] catalog JSON support is unavailable in this build
+2026-07-22 10:25:34 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/Catalog from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 call_id=catalog-response-1784687134-1@11000000002000000001 cseq=1 body_bytes=588
+2026-07-22 10:25:34 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/RecordInfo from=11000000002000000001 to=10000000002000000001
+2026-07-22 10:25:34 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/RecordInfo from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 body_bytes=427
+2026-07-22 10:25:34 [sip] [INFO] direction=outbound request method=ACK event=request from=11000000002000000001 to=12000000002000000001 call_id=selftest-invite-client-dialog cseq=1
+2026-07-22 10:25:34 [sip] [INFO] direction=outbound response status=400 method=INVITE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-22 10:25:34 [sip] [INFO] direction=outbound response status=200 method=INVITE event=request from=11000000002000000001 to=10000000002000000001 body_bytes=159
+2026-07-22 10:25:34 [sip] [INFO] direction=outbound response status=481 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-22 10:25:34 [sip] [INFO] direction=outbound response status=200 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-22 10:25:34 [node] [INFO] stop capability=MediaSendCapability
+2026-07-22 10:25:34 [node] [INFO] stop capability=MediaReceiveCapability
+2026-07-22 10:25:34 [node] [INFO] stop capability=InviteServerCapability
+2026-07-22 10:25:34 [node] [INFO] stop capability=InviteClientCapability
+2026-07-22 10:25:34 [node] [INFO] stop capability=RecordQueryServerCapability
+2026-07-22 10:25:34 [node] [INFO] stop capability=RecordQueryClientCapability
+2026-07-22 10:25:34 [node] [INFO] stop capability=CatalogServerCapability
+2026-07-22 10:25:34 [node] [INFO] stop capability=CatalogClientCapability
+2026-07-22 10:25:34 [node] [INFO] stop capability=KeepaliveServerCapability
+2026-07-22 10:25:34 [node] [INFO] stop capability=KeepaliveClientCapability
+2026-07-22 10:25:34 [node] [INFO] stop capability=RegisterServerCapability
+2026-07-22 10:25:34 [node] [INFO] stop capability=RegisterClientCapability
+2026-07-22 10:25:34 [server] [INFO] stopped
+2026-07-22 10:35:56 [server] [INFO] starting with config /Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-22 10:35:56 [node] [INFO] config=/Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-22 10:35:56 [sip] [INFO] endpoint=node sip_id=11000000002000000001 address=127.0.0.1:7101
+2026-07-22 10:35:56 [node] [INFO] upstream_peers=1 downstream_peers=1 available_rtp_ports=5001
+2026-07-22 10:35:56 [node] [INFO] start capability=RegisterClientCapability
+2026-07-22 10:35:56 [scheduler] [INFO] task=RegisterClientCapability:register-refresh interval_ms=300000
+2026-07-22 10:35:56 [node] [INFO] start capability=RegisterServerCapability
+2026-07-22 10:35:56 [node] [INFO] start capability=KeepaliveClientCapability
+2026-07-22 10:35:56 [scheduler] [INFO] task=KeepaliveClientCapability:keepalive interval_ms=60000
+2026-07-22 10:35:56 [node] [INFO] start capability=KeepaliveServerCapability
+2026-07-22 10:35:56 [node] [INFO] start capability=CatalogClientCapability
+2026-07-22 10:35:56 [node] [INFO] start capability=CatalogServerCapability
+2026-07-22 10:35:56 [node] [INFO] start capability=RecordQueryClientCapability
+2026-07-22 10:35:56 [node] [INFO] start capability=RecordQueryServerCapability
+2026-07-22 10:35:56 [node] [INFO] start capability=InviteClientCapability
+2026-07-22 10:35:56 [node] [INFO] start capability=InviteServerCapability
+2026-07-22 10:35:56 [node] [INFO] start capability=MediaReceiveCapability
+2026-07-22 10:35:56 [node] [INFO] start capability=MediaSendCapability
+2026-07-22 10:35:56 [scheduler] [INFO] task=MediaSendCapability:media-send interval_ms=1000
+2026-07-22 10:35:56 [node] [INFO] sip_routes=11
+2026-07-22 10:35:56 [server] [INFO] started
+2026-07-22 10:35:56 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-22 10:35:56 [sip] [INFO] direction=outbound request method=REGISTER event=request from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 authorization_user=admin
+2026-07-22 10:35:56 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 10:35:56 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 10:35:56 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 10:35:56 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-22 10:35:56 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 10:35:56 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 10:35:56 [sip] [INFO] direction=outbound response status=400 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-22 10:35:56 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-22 10:35:56 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/Catalog from=11000000002000000001 to=10000000002000000001
+2026-07-22 10:35:56 [catalog] [WARN] catalog JSON support is unavailable in this build
+2026-07-22 10:35:56 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/Catalog from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 call_id=catalog-response-1784687756-1@11000000002000000001 cseq=1 body_bytes=588
+2026-07-22 10:35:56 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/RecordInfo from=11000000002000000001 to=10000000002000000001
+2026-07-22 10:35:56 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/RecordInfo from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 body_bytes=427
+2026-07-22 10:35:56 [sip] [INFO] direction=outbound request method=ACK event=request from=11000000002000000001 to=12000000002000000001 call_id=selftest-invite-client-dialog cseq=1
+2026-07-22 10:35:56 [sip] [INFO] direction=outbound response status=400 method=INVITE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-22 10:35:56 [sip] [INFO] direction=outbound response status=200 method=INVITE event=request from=11000000002000000001 to=10000000002000000001 body_bytes=159
+2026-07-22 10:35:56 [sip] [INFO] direction=outbound response status=481 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-22 10:35:56 [sip] [INFO] direction=outbound response status=200 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-22 10:35:56 [node] [INFO] stop capability=MediaSendCapability
+2026-07-22 10:35:56 [node] [INFO] stop capability=MediaReceiveCapability
+2026-07-22 10:35:56 [node] [INFO] stop capability=InviteServerCapability
+2026-07-22 10:35:56 [node] [INFO] stop capability=InviteClientCapability
+2026-07-22 10:35:56 [node] [INFO] stop capability=RecordQueryServerCapability
+2026-07-22 10:35:56 [node] [INFO] stop capability=RecordQueryClientCapability
+2026-07-22 10:35:56 [node] [INFO] stop capability=CatalogServerCapability
+2026-07-22 10:35:56 [node] [INFO] stop capability=CatalogClientCapability
+2026-07-22 10:35:56 [node] [INFO] stop capability=KeepaliveServerCapability
+2026-07-22 10:35:56 [node] [INFO] stop capability=KeepaliveClientCapability
+2026-07-22 10:35:56 [node] [INFO] stop capability=RegisterServerCapability
+2026-07-22 10:35:56 [node] [INFO] stop capability=RegisterClientCapability
+2026-07-22 10:35:56 [server] [INFO] stopped
+2026-07-22 11:26:56 [server] [INFO] starting with config /Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-22 11:26:56 [node] [INFO] config=/Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-22 11:26:56 [sip] [INFO] endpoint=node sip_id=11000000002000000001 address=127.0.0.1:7101
+2026-07-22 11:26:56 [node] [INFO] upstream_peers=1 downstream_peers=1 available_rtp_ports=5001
+2026-07-22 11:26:56 [node] [INFO] start capability=RegisterClientCapability
+2026-07-22 11:26:56 [scheduler] [INFO] task=RegisterClientCapability:register-refresh interval_ms=300000
+2026-07-22 11:26:56 [node] [INFO] start capability=RegisterServerCapability
+2026-07-22 11:26:56 [node] [INFO] start capability=KeepaliveClientCapability
+2026-07-22 11:26:56 [scheduler] [INFO] task=KeepaliveClientCapability:keepalive interval_ms=60000
+2026-07-22 11:26:56 [node] [INFO] start capability=KeepaliveServerCapability
+2026-07-22 11:26:56 [node] [INFO] start capability=CatalogClientCapability
+2026-07-22 11:26:56 [node] [INFO] start capability=CatalogServerCapability
+2026-07-22 11:26:56 [node] [INFO] start capability=RecordQueryClientCapability
+2026-07-22 11:26:56 [node] [INFO] start capability=RecordQueryServerCapability
+2026-07-22 11:26:56 [node] [INFO] start capability=InviteClientCapability
+2026-07-22 11:26:56 [node] [INFO] start capability=InviteServerCapability
+2026-07-22 11:26:56 [node] [INFO] start capability=MediaReceiveCapability
+2026-07-22 11:26:56 [node] [INFO] start capability=MediaSendCapability
+2026-07-22 11:26:56 [scheduler] [INFO] task=MediaSendCapability:media-send interval_ms=1000
+2026-07-22 11:26:56 [node] [INFO] sip_routes=11
+2026-07-22 11:26:56 [server] [INFO] started
+2026-07-22 11:26:56 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-22 11:26:56 [sip] [INFO] direction=outbound request method=REGISTER event=request from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 authorization_user=admin
+2026-07-22 11:26:56 [register] [WARN] Digest rejected: username/realm/URI/response mismatch for peer=12000000002000000001 username=admin realm=1000000000 uri=sip:11000000002000000001@127.0.0.1:7101
+2026-07-22 11:26:56 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 11:26:56 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 11:26:56 [register] [WARN] Digest rejected: nonce already used for peer=12000000002000000001
+2026-07-22 11:26:56 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 11:26:56 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-22 11:26:56 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 11:26:56 [register] [WARN] Digest rejected: invalid or replayed nonce-count for peer=12000000002000000001
+2026-07-22 11:26:56 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 11:26:56 [sip] [INFO] direction=outbound response status=400 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-22 11:26:56 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-22 11:26:56 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/Catalog from=11000000002000000001 to=10000000002000000001
+2026-07-22 11:26:56 [catalog] [WARN] catalog JSON support is unavailable in this build
+2026-07-22 11:26:56 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/Catalog from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 call_id=catalog-response-1784690816-1@11000000002000000001 cseq=1 body_bytes=588
+2026-07-22 11:26:56 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/RecordInfo from=11000000002000000001 to=10000000002000000001
+2026-07-22 11:26:56 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/RecordInfo from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 body_bytes=427
+2026-07-22 11:26:56 [sip] [INFO] direction=outbound request method=ACK event=request from=11000000002000000001 to=12000000002000000001 call_id=selftest-invite-client-dialog cseq=1
+2026-07-22 11:26:56 [sip] [INFO] direction=outbound response status=400 method=INVITE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-22 11:26:56 [sip] [INFO] direction=outbound response status=200 method=INVITE event=request from=11000000002000000001 to=10000000002000000001 body_bytes=159
+2026-07-22 11:26:56 [sip] [INFO] direction=outbound response status=481 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-22 11:26:56 [sip] [INFO] direction=outbound response status=200 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-22 11:26:56 [node] [INFO] stop capability=MediaSendCapability
+2026-07-22 11:26:56 [node] [INFO] stop capability=MediaReceiveCapability
+2026-07-22 11:26:56 [node] [INFO] stop capability=InviteServerCapability
+2026-07-22 11:26:56 [node] [INFO] stop capability=InviteClientCapability
+2026-07-22 11:26:56 [node] [INFO] stop capability=RecordQueryServerCapability
+2026-07-22 11:26:56 [node] [INFO] stop capability=RecordQueryClientCapability
+2026-07-22 11:26:56 [node] [INFO] stop capability=CatalogServerCapability
+2026-07-22 11:26:56 [node] [INFO] stop capability=CatalogClientCapability
+2026-07-22 11:26:56 [node] [INFO] stop capability=KeepaliveServerCapability
+2026-07-22 11:26:56 [node] [INFO] stop capability=KeepaliveClientCapability
+2026-07-22 11:26:56 [node] [INFO] stop capability=RegisterServerCapability
+2026-07-22 11:26:56 [node] [INFO] stop capability=RegisterClientCapability
+2026-07-22 11:26:56 [server] [INFO] stopped
+2026-07-22 14:56:32 [server] [INFO] starting with config /Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-22 14:56:33 [node] [INFO] config=/Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-22 14:56:33 [sip] [INFO] endpoint=node sip_id=11000000002000000001 address=127.0.0.1:7101
+2026-07-22 14:56:33 [node] [INFO] upstream_peers=1 downstream_peers=1 available_rtp_ports=5001
+2026-07-22 14:56:33 [node] [INFO] start capability=RegisterClientCapability
+2026-07-22 14:56:33 [scheduler] [INFO] task=RegisterClientCapability:register-refresh interval_ms=300000
+2026-07-22 14:56:33 [node] [INFO] start capability=RegisterServerCapability
+2026-07-22 14:56:33 [node] [INFO] start capability=KeepaliveClientCapability
+2026-07-22 14:56:33 [scheduler] [INFO] task=KeepaliveClientCapability:keepalive interval_ms=60000
+2026-07-22 14:56:33 [node] [INFO] start capability=KeepaliveServerCapability
+2026-07-22 14:56:33 [node] [INFO] start capability=CatalogClientCapability
+2026-07-22 14:56:33 [node] [INFO] start capability=CatalogServerCapability
+2026-07-22 14:56:33 [node] [INFO] start capability=RecordQueryClientCapability
+2026-07-22 14:56:33 [node] [INFO] start capability=RecordQueryServerCapability
+2026-07-22 14:56:33 [node] [INFO] start capability=InviteClientCapability
+2026-07-22 14:56:33 [node] [INFO] start capability=InviteServerCapability
+2026-07-22 14:56:33 [node] [INFO] start capability=MediaReceiveCapability
+2026-07-22 14:56:33 [node] [INFO] start capability=MediaSendCapability
+2026-07-22 14:56:33 [scheduler] [INFO] task=MediaSendCapability:media-send interval_ms=1000
+2026-07-22 14:56:33 [node] [INFO] sip_routes=11
+2026-07-22 14:56:33 [server] [INFO] started
+2026-07-22 14:56:33 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-22 14:56:33 [sip] [INFO] direction=outbound request method=REGISTER event=request from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 authorization_user=admin
+2026-07-22 14:56:33 [register] [WARN] Digest rejected: username/realm/URI/response mismatch for peer=12000000002000000001 username=admin realm=1000000000 uri=sip:11000000002000000001@127.0.0.1:7101
+2026-07-22 14:56:33 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 14:56:33 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 14:56:33 [register] [WARN] Digest rejected: nonce already used for peer=12000000002000000001
+2026-07-22 14:56:33 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 14:56:33 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-22 14:56:33 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 14:56:33 [register] [WARN] Digest rejected: invalid or replayed nonce-count for peer=12000000002000000001
+2026-07-22 14:56:33 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 14:56:33 [sip] [INFO] direction=outbound response status=400 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-22 14:56:33 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-22 14:56:33 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/Catalog from=11000000002000000001 to=10000000002000000001
+2026-07-22 14:56:33 [catalog] [WARN] catalog JSON support is unavailable in this build
+2026-07-22 14:56:33 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/Catalog from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 call_id=catalog-response-1784703393-1@11000000002000000001 cseq=1 body_bytes=588
+2026-07-22 14:56:33 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/RecordInfo from=11000000002000000001 to=10000000002000000001
+2026-07-22 14:56:33 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/RecordInfo from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 body_bytes=427
+2026-07-22 14:56:33 [sip] [INFO] direction=outbound request method=ACK event=request from=11000000002000000001 to=12000000002000000001 call_id=selftest-invite-client-dialog cseq=1
+2026-07-22 14:56:33 [sip] [INFO] direction=outbound response status=400 method=INVITE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-22 14:56:33 [sip] [INFO] direction=outbound response status=200 method=INVITE event=request from=11000000002000000001 to=10000000002000000001 body_bytes=159
+2026-07-22 14:56:33 [sip] [INFO] direction=outbound response status=481 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-22 14:56:33 [sip] [INFO] direction=outbound response status=200 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-22 14:56:33 [node] [INFO] stop capability=MediaSendCapability
+2026-07-22 14:56:33 [node] [INFO] stop capability=MediaReceiveCapability
+2026-07-22 14:56:33 [node] [INFO] stop capability=InviteServerCapability
+2026-07-22 14:56:33 [node] [INFO] stop capability=InviteClientCapability
+2026-07-22 14:56:33 [node] [INFO] stop capability=RecordQueryServerCapability
+2026-07-22 14:56:33 [node] [INFO] stop capability=RecordQueryClientCapability
+2026-07-22 14:56:33 [node] [INFO] stop capability=CatalogServerCapability
+2026-07-22 14:56:33 [node] [INFO] stop capability=CatalogClientCapability
+2026-07-22 14:56:33 [node] [INFO] stop capability=KeepaliveServerCapability
+2026-07-22 14:56:33 [node] [INFO] stop capability=KeepaliveClientCapability
+2026-07-22 14:56:33 [node] [INFO] stop capability=RegisterServerCapability
+2026-07-22 14:56:33 [node] [INFO] stop capability=RegisterClientCapability
+2026-07-22 14:56:33 [server] [INFO] stopped
+2026-07-22 15:15:07 [server] [INFO] starting with config /Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-22 15:15:07 [node] [INFO] config=/Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-22 15:15:07 [sip] [INFO] endpoint=node sip_id=11000000002000000001 address=127.0.0.1:7101
+2026-07-22 15:15:07 [node] [INFO] upstream_peers=1 downstream_peers=1 available_rtp_ports=5001
+2026-07-22 15:15:07 [node] [INFO] start capability=RegisterClientCapability
+2026-07-22 15:15:07 [scheduler] [INFO] task=RegisterClientCapability:register-refresh interval_ms=300000
+2026-07-22 15:15:07 [node] [INFO] start capability=RegisterServerCapability
+2026-07-22 15:15:07 [node] [INFO] start capability=KeepaliveClientCapability
+2026-07-22 15:15:07 [scheduler] [INFO] task=KeepaliveClientCapability:keepalive interval_ms=60000
+2026-07-22 15:15:07 [node] [INFO] start capability=KeepaliveServerCapability
+2026-07-22 15:15:07 [node] [INFO] start capability=CatalogClientCapability
+2026-07-22 15:15:07 [node] [INFO] start capability=CatalogServerCapability
+2026-07-22 15:15:07 [node] [INFO] start capability=RecordQueryClientCapability
+2026-07-22 15:15:07 [node] [INFO] start capability=RecordQueryServerCapability
+2026-07-22 15:15:07 [node] [INFO] start capability=InviteClientCapability
+2026-07-22 15:15:07 [node] [INFO] start capability=InviteServerCapability
+2026-07-22 15:15:07 [node] [INFO] start capability=MediaReceiveCapability
+2026-07-22 15:15:07 [node] [INFO] start capability=MediaSendCapability
+2026-07-22 15:15:07 [scheduler] [INFO] task=MediaSendCapability:media-send interval_ms=1000
+2026-07-22 15:15:07 [node] [INFO] sip_routes=11
+2026-07-22 15:15:07 [server] [INFO] started
+2026-07-22 15:15:07 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-22 15:15:07 [sip] [INFO] direction=outbound request method=REGISTER event=request from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 authorization_user=admin
+2026-07-22 15:15:07 [register] [WARN] Digest rejected: username/realm/URI/response mismatch for peer=12000000002000000001 username=admin realm=1000000000 uri=sip:11000000002000000001@127.0.0.1:7101
+2026-07-22 15:15:07 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 15:15:07 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 15:15:07 [register] [WARN] Digest rejected: nonce already used for peer=12000000002000000001
+2026-07-22 15:15:07 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 15:15:07 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-22 15:15:07 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 15:15:07 [register] [WARN] Digest rejected: invalid or replayed nonce-count for peer=12000000002000000001
+2026-07-22 15:15:07 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 15:15:07 [sip] [INFO] direction=outbound response status=400 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-22 15:15:07 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-22 15:15:07 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/Catalog from=11000000002000000001 to=10000000002000000001
+2026-07-22 15:15:07 [catalog] [WARN] catalog JSON support is unavailable in this build
+2026-07-22 15:15:07 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/Catalog from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 call_id=catalog-response-1784704507-1@11000000002000000001 cseq=1 body_bytes=588
+2026-07-22 15:15:07 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/RecordInfo from=11000000002000000001 to=10000000002000000001
+2026-07-22 15:15:07 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/RecordInfo from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 body_bytes=427
+2026-07-22 15:15:07 [sip] [INFO] direction=outbound request method=ACK event=request from=11000000002000000001 to=12000000002000000001 call_id=selftest-invite-client-dialog cseq=1
+2026-07-22 15:15:07 [sip] [INFO] direction=outbound response status=400 method=INVITE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-22 15:15:07 [sip] [INFO] direction=outbound response status=200 method=INVITE event=request from=11000000002000000001 to=10000000002000000001 body_bytes=159
+2026-07-22 15:15:07 [sip] [INFO] direction=outbound response status=481 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-22 15:15:07 [sip] [INFO] direction=outbound response status=200 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-22 15:15:07 [node] [INFO] stop capability=MediaSendCapability
+2026-07-22 15:15:07 [node] [INFO] stop capability=MediaReceiveCapability
+2026-07-22 15:15:07 [node] [INFO] stop capability=InviteServerCapability
+2026-07-22 15:15:07 [node] [INFO] stop capability=InviteClientCapability
+2026-07-22 15:15:07 [node] [INFO] stop capability=RecordQueryServerCapability
+2026-07-22 15:15:07 [node] [INFO] stop capability=RecordQueryClientCapability
+2026-07-22 15:15:07 [node] [INFO] stop capability=CatalogServerCapability
+2026-07-22 15:15:07 [node] [INFO] stop capability=CatalogClientCapability
+2026-07-22 15:15:07 [node] [INFO] stop capability=KeepaliveServerCapability
+2026-07-22 15:15:07 [node] [INFO] stop capability=KeepaliveClientCapability
+2026-07-22 15:15:07 [node] [INFO] stop capability=RegisterServerCapability
+2026-07-22 15:15:07 [node] [INFO] stop capability=RegisterClientCapability
+2026-07-22 15:15:07 [server] [INFO] stopped
+2026-07-22 15:21:55 [server] [INFO] starting with config /Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-22 15:21:55 [node] [INFO] config=/Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-22 15:21:55 [sip] [INFO] endpoint=node sip_id=11000000002000000001 address=127.0.0.1:7101
+2026-07-22 15:21:55 [node] [INFO] upstream_peers=1 downstream_peers=1 available_rtp_ports=5001
+2026-07-22 15:21:55 [node] [INFO] start capability=RegisterClientCapability
+2026-07-22 15:21:55 [scheduler] [INFO] task=RegisterClientCapability:register-refresh interval_ms=300000
+2026-07-22 15:21:55 [node] [INFO] start capability=RegisterServerCapability
+2026-07-22 15:21:55 [node] [INFO] start capability=KeepaliveClientCapability
+2026-07-22 15:21:55 [scheduler] [INFO] task=KeepaliveClientCapability:keepalive interval_ms=60000
+2026-07-22 15:21:55 [node] [INFO] start capability=KeepaliveServerCapability
+2026-07-22 15:21:55 [node] [INFO] start capability=CatalogClientCapability
+2026-07-22 15:21:55 [node] [INFO] start capability=CatalogServerCapability
+2026-07-22 15:21:55 [node] [INFO] start capability=RecordQueryClientCapability
+2026-07-22 15:21:55 [node] [INFO] start capability=RecordQueryServerCapability
+2026-07-22 15:21:55 [node] [INFO] start capability=InviteClientCapability
+2026-07-22 15:21:55 [node] [INFO] start capability=InviteServerCapability
+2026-07-22 15:21:55 [node] [INFO] start capability=MediaReceiveCapability
+2026-07-22 15:21:55 [node] [INFO] start capability=MediaSendCapability
+2026-07-22 15:21:55 [scheduler] [INFO] task=MediaSendCapability:media-send interval_ms=1000
+2026-07-22 15:21:55 [node] [INFO] sip_routes=11
+2026-07-22 15:21:55 [server] [INFO] started
+2026-07-22 15:21:55 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-22 15:21:55 [sip] [INFO] direction=outbound request method=REGISTER event=request from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 authorization_user=admin
+2026-07-22 15:21:55 [register] [WARN] Digest rejected: username/realm/URI/response mismatch for peer=12000000002000000001 username=admin realm=1000000000 uri=sip:11000000002000000001@127.0.0.1:7101
+2026-07-22 15:21:55 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 15:21:55 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 15:21:55 [register] [WARN] Digest rejected: nonce already used for peer=12000000002000000001
+2026-07-22 15:21:55 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 15:21:55 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-22 15:21:55 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 15:21:55 [register] [WARN] Digest rejected: invalid or replayed nonce-count for peer=12000000002000000001
+2026-07-22 15:21:55 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-22 15:21:55 [sip] [INFO] direction=outbound response status=400 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-22 15:21:55 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-22 15:21:55 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/Catalog from=11000000002000000001 to=10000000002000000001
+2026-07-22 15:21:55 [catalog] [WARN] catalog JSON support is unavailable in this build
+2026-07-22 15:21:55 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/Catalog from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 call_id=catalog-response-1784704915-1@11000000002000000001 cseq=1 body_bytes=588
+2026-07-22 15:21:55 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/RecordInfo from=11000000002000000001 to=10000000002000000001
+2026-07-22 15:21:55 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/RecordInfo from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 body_bytes=427
+2026-07-22 15:21:55 [sip] [INFO] direction=outbound request method=ACK event=request from=11000000002000000001 to=12000000002000000001 call_id=selftest-invite-client-dialog cseq=1
+2026-07-22 15:21:55 [sip] [INFO] direction=outbound response status=400 method=INVITE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-22 15:21:55 [sip] [INFO] direction=outbound response status=200 method=INVITE event=request from=11000000002000000001 to=10000000002000000001 body_bytes=159
+2026-07-22 15:21:55 [sip] [INFO] direction=outbound response status=481 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-22 15:21:55 [sip] [INFO] direction=outbound response status=200 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-22 15:21:55 [node] [INFO] stop capability=MediaSendCapability
+2026-07-22 15:21:55 [node] [INFO] stop capability=MediaReceiveCapability
+2026-07-22 15:21:55 [node] [INFO] stop capability=InviteServerCapability
+2026-07-22 15:21:55 [node] [INFO] stop capability=InviteClientCapability
+2026-07-22 15:21:55 [node] [INFO] stop capability=RecordQueryServerCapability
+2026-07-22 15:21:55 [node] [INFO] stop capability=RecordQueryClientCapability
+2026-07-22 15:21:55 [node] [INFO] stop capability=CatalogServerCapability
+2026-07-22 15:21:55 [node] [INFO] stop capability=CatalogClientCapability
+2026-07-22 15:21:55 [node] [INFO] stop capability=KeepaliveServerCapability
+2026-07-22 15:21:55 [node] [INFO] stop capability=KeepaliveClientCapability
+2026-07-22 15:21:55 [node] [INFO] stop capability=RegisterServerCapability
+2026-07-22 15:21:55 [node] [INFO] stop capability=RegisterClientCapability
+2026-07-22 15:21:55 [server] [INFO] stopped
+2026-07-23 09:55:55 [server] [INFO] starting with config /Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-23 09:55:55 [node] [INFO] config=/Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-23 09:55:55 [sip] [INFO] endpoint=node sip_id=11000000002000000001 address=127.0.0.1:7101
+2026-07-23 09:55:55 [node] [INFO] upstream_peers=1 downstream_peers=1 available_rtp_ports=5001
+2026-07-23 09:55:55 [node] [INFO] start capability=RegisterClientCapability
+2026-07-23 09:55:55 [scheduler] [INFO] task=RegisterClientCapability:register-refresh interval_ms=300000
+2026-07-23 09:55:55 [node] [INFO] start capability=RegisterServerCapability
+2026-07-23 09:55:55 [node] [INFO] start capability=KeepaliveClientCapability
+2026-07-23 09:55:55 [scheduler] [INFO] task=KeepaliveClientCapability:keepalive interval_ms=60000
+2026-07-23 09:55:55 [node] [INFO] start capability=KeepaliveServerCapability
+2026-07-23 09:55:55 [node] [INFO] start capability=CatalogClientCapability
+2026-07-23 09:55:55 [node] [INFO] start capability=CatalogServerCapability
+2026-07-23 09:55:55 [node] [INFO] start capability=RecordQueryClientCapability
+2026-07-23 09:55:55 [node] [INFO] start capability=RecordQueryServerCapability
+2026-07-23 09:55:55 [node] [INFO] start capability=InviteClientCapability
+2026-07-23 09:55:55 [node] [INFO] start capability=InviteServerCapability
+2026-07-23 09:55:55 [node] [INFO] start capability=MediaReceiveCapability
+2026-07-23 09:55:55 [node] [INFO] start capability=MediaSendCapability
+2026-07-23 09:55:55 [scheduler] [INFO] task=MediaSendCapability:media-send interval_ms=1000
+2026-07-23 09:55:55 [node] [INFO] sip_routes=11
+2026-07-23 09:55:55 [server] [INFO] started
+2026-07-23 09:55:55 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-23 09:55:55 [sip] [INFO] direction=outbound request method=REGISTER event=request from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 authorization_user=admin
+2026-07-23 09:55:55 [register] [WARN] Digest rejected: username/realm/URI/response mismatch for peer=12000000002000000001 username=admin realm=1000000000 uri=sip:11000000002000000001@127.0.0.1:7101
+2026-07-23 09:55:55 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-23 09:55:55 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-23 09:55:55 [register] [WARN] Digest rejected: nonce already used for peer=12000000002000000001
+2026-07-23 09:55:55 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-23 09:55:55 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-23 09:55:55 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-23 09:55:55 [register] [WARN] Digest rejected: invalid or replayed nonce-count for peer=12000000002000000001
+2026-07-23 09:55:55 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-23 09:55:55 [sip] [INFO] direction=outbound response status=400 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-23 09:55:55 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-23 09:55:55 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/Catalog from=11000000002000000001 to=10000000002000000001
+2026-07-23 09:55:55 [catalog] [WARN] catalog JSON support is unavailable in this build
+2026-07-23 09:55:55 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/Catalog from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 call_id=catalog-response-1784771755-1@11000000002000000001 cseq=1 body_bytes=588
+2026-07-23 09:55:55 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/RecordInfo from=11000000002000000001 to=10000000002000000001
+2026-07-23 09:55:55 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/RecordInfo from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 body_bytes=427
+2026-07-23 09:55:55 [sip] [INFO] direction=outbound response status=400 method=INVITE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-23 09:55:55 [sip] [INFO] direction=outbound response status=200 method=INVITE event=request from=11000000002000000001 to=10000000002000000001 body_bytes=159
+2026-07-23 09:55:55 [sip] [INFO] direction=outbound response status=481 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-23 09:55:55 [sip] [INFO] direction=outbound response status=200 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-23 09:55:55 [node] [INFO] stop capability=MediaSendCapability
+2026-07-23 09:55:55 [node] [INFO] stop capability=MediaReceiveCapability
+2026-07-23 09:55:55 [node] [INFO] stop capability=InviteServerCapability
+2026-07-23 09:55:55 [node] [INFO] stop capability=InviteClientCapability
+2026-07-23 09:55:55 [node] [INFO] stop capability=RecordQueryServerCapability
+2026-07-23 09:55:55 [node] [INFO] stop capability=RecordQueryClientCapability
+2026-07-23 09:55:55 [node] [INFO] stop capability=CatalogServerCapability
+2026-07-23 09:55:55 [node] [INFO] stop capability=CatalogClientCapability
+2026-07-23 09:55:55 [node] [INFO] stop capability=KeepaliveServerCapability
+2026-07-23 09:55:55 [node] [INFO] stop capability=KeepaliveClientCapability
+2026-07-23 09:55:55 [node] [INFO] stop capability=RegisterServerCapability
+2026-07-23 09:55:55 [node] [INFO] stop capability=RegisterClientCapability
+2026-07-23 09:56:45 [server] [INFO] starting with config /Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-23 09:56:45 [node] [INFO] config=/Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-23 09:56:45 [sip] [INFO] endpoint=node sip_id=11000000002000000001 address=127.0.0.1:7101
+2026-07-23 09:56:45 [node] [INFO] upstream_peers=1 downstream_peers=1 available_rtp_ports=5001
+2026-07-23 09:56:45 [node] [INFO] start capability=RegisterClientCapability
+2026-07-23 09:56:45 [scheduler] [INFO] task=RegisterClientCapability:register-refresh interval_ms=300000
+2026-07-23 09:56:45 [node] [INFO] start capability=RegisterServerCapability
+2026-07-23 09:56:45 [node] [INFO] start capability=KeepaliveClientCapability
+2026-07-23 09:56:45 [scheduler] [INFO] task=KeepaliveClientCapability:keepalive interval_ms=60000
+2026-07-23 09:56:45 [node] [INFO] start capability=KeepaliveServerCapability
+2026-07-23 09:56:45 [node] [INFO] start capability=CatalogClientCapability
+2026-07-23 09:56:45 [node] [INFO] start capability=CatalogServerCapability
+2026-07-23 09:56:45 [node] [INFO] start capability=RecordQueryClientCapability
+2026-07-23 09:56:45 [node] [INFO] start capability=RecordQueryServerCapability
+2026-07-23 09:56:45 [node] [INFO] start capability=InviteClientCapability
+2026-07-23 09:56:45 [node] [INFO] start capability=InviteServerCapability
+2026-07-23 09:56:45 [node] [INFO] start capability=MediaReceiveCapability
+2026-07-23 09:56:45 [node] [INFO] start capability=MediaSendCapability
+2026-07-23 09:56:45 [scheduler] [INFO] task=MediaSendCapability:media-send interval_ms=1000
+2026-07-23 09:56:45 [node] [INFO] sip_routes=11
+2026-07-23 09:56:45 [server] [INFO] started
+2026-07-23 09:56:45 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-23 09:56:45 [sip] [INFO] direction=outbound request method=REGISTER event=request from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 authorization_user=admin
+2026-07-23 09:56:45 [register] [WARN] Digest rejected: username/realm/URI/response mismatch for peer=12000000002000000001 username=admin realm=1000000000 uri=sip:11000000002000000001@127.0.0.1:7101
+2026-07-23 09:56:45 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-23 09:56:45 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-23 09:56:45 [register] [WARN] Digest rejected: nonce already used for peer=12000000002000000001
+2026-07-23 09:56:45 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-23 09:56:45 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-23 09:56:45 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-23 09:56:45 [register] [WARN] Digest rejected: invalid or replayed nonce-count for peer=12000000002000000001
+2026-07-23 09:56:45 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-23 09:56:45 [sip] [INFO] direction=outbound response status=400 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-23 09:56:45 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-23 09:56:45 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/Catalog from=11000000002000000001 to=10000000002000000001
+2026-07-23 09:56:45 [catalog] [WARN] catalog JSON support is unavailable in this build
+2026-07-23 09:56:45 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/Catalog from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 call_id=catalog-response-1784771805-1@11000000002000000001 cseq=1 body_bytes=588
+2026-07-23 09:56:45 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/RecordInfo from=11000000002000000001 to=10000000002000000001
+2026-07-23 09:56:45 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/RecordInfo from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 body_bytes=427
+2026-07-23 09:56:45 [sip] [INFO] direction=outbound request method=ACK event=request from=11000000002000000001 to=12000000002000000001 call_id=selftest-invite-client-dialog cseq=1
+2026-07-23 09:56:45 [sip] [INFO] direction=outbound response status=400 method=INVITE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-23 09:56:45 [sip] [INFO] direction=outbound response status=200 method=INVITE event=request from=11000000002000000001 to=10000000002000000001 body_bytes=159
+2026-07-23 09:56:45 [sip] [INFO] direction=outbound response status=481 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-23 09:56:45 [sip] [INFO] direction=outbound response status=200 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-23 09:56:45 [node] [INFO] stop capability=MediaSendCapability
+2026-07-23 09:56:45 [node] [INFO] stop capability=MediaReceiveCapability
+2026-07-23 09:56:45 [node] [INFO] stop capability=InviteServerCapability
+2026-07-23 09:56:45 [node] [INFO] stop capability=InviteClientCapability
+2026-07-23 09:56:45 [node] [INFO] stop capability=RecordQueryServerCapability
+2026-07-23 09:56:45 [node] [INFO] stop capability=RecordQueryClientCapability
+2026-07-23 09:56:45 [node] [INFO] stop capability=CatalogServerCapability
+2026-07-23 09:56:45 [node] [INFO] stop capability=CatalogClientCapability
+2026-07-23 09:56:45 [node] [INFO] stop capability=KeepaliveServerCapability
+2026-07-23 09:56:45 [node] [INFO] stop capability=KeepaliveClientCapability
+2026-07-23 09:56:45 [node] [INFO] stop capability=RegisterServerCapability
+2026-07-23 09:56:45 [node] [INFO] stop capability=RegisterClientCapability
+2026-07-23 09:56:45 [server] [INFO] stopped
+2026-07-23 09:57:43 [server] [INFO] starting with config /Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-23 09:57:43 [node] [INFO] config=/Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-23 09:57:43 [sip] [INFO] endpoint=node sip_id=11000000002000000001 address=127.0.0.1:7101
+2026-07-23 09:57:43 [node] [INFO] upstream_peers=1 downstream_peers=1 available_rtp_ports=5001
+2026-07-23 09:57:43 [node] [INFO] start capability=RegisterClientCapability
+2026-07-23 09:57:43 [scheduler] [INFO] task=RegisterClientCapability:register-refresh interval_ms=300000
+2026-07-23 09:57:43 [node] [INFO] start capability=RegisterServerCapability
+2026-07-23 09:57:43 [node] [INFO] start capability=KeepaliveClientCapability
+2026-07-23 09:57:43 [scheduler] [INFO] task=KeepaliveClientCapability:keepalive interval_ms=60000
+2026-07-23 09:57:43 [node] [INFO] start capability=KeepaliveServerCapability
+2026-07-23 09:57:43 [node] [INFO] start capability=CatalogClientCapability
+2026-07-23 09:57:43 [node] [INFO] start capability=CatalogServerCapability
+2026-07-23 09:57:43 [node] [INFO] start capability=RecordQueryClientCapability
+2026-07-23 09:57:43 [node] [INFO] start capability=RecordQueryServerCapability
+2026-07-23 09:57:43 [node] [INFO] start capability=InviteClientCapability
+2026-07-23 09:57:43 [node] [INFO] start capability=InviteServerCapability
+2026-07-23 09:57:43 [node] [INFO] start capability=MediaReceiveCapability
+2026-07-23 09:57:43 [node] [INFO] start capability=MediaSendCapability
+2026-07-23 09:57:43 [scheduler] [INFO] task=MediaSendCapability:media-send interval_ms=1000
+2026-07-23 09:57:43 [node] [INFO] sip_routes=11
+2026-07-23 09:57:43 [server] [INFO] started
+2026-07-23 09:57:43 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-23 09:57:43 [sip] [INFO] direction=outbound request method=REGISTER event=request from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 authorization_user=admin
+2026-07-23 09:57:43 [register] [WARN] Digest rejected: username/realm/URI/response mismatch for peer=12000000002000000001 username=admin realm=1000000000 uri=sip:11000000002000000001@127.0.0.1:7101
+2026-07-23 09:57:43 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-23 09:57:43 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-23 09:57:43 [register] [WARN] Digest rejected: nonce already used for peer=12000000002000000001
+2026-07-23 09:57:43 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-23 09:57:43 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-23 09:57:43 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-23 09:57:43 [register] [WARN] Digest rejected: invalid or replayed nonce-count for peer=12000000002000000001
+2026-07-23 09:57:43 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-23 09:57:43 [sip] [INFO] direction=outbound response status=400 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-23 09:57:43 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-23 09:57:43 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/Catalog from=11000000002000000001 to=10000000002000000001
+2026-07-23 09:57:43 [catalog] [WARN] catalog JSON support is unavailable in this build
+2026-07-23 09:57:43 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/Catalog from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 call_id=catalog-response-1784771863-1@11000000002000000001 cseq=1 body_bytes=588
+2026-07-23 09:57:43 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/RecordInfo from=11000000002000000001 to=10000000002000000001
+2026-07-23 09:57:43 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/RecordInfo from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 body_bytes=427
+2026-07-23 09:57:43 [sip] [INFO] direction=outbound request method=ACK event=request from=11000000002000000001 to=12000000002000000001 call_id=selftest-invite-client-dialog cseq=1
+2026-07-23 09:57:43 [sip] [INFO] direction=outbound response status=400 method=INVITE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-23 09:57:43 [sip] [INFO] direction=outbound response status=200 method=INVITE event=request from=11000000002000000001 to=10000000002000000001 body_bytes=159
+2026-07-23 09:57:43 [sip] [INFO] direction=outbound response status=481 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-23 09:57:43 [sip] [INFO] direction=outbound response status=200 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-23 09:57:43 [node] [INFO] stop capability=MediaSendCapability
+2026-07-23 09:57:43 [node] [INFO] stop capability=MediaReceiveCapability
+2026-07-23 09:57:43 [node] [INFO] stop capability=InviteServerCapability
+2026-07-23 09:57:43 [node] [INFO] stop capability=InviteClientCapability
+2026-07-23 09:57:43 [node] [INFO] stop capability=RecordQueryServerCapability
+2026-07-23 09:57:43 [node] [INFO] stop capability=RecordQueryClientCapability
+2026-07-23 09:57:43 [node] [INFO] stop capability=CatalogServerCapability
+2026-07-23 09:57:43 [node] [INFO] stop capability=CatalogClientCapability
+2026-07-23 09:57:43 [node] [INFO] stop capability=KeepaliveServerCapability
+2026-07-23 09:57:43 [node] [INFO] stop capability=KeepaliveClientCapability
+2026-07-23 09:57:43 [node] [INFO] stop capability=RegisterServerCapability
+2026-07-23 09:57:43 [node] [INFO] stop capability=RegisterClientCapability
+2026-07-23 09:57:43 [server] [INFO] stopped
+2026-07-23 16:43:47 [server] [INFO] starting with config /Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-23 16:43:47 [node] [INFO] config=/Users/sxr/Projects/media-fabric/conf/media-fabric.conf
+2026-07-23 16:43:47 [sip] [INFO] endpoint=node sip_id=11000000002000000001 address=127.0.0.1:7101
+2026-07-23 16:43:47 [node] [INFO] upstream_peers=1 downstream_peers=1 available_rtp_ports=5001
+2026-07-23 16:43:47 [node] [INFO] start capability=RegisterClientCapability
+2026-07-23 16:43:47 [scheduler] [INFO] task=RegisterClientCapability:register-refresh interval_ms=300000
+2026-07-23 16:43:47 [node] [INFO] start capability=RegisterServerCapability
+2026-07-23 16:43:47 [node] [INFO] start capability=KeepaliveClientCapability
+2026-07-23 16:43:47 [scheduler] [INFO] task=KeepaliveClientCapability:keepalive interval_ms=60000
+2026-07-23 16:43:47 [node] [INFO] start capability=KeepaliveServerCapability
+2026-07-23 16:43:47 [node] [INFO] start capability=CatalogClientCapability
+2026-07-23 16:43:47 [node] [INFO] start capability=CatalogServerCapability
+2026-07-23 16:43:47 [node] [INFO] start capability=RecordQueryClientCapability
+2026-07-23 16:43:47 [node] [INFO] start capability=RecordQueryServerCapability
+2026-07-23 16:43:47 [node] [INFO] start capability=InviteClientCapability
+2026-07-23 16:43:47 [node] [INFO] start capability=InviteServerCapability
+2026-07-23 16:43:47 [node] [INFO] start capability=MediaReceiveCapability
+2026-07-23 16:43:47 [node] [INFO] start capability=MediaSendCapability
+2026-07-23 16:43:47 [scheduler] [INFO] task=MediaSendCapability:media-send interval_ms=1000
+2026-07-23 16:43:47 [node] [INFO] sip_routes=11
+2026-07-23 16:43:47 [server] [INFO] started
+2026-07-23 16:43:47 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-23 16:43:47 [sip] [INFO] direction=outbound request method=REGISTER event=request from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 authorization_user=admin
+2026-07-23 16:43:47 [register] [WARN] Digest rejected: username/realm/URI/response mismatch for peer=12000000002000000001 username=admin realm=1000000000 uri=sip:11000000002000000001@127.0.0.1:7101
+2026-07-23 16:43:47 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-23 16:43:47 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-23 16:43:47 [register] [WARN] Digest rejected: nonce already used for peer=12000000002000000001
+2026-07-23 16:43:47 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-23 16:43:47 [sip] [INFO] direction=outbound response status=401 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001 auth_realm=1000000000
+2026-07-23 16:43:47 [sip] [INFO] direction=outbound response status=200 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-23 16:43:47 [register] [WARN] Digest rejected: invalid or replayed nonce-count for peer=12000000002000000001
+2026-07-23 16:43:47 [sip] [INFO] direction=outbound response status=403 method=REGISTER event=request from=11000000002000000001 to=12000000002000000001
+2026-07-23 16:43:47 [sip] [INFO] direction=outbound response status=400 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-23 16:43:47 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Notify/keepalive from=11000000002000000001 to=12000000002000000001
+2026-07-23 16:43:47 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/Catalog from=11000000002000000001 to=10000000002000000001
+2026-07-23 16:43:47 [catalog] [WARN] catalog JSON support is unavailable in this build
+2026-07-23 16:43:47 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/Catalog from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 call_id=catalog-response-1784796227-1@11000000002000000001 cseq=1 body_bytes=588
+2026-07-23 16:43:47 [sip] [INFO] direction=outbound response status=200 method=MESSAGE event=Query/RecordInfo from=11000000002000000001 to=10000000002000000001
+2026-07-23 16:43:47 [sip] [INFO] direction=outbound request method=MESSAGE event=Response/RecordInfo from=11000000002000000001 to=10000000002000000001 remote=127.0.0.1:5061 body_bytes=427
+2026-07-23 16:43:47 [sip] [INFO] direction=outbound request method=ACK event=request from=11000000002000000001 to=12000000002000000001 call_id=selftest-invite-client-dialog cseq=1
+2026-07-23 16:43:47 [sip] [INFO] direction=outbound response status=400 method=INVITE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-23 16:43:47 [sip] [INFO] direction=outbound response status=200 method=INVITE event=request from=11000000002000000001 to=10000000002000000001 body_bytes=159
+2026-07-23 16:43:47 [sip] [INFO] direction=outbound response status=481 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-23 16:43:47 [sip] [INFO] direction=outbound response status=200 method=BYE event=request from=11000000002000000001 to=10000000002000000001
+2026-07-23 16:43:47 [node] [INFO] stop capability=MediaSendCapability
+2026-07-23 16:43:47 [node] [INFO] stop capability=MediaReceiveCapability
+2026-07-23 16:43:47 [node] [INFO] stop capability=InviteServerCapability
+2026-07-23 16:43:47 [node] [INFO] stop capability=InviteClientCapability
+2026-07-23 16:43:47 [node] [INFO] stop capability=RecordQueryServerCapability
+2026-07-23 16:43:47 [node] [INFO] stop capability=RecordQueryClientCapability
+2026-07-23 16:43:47 [node] [INFO] stop capability=CatalogServerCapability
+2026-07-23 16:43:47 [node] [INFO] stop capability=CatalogClientCapability
+2026-07-23 16:43:47 [node] [INFO] stop capability=KeepaliveServerCapability
+2026-07-23 16:43:47 [node] [INFO] stop capability=KeepaliveClientCapability
+2026-07-23 16:43:47 [node] [INFO] stop capability=RegisterServerCapability
+2026-07-23 16:43:47 [node] [INFO] stop capability=RegisterClientCapability
+2026-07-23 16:43:47 [server] [INFO] stopped

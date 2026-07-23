@@ -49,6 +49,7 @@ stream_loop = true
 - [项目式学习计划](docs/流媒体开发项目式学习计划.md)
 - [架构现状](docs/architecture.md)
 - [里程碑 6 链路验证](docs/milestone6-validation.md)
+- [Go 业务层、C++ 媒体层与前端迭代计划](docs/迭代计划-Go业务层-C++媒体层-前端.md)
 - [信令流程](docs/signaling-flow.md)
 - [媒体流程](docs/media-flow.md)
 - [第三方库补齐说明](docs/third-party-libs.md)
@@ -68,13 +69,23 @@ stream_loop = true
 
 ## 构建
 
-当前已经具备根目录统一 `CMakeLists.txt`，默认构建目标是最终入口 `media-fabric`。
+当前根目录 CMake 负责构建 C++ 媒体核心；正式服务由 Go CGO 链接该核心后输出为最终入口 `media-fabric`。
 
-默认构建：
+构建最终单二进制：
+
+```bash
+scripts/build-media-fabric.sh
+```
+
+输出文件为 `build/media-fabric`。该命令会先构建 `media_fabric_core` 静态库，再由 Go 链接为一个进程的最终服务。
+当前随仓库提供的 PJSIP、JRTPLIB 与 tinyxml2 静态库面向 Linux x86_64，因此最终链接与运行应在 Linux 目标环境执行。
+
+如需单独排查 C++ 协议或运行 C++ 自测，可构建诊断入口：
 
 ```bash
 cmake -S . -B build
-cmake --build build
+cmake --build build --target media-fabric-cpp mfcli
+./build/media-fabric-cpp -c conf/media-fabric.conf
 ```
 
 默认构建启用 PJSIP 与 JRTPLIB，用于真实 SIP/RTP 通信。若此前使用过旧版本或旧项目路径的 `build` 目录，请先删除该目录后再执行配置。

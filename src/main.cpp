@@ -3,6 +3,7 @@
 #include "ManscdpMessage.h"
 #include "MediaFrameSink.h"
 #include "ManagementServer.h"
+#include "MediaFabricRuntime.h"
 #include "Logger.h"
 #include "NodeConfig.h"
 #include "ProgramStream.h"
@@ -447,6 +448,23 @@ int main(int argc, char* argv[])
         }
 
         std::cout << json << std::endl;
+        return 0;
+    }
+
+    // The standalone executable remains available for protocol diagnosis, but
+    // production lifecycle management is shared with the Go host through this
+    // same embeddable runtime.
+    if (!selfTest)
+    {
+        gb28181::MediaFabricRuntime runtime;
+        std::string runtimeError;
+        if (!runtime.start(configPath, true, &runtimeError))
+        {
+            std::cerr << runtimeError << std::endl;
+            return 1;
+        }
+        waitForServerStopSignal();
+        runtime.stop();
         return 0;
     }
 
