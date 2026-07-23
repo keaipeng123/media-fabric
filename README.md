@@ -47,11 +47,8 @@ stream_loop = true
 ## 文档入口
 
 - [项目式学习计划](docs/流媒体开发项目式学习计划.md)
-- [阶段 0 执行计划](docs/阶段0-整理现有项目基础执行计划.md)
 - [架构现状](docs/architecture.md)
-- [里程碑 3 公共模块盘点](docs/milestone3-common-inventory.md)
-- [里程碑 4 节点与能力模块](docs/milestone4-node-capabilities.md)
-- [里程碑 4 完成审计清单](docs/milestone4-completion-audit.md)
+- [里程碑 6 链路验证](docs/milestone6-validation.md)
 - [信令流程](docs/signaling-flow.md)
 - [媒体流程](docs/media-flow.md)
 - [第三方库补齐说明](docs/third-party-libs.md)

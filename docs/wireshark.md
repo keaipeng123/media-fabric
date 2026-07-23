@@ -243,7 +243,7 @@ GB28181_CAPTURE_SECONDS=10
 GB28181_CAPTURE_DIR=artifacts/milestone4
 ```
 
-5. 抓包结论回填到 [milestone4-node-capabilities.md](milestone4-node-capabilities.md) 的“未完成项”和 [milestone4-completion-audit.md](milestone4-completion-audit.md)。
+5. 将抓包结论记录到当前验证任务或缺陷跟踪中。
 
 Wireshark 可能无法自动把 payload type 96 识别成 PS。可以先用 RTP 基础字段验证，再结合程序日志确认 PS demux 是否成功。
 

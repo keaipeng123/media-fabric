@@ -39,7 +39,7 @@ Notes:
   - default runs the portable CTest self-test.
   - pjsip/jrtplib/full modes are intended for the Linux target environment.
   - jrtplib and full modes require 3rd/lib/libjrtp.a and 3rd/lib/libjthread.a.
-  - completion-gate runs the Linux hard gates required before updating docs/milestone4-completion-audit.md.
+  - completion-gate runs the Linux SIP/RTP capture gates.
   - capture-audit rechecks the latest full-capture report unless a report or capture directory is supplied.
 USAGE
 }
@@ -555,7 +555,6 @@ EOF
         echo
         echo "docs:"
         echo "- docs/wireshark.md"
-        echo "- docs/milestone4-completion-audit.md"
     } >"$report"
     LAST_CAPTURE_REPORT="$report"
 
@@ -690,7 +689,6 @@ run_full_capture() {
         echo
         echo "docs:"
         echo "- docs/wireshark.md"
-        echo "- docs/milestone4-completion-audit.md"
     } >"$report"
     LAST_CAPTURE_REPORT="$report"
 
@@ -732,7 +730,7 @@ run_completion_gate() {
 
     echo "completion-gate: command gates passed"
     echo "completion-gate: inspect generated pcaps with docs/wireshark.md"
-    echo "completion-gate: then update docs/milestone4-completion-audit.md"
+    echo "completion-gate: record the result in the current validation task"
 }
 
 run_capture_audit() {
