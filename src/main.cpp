@@ -482,9 +482,11 @@ int main(int argc, char* argv[])
                 std::string error;
                 if (command == "register") return node.requestRegistration(peerId, &error) ? std::string("OK REGISTER sent\n") : std::string("ERROR ") + error + "\n";
                 if (command == "invite") return node.requestInvite(peerId, &error) ? std::string("OK INVITE sent\n") : std::string("ERROR ") + error + "\n";
+                if (command == "bye") return node.requestBye(peerId, &error) ? std::string("OK BYE sent\n") : std::string("ERROR ") + error + "\n";
+                if (command == "streams") return std::string("OK\n") + node.streamsStatusText();
                 if (command == "catalog-query") return node.requestCatalog(peerId, &error) ? std::string("OK Catalog query sent\n") : std::string("ERROR ") + error + "\n";
                 if (command == "catalog-show") return std::string("OK\n") + node.catalogJson(peerId) + "\n";
-                if (command == "help") return std::string("OK commands: peers, register <peer-id>, invite <peer-id>, catalog-query <peer-id>, catalog-show <peer-id>\n");
+                if (command == "help") return std::string("OK commands: peers, register <peer-id>, invite <catalog-device-id>, bye <catalog-device-id>, streams, catalog-query <peer-id>, catalog-show <peer-id>\n");
                 return std::string("ERROR unknown command\n");
             }, &managementError))
         {
@@ -724,6 +726,13 @@ int main(int argc, char* argv[])
         const bool badCatalogResponseRejected = !node.dispatchSipRequest(badCatalogResponse);
         const bool catalogResponseOk = node.dispatchSipRequest(catalogResponse);
         const bool catalogResponseSecondOk = node.dispatchSipRequest(catalogResponseSecond);
+        gb28181::BusinessState catalogRoutingState;
+        catalogRoutingState.updateCatalog(kSelfTestDownstreamId, catalogResponse.manscdp.items);
+        const bool catalogRouteResolved = catalogRoutingState.catalogOwners(kSelfTestDownstreamId).size() == 1 &&
+                                          catalogRoutingState.catalogOwners(kSelfTestDownstreamId).front() == kSelfTestDownstreamId;
+        catalogRoutingState.updateCatalog("12000000002000000002", catalogResponse.manscdp.items);
+        const bool catalogRouteAmbiguous = catalogRoutingState.catalogOwners(kSelfTestDownstreamId).size() == 2;
+        const bool catalogRouteMissing = catalogRoutingState.catalogOwners("00000000000000000000").empty();
         const bool badRecordResponseRejected = !node.dispatchSipRequest(badRecordResponse);
         const bool recordResponseOk = node.dispatchSipRequest(recordResponse);
         const bool inviteResponseOk = node.dispatchSipRequest(inviteResponse);
@@ -1015,6 +1024,7 @@ int main(int argc, char* argv[])
                   << " RECORD=" << (recordOk ? "ok" : "failed")
                   << " BAD_CATALOG_RESPONSE=" << (badCatalogResponseRejected ? "rejected" : "accepted")
                   << " CATALOG_RESPONSE=" << (catalogResponseOk ? "ok" : "failed")
+                  << " CATALOG_ROUTE=" << (catalogRouteResolved && catalogRouteAmbiguous && catalogRouteMissing ? "ok" : "failed")
                   << " BAD_RECORD_RESPONSE=" << (badRecordResponseRejected ? "rejected" : "accepted")
                   << " RECORD_RESPONSE=" << (recordResponseOk ? "ok" : "failed")
                   << " INVITE_RESPONSE=" << (inviteResponseOk ? "ok" : "failed")
@@ -1058,7 +1068,7 @@ int main(int argc, char* argv[])
                   << " available_rtp_ports=" << availableRtpPorts
                   << std::endl;
 
-        if (!singleEndpointOk || !peerTopologyOk || !mediaSourceOk || !mediaSourcePsOk || !regChallengeOk || !challengeNonceOk || !registerAuthRetryOk || !badRegRejected || !regOk || !replayRegRejected || !qopChallengeOk || !qopChallengeNonceOk || !qopRegOk || !qopReplayRejected || !badKeepaliveRejected || !keepaliveOk || !catalogOk || !recordOk || !badCatalogResponseRejected || !catalogResponseOk || !catalogResponseSecondOk || !badRecordResponseRejected || !recordResponseOk || !inviteResponseOk || !inviteAckOk || catalogItems != 2 || recordItems != 1 || !catalogSnapshotOk || !recordSnapshotOk || !businessStatePersistenceOk || !businessQueryJsonOk || !badInviteRejected || !earlyAckRejected || !inviteOk || !badAckCseqRejected || !ackOk || !badRtpSsrcRejected || !rtpPacketizeOk || !rtpOk || !mediaReceivingOk || !rtpAdapterOk || !adapterSendOk || !frameFileOk || !wrongDialogByeRejected || !byeOk || !md5Ok || sentMessages == 0 || scheduledTasks < 3 || mediaSessions != 0 || !rtpPortsReleased)
+        if (!singleEndpointOk || !peerTopologyOk || !mediaSourceOk || !mediaSourcePsOk || !regChallengeOk || !challengeNonceOk || !registerAuthRetryOk || !badRegRejected || !regOk || !replayRegRejected || !qopChallengeOk || !qopChallengeNonceOk || !qopRegOk || !qopReplayRejected || !badKeepaliveRejected || !keepaliveOk || !catalogOk || !recordOk || !badCatalogResponseRejected || !catalogResponseOk || !catalogResponseSecondOk || !catalogRouteResolved || !catalogRouteAmbiguous || !catalogRouteMissing || !badRecordResponseRejected || !recordResponseOk || !inviteResponseOk || !inviteAckOk || catalogItems != 2 || recordItems != 1 || !catalogSnapshotOk || !recordSnapshotOk || !businessStatePersistenceOk || !businessQueryJsonOk || !badInviteRejected || !earlyAckRejected || !inviteOk || !badAckCseqRejected || !ackOk || !badRtpSsrcRejected || !rtpPacketizeOk || !rtpOk || !mediaReceivingOk || !rtpAdapterOk || !adapterSendOk || !frameFileOk || !wrongDialogByeRejected || !byeOk || !md5Ok || sentMessages == 0 || scheduledTasks < 3 || mediaSessions != 0 || !rtpPortsReleased)
         {
             node.stop();
             return 1;

@@ -22,6 +22,7 @@ struct MediaSessionInfo
 {
     std::string id;
     std::string peerId;
+    std::string targetDeviceId;
     std::string localIp;
     int localRtpPort;
     std::string remoteIp;
@@ -90,6 +91,7 @@ public:
     int allocateRtpPort();
     void releaseRtpPort(int port);
     bool createSession(const MediaSessionInfo& session);
+    bool updateSession(const MediaSessionInfo& session);
     const MediaSessionInfo* findSession(const std::string& sessionId) const;
     bool updateSessionState(const std::string& sessionId, const std::string& state);
     std::vector<MediaSessionInfo> sessionSnapshot() const;

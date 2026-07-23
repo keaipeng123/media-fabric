@@ -40,8 +40,10 @@ public:
     size_t registeredPeerCount() const;
     size_t keepalivePeerCount() const;
     std::string peersStatusText() const;
+    std::string streamsStatusText() const;
     bool requestRegistration(const std::string& peerId, std::string* error);
-    bool requestInvite(const std::string& peerId, std::string* error);
+    bool requestInvite(const std::string& deviceId, std::string* error);
+    bool requestBye(const std::string& deviceId, std::string* error);
     bool requestCatalog(const std::string& peerId, std::string* error);
     size_t sentSipMessageCount() const;
     bool lastSentSipMessage(SipMessageContext* message) const;

@@ -96,12 +96,15 @@ cmake -S . -B build -DMEDIA_FABRIC_ENABLE_PJSIP=OFF
 ./build/media-fabric -c conf/media-fabric.conf
 ./build/mfcli peers
 ./build/mfcli register 10000000002000000001
-./build/mfcli invite 12000000002000000001
 ./build/mfcli catalog-query 12000000002000000001
 ./build/mfcli catalog-show 12000000002000000001
+./build/mfcli invite 11000000001310000059
+./build/mfcli streams
+./build/mfcli bye 11000000001310000059
 ```
 
 注册成功后，服务会按 `[timers] heartbeat_interval_seconds` 自动发送心跳；`peers` 显示上下级节点的实时注册与最后心跳时间。
+`invite` 的参数是已同步目录中的设备 `DeviceID`，不是下级平台 ID；服务会自动按目录归属路由到对应已注册下级。真实开流需以 `MEDIA_FABRIC_ENABLE_PJSIP=ON` 和 `MEDIA_FABRIC_ENABLE_JRTPLIB=ON` 构建。`streams` 显示 RTP 收流统计，`bye` 停止指定设备的开流会话。
 
 本地模拟上下级可分别使用 `conf/media-fabric-sup.conf` 和 `conf/media-fabric-sub.conf`。先启动上级与下级，再从下级发起注册：
 

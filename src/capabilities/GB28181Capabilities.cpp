@@ -635,18 +635,14 @@ const PeerInfo* downstreamPeerForInviteResponse(NodeRuntime& runtime, const SipR
     {
         return peer;
     }
-
     peer = runtime.peerRegistry->findBySipId(response.fromId);
-    if (peer != NULL && peer->relation == PEER_DOWNSTREAM)
-    {
-        return peer;
-    }
-    return NULL;
+    return peer != NULL && peer->relation == PEER_DOWNSTREAM ? peer : NULL;
 }
 
 bool sendAckForInviteResponse(NodeRuntime& runtime,
                               const std::string& capability,
                               const PeerInfo& peer,
+                              const std::string& targetDeviceId,
                               const SipRequestContext& response)
 {
     const SipEndpointConfig* local = localEndpointForPeer(runtime, peer);
@@ -657,6 +653,7 @@ bool sendAckForInviteResponse(NodeRuntime& runtime,
     }
 
     SipMessageContext ack = makeRequest(peer, *local, "ACK", "request");
+    ack.toId = targetDeviceId;
     ack.callId = response.callId;
     ack.cseq = response.cseq;
     ack.contact = response.contact;
@@ -1276,10 +1273,13 @@ bool InviteClientCapability::onStart(NodeRuntime& runtime)
 
 bool InviteClientCapability::handleSipRequest(const SipRequestContext& request, NodeRuntime& runtime)
 {
-    const PeerInfo* peer = downstreamPeerForInviteResponse(runtime, request);
+    const std::string sessionId = request.callId.empty() ? "" : "InviteClientCapability:dialog:" + request.callId;
+    const MediaSessionInfo* existingSession = sessionId.empty() ? NULL : runtime.mediaManager->findSession(sessionId);
+    const PeerInfo* peer = existingSession == NULL ? downstreamPeerForInviteResponse(runtime, request)
+                                                   : runtime.peerRegistry->findBySipId(existingSession->peerId);
 
     SessionInfo session;
-    session.id = name() + ":response:" + (peer == NULL ? request.fromId : peer->sipId);
+    session.id = name() + ":response:" + (existingSession == NULL ? request.fromId : existingSession->targetDeviceId);
     session.capability = name();
     session.peerId = peer == NULL ? request.fromId : peer->sipId;
     std::ostringstream state;
@@ -1293,7 +1293,48 @@ bool InviteClientCapability::handleSipRequest(const SipRequestContext& request, 
         {
             return false;
         }
-        return sendAckForInviteResponse(runtime, name(), *peer, request);
+        if (existingSession == NULL)
+        {
+            return sendAckForInviteResponse(runtime, name(), *peer, request.fromId, request);
+        }
+
+        SdpInfo responseSdp;
+        if (!parseSdp(request.body, &responseSdp))
+        {
+            runtime.mediaManager->closeSession(sessionId);
+            media_fabric::Logger::instance().log(media_fabric::LOG_WARN, "invite",
+                                                 "invalid 200 SDP call_id=" + request.callId);
+            return false;
+        }
+
+        MediaSessionInfo mediaSession = *existingSession;
+        mediaSession.remoteIp = responseSdp.connectionIp;
+        mediaSession.remoteRtpPort = responseSdp.mediaPort;
+        mediaSession.transport = responseSdp.transport;
+        mediaSession.direction = responseSdp.direction;
+        mediaSession.remoteContact = request.contact;
+        mediaSession.state = "stream-confirmed";
+        if (!runtime.mediaManager->updateSession(mediaSession))
+        {
+            runtime.mediaManager->closeSession(sessionId);
+            return false;
+        }
+        const bool ackSent = sendAckForInviteResponse(runtime, name(), *peer, mediaSession.targetDeviceId, request);
+        if (!ackSent)
+        {
+            runtime.mediaManager->closeSession(sessionId);
+            return false;
+        }
+        media_fabric::Logger::instance().log(media_fabric::LOG_INFO, "invite",
+                                             "confirmed device=" + mediaSession.targetDeviceId +
+                                             " route_peer=" + peer->sipId + " call_id=" + request.callId +
+                                             " remote_rtp=" + mediaSession.remoteIp + ":" + std::to_string(mediaSession.remoteRtpPort));
+        return true;
+    }
+
+    if (existingSession != NULL)
+    {
+        runtime.mediaManager->closeSession(sessionId);
     }
 
     return true;

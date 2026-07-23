@@ -210,6 +210,18 @@ bool MediaManager::createSession(const MediaSessionInfo& session)
     return true;
 }
 
+bool MediaManager::updateSession(const MediaSessionInfo& session)
+{
+    std::map<std::string, MediaSessionInfo>::iterator existing = m_sessions.find(session.id);
+    if (existing == m_sessions.end() || session.localRtpPort <= 0 ||
+        existing->second.localRtpPort != session.localRtpPort)
+    {
+        return false;
+    }
+    existing->second = session;
+    return true;
+}
+
 const MediaSessionInfo* MediaManager::findSession(const std::string& sessionId) const
 {
     std::map<std::string, MediaSessionInfo>::const_iterator it = m_sessions.find(sessionId);

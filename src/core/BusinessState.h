@@ -21,6 +21,7 @@ public:
     size_t catalogItemCount(const std::string& peerId) const;
     size_t recordItemCount(const std::string& peerId) const;
     std::vector<std::string> catalogPeerIds() const;
+    std::vector<std::string> catalogOwners(const std::string& deviceId) const;
     std::vector<std::string> recordPeerIds() const;
     std::vector<ManscdpItem> catalogItems(const std::string& peerId) const;
     std::vector<ManscdpItem> recordItems(const std::string& peerId) const;

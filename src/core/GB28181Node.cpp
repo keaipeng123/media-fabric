@@ -2,6 +2,11 @@
 
 #include "SipMessageContext.h"
 #include "Logger.h"
+#include "SdpSession.h"
+
+#ifdef GB28181_ENABLE_JRTPLIB
+#include "JrtplibRtpSessionAdapter.h"
+#endif
 
 #include <sstream>
 #include <ctime>
@@ -15,6 +20,24 @@ std::string nextTransactionCallId(const std::string& prefix, const std::string& 
     output << prefix << "-" << std::time(NULL) << "-" << ++counter << "@" << localId;
     return output.str();
 }
+
+#ifdef GB28181_ENABLE_JRTPLIB
+std::string nextInviteSsrc()
+{
+    static unsigned long counter = 0;
+    const unsigned long value = (static_cast<unsigned long>(std::time(NULL)) + ++counter) % 10000000000UL;
+    std::ostringstream output;
+    output.width(10);
+    output.fill('0');
+    output << value;
+    return output.str();
+}
+
+std::string clientInviteSessionId(const std::string& callId)
+{
+    return "InviteClientCapability:dialog:" + callId;
+}
+#endif
 }
 
 GB28181Node::GB28181Node(const NodeConfig& config)
@@ -192,6 +215,29 @@ std::string GB28181Node::peersStatusText() const
     return output.str();
 }
 
+std::string GB28181Node::streamsStatusText() const
+{
+    std::ostringstream output;
+    const std::vector<MediaSessionInfo> sessions = m_mediaManager.sessionSnapshot();
+    for (std::vector<MediaSessionInfo>::const_iterator session = sessions.begin(); session != sessions.end(); ++session)
+    {
+        if (session->targetDeviceId.empty())
+        {
+            continue;
+        }
+        output << "device=" << session->targetDeviceId
+               << " route_peer=" << session->peerId
+               << " state=" << session->state
+               << " call_id=" << session->callId
+               << " local_rtp=" << session->localIp << ":" << session->localRtpPort
+               << " remote_rtp=" << session->remoteIp << ":" << session->remoteRtpPort
+               << " received_packets=" << session->receivedRtpPackets
+               << " received_frames=" << session->completedVideoFrames
+               << " received_bytes=" << session->receivedRtpBytes << "\n";
+    }
+    return output.str();
+}
+
 bool GB28181Node::requestRegistration(const std::string& peerId, std::string* error)
 {
     PeerInfo* peer = m_peerRegistry.findBySipId(peerId);
@@ -204,16 +250,98 @@ bool GB28181Node::requestRegistration(const std::string& peerId, std::string* er
     return true;
 }
 
-bool GB28181Node::requestInvite(const std::string& peerId, std::string* error)
+bool GB28181Node::requestInvite(const std::string& deviceId, std::string* error)
 {
-    PeerInfo* peer = m_peerRegistry.findBySipId(peerId);
-    if (peer == NULL || peer->relation != PEER_DOWNSTREAM) { if(error) *error="unknown downstream peer"; return false; }
-    if (!peer->registered) { if(error) *error="downstream peer is not registered"; return false; }
+    const std::vector<std::string> owners = m_businessState.catalogOwners(deviceId);
+    if (owners.empty()) { if (error) *error = "device is not present in synchronized catalog: " + deviceId; return false; }
+    if (owners.size() != 1) { if (error) *error = "device belongs to multiple downstream peers: " + deviceId; return false; }
+
+    PeerInfo* peer = m_peerRegistry.findBySipId(owners.front());
+    if (peer == NULL || peer->relation != PEER_DOWNSTREAM) { if (error) *error = "catalog owner is not a downstream peer: " + owners.front(); return false; }
+    if (!peer->registered) { if (error) *error = "catalog owner is not registered: " + owners.front(); return false; }
+
+#ifndef GB28181_ENABLE_JRTPLIB
+    if (error) *error = "real RTP invite requires a build with MEDIA_FABRIC_ENABLE_JRTPLIB=ON";
+    return false;
+#else
     const SipEndpointConfig& local = m_config.node();
-    SipMessageContext message; message.method="INVITE"; message.event="request"; message.fromId=local.sipId; message.toId=peer->sipId;
-    message.localIp=local.sipIp; message.localPort=local.sipPort; message.remoteIp=peer->ip; message.remotePort=peer->port; message.contentType="Application/SDP";
-    message.body="v=0\r\no=" + local.sipId + " 0 0 IN IP4 " + local.sipIp + "\r\ns=media-fabric\r\nc=IN IP4 " + local.sipIp + "\r\nt=0 0\r\nm=video 30000 RTP/AVP 96\r\na=sendrecv\r\n";
-    if (!m_sipStack.send(message)) { if(error) *error="failed to send INVITE"; return false; }
+    const int rtpPort = m_mediaManager.allocateRtpPort();
+    if (rtpPort <= 0) { if (error) *error = "no RTP port available"; return false; }
+
+    const std::string callId = nextTransactionCallId("invite", local.sipId);
+    MediaSessionInfo mediaSession;
+    mediaSession.id = clientInviteSessionId(callId);
+    mediaSession.peerId = peer->sipId;
+    mediaSession.targetDeviceId = deviceId;
+    mediaSession.localIp = local.sipIp;
+    mediaSession.localRtpPort = rtpPort;
+    mediaSession.remoteIp = peer->ip;
+    mediaSession.remoteRtpPort = 0;
+    mediaSession.transport = "RTP/AVP";
+    mediaSession.direction = "recvonly";
+    mediaSession.ssrc = nextInviteSsrc();
+    mediaSession.callId = callId;
+    mediaSession.inviteCseq = "1";
+    mediaSession.state = "invite-requested";
+    if (!m_mediaManager.createSession(mediaSession))
+    {
+        m_mediaManager.releaseRtpPort(rtpPort);
+        if (error) *error = "failed to create RTP receive session";
+        return false;
+    }
+
+    std::string rtpError;
+    if (!m_mediaManager.startRtpSessionAdapter(mediaSession.id,
+                                                std::unique_ptr<RtpSessionAdapter>(new JrtplibRtpSessionAdapter()),
+                                                &rtpError))
+    {
+        m_mediaManager.closeSession(mediaSession.id);
+        if (error) *error = "failed to start RTP receiver: " + rtpError;
+        return false;
+    }
+
+    SipMessageContext message; message.method="INVITE"; message.event="request"; message.fromId=local.sipId; message.toId=deviceId;
+    message.localIp=local.sipIp; message.localPort=local.sipPort; message.remoteIp=peer->ip; message.remotePort=peer->port;
+    message.callId = callId; message.cseq = mediaSession.inviteCseq; message.contentType="Application/SDP";
+    message.body = buildInviteSdp(local.sipId, local.sipIp, rtpPort, mediaSession.ssrc);
+    if (!m_sipStack.send(message))
+    {
+        m_mediaManager.closeSession(mediaSession.id);
+        if(error) *error="failed to send INVITE";
+        return false;
+    }
+    media_fabric::Logger::instance().log(media_fabric::LOG_INFO, "invite",
+                                         "sent device=" + deviceId + " route_peer=" + peer->sipId +
+                                         " call_id=" + callId + " rtp_port=" + std::to_string(rtpPort));
+    return true;
+#endif
+}
+
+bool GB28181Node::requestBye(const std::string& deviceId, std::string* error)
+{
+    const std::vector<MediaSessionInfo> sessions = m_mediaManager.sessionSnapshot();
+    const MediaSessionInfo* active = NULL;
+    for (std::vector<MediaSessionInfo>::const_iterator session = sessions.begin(); session != sessions.end(); ++session)
+    {
+        if (session->targetDeviceId == deviceId)
+        {
+            if (active != NULL) { if (error) *error = "multiple active streams for device: " + deviceId; return false; }
+            active = &(*session);
+        }
+    }
+    if (active == NULL) { if (error) *error = "no active stream for device: " + deviceId; return false; }
+    PeerInfo* peer = m_peerRegistry.findBySipId(active->peerId);
+    if (peer == NULL) { if (error) *error = "stream route peer not found: " + active->peerId; return false; }
+    const SipEndpointConfig& local = m_config.node();
+    SipMessageContext bye;
+    bye.method = "BYE"; bye.event = "request"; bye.fromId = local.sipId; bye.toId = deviceId;
+    bye.localIp = local.sipIp; bye.localPort = local.sipPort; bye.remoteIp = peer->ip; bye.remotePort = peer->port;
+    bye.callId = active->callId; bye.cseq = "2";
+    if (!m_sipStack.send(bye)) { if (error) *error = "failed to send BYE"; return false; }
+    media_fabric::Logger::instance().log(media_fabric::LOG_INFO, "invite",
+                                         "bye device=" + deviceId + " route_peer=" + peer->sipId +
+                                         " call_id=" + active->callId);
+    m_mediaManager.closeSession(active->id);
     return true;
 }
 

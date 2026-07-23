@@ -236,6 +236,27 @@ std::vector<std::string> BusinessState::catalogPeerIds() const
     return peerIds(m_catalogItems);
 }
 
+std::vector<std::string> BusinessState::catalogOwners(const std::string& deviceId) const
+{
+    std::vector<std::string> owners;
+    if (deviceId.empty())
+    {
+        return owners;
+    }
+    for (ItemMap::const_iterator peer = m_catalogItems.begin(); peer != m_catalogItems.end(); ++peer)
+    {
+        for (std::vector<ManscdpItem>::const_iterator item = peer->second.begin(); item != peer->second.end(); ++item)
+        {
+            if (item->deviceId == deviceId)
+            {
+                owners.push_back(peer->first);
+                break;
+            }
+        }
+    }
+    return owners;
+}
+
 std::vector<std::string> BusinessState::recordPeerIds() const
 {
     return peerIds(m_recordItems);
