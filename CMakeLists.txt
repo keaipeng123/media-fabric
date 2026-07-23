@@ -12,7 +12,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(MEDIA_FABRIC_BUILD_LEGACY_SERVICES "Build historical SipSupService and SipSubService targets" OFF)
 option(MEDIA_FABRIC_ENABLE_PJSIP "Enable PJSIP transport adapter for real SIP networking" ON)
-option(MEDIA_FABRIC_ENABLE_JRTPLIB "Enable experimental JRTPLIB RTP adapter for media-fabric" OFF)
+option(MEDIA_FABRIC_ENABLE_JRTPLIB "Enable JRTPLIB RTP adapter for media-fabric" ON)
 set(MEDIA_FABRIC_SELF_TEST_CONFIG "conf/media-fabric.conf" CACHE STRING "Config file used by media-fabric-self-test")
 if(IS_ABSOLUTE "${MEDIA_FABRIC_SELF_TEST_CONFIG}")
     set(MEDIA_FABRIC_SELF_TEST_CONFIG_PATH "${MEDIA_FABRIC_SELF_TEST_CONFIG}")
