@@ -79,6 +79,7 @@ scripts/build-media-fabric.sh
 
 输出文件为 `build/media-fabric`。该命令会先构建 `media_fabric_core` 静态库，再由 Go 链接为一个进程的最终服务。
 当前随仓库提供的 PJSIP、JRTPLIB 与 tinyxml2 静态库面向 Linux x86_64，因此最终链接与运行应在 Linux 目标环境执行。
+构建机还需要安装 Go 1.23 或更高版本，并确保 `go` 命令位于 `PATH` 中。
 
 如需单独排查 C++ 协议或运行 C++ 自测，可构建诊断入口：
 
