@@ -50,6 +50,7 @@ stream_loop = true
 - [架构现状](docs/architecture.md)
 - [里程碑 6 链路验证](docs/milestone6-validation.md)
 - [Go 业务层、C++ 媒体层与前端迭代计划](docs/迭代计划-Go业务层-C++媒体层-前端.md)
+- [业务 API：认证与用户管理](docs/业务API.md)
 - [信令流程](docs/signaling-flow.md)
 - [媒体流程](docs/media-flow.md)
 - [第三方库补齐说明](docs/third-party-libs.md)

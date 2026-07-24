@@ -11,7 +11,7 @@ fi
 
 build_dir="${MEDIA_FABRIC_BUILD_DIR:-build}"
 cmake -S . -B "$build_dir" "$@"
-cmake --build "$build_dir" --target media_fabric_core
+cmake --build "$build_dir" --target media_fabric_core mfcli
 
 root_dir=$(pwd)
 case "$build_dir" in
